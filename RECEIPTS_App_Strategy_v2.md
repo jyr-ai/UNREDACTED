@@ -1,4 +1,4 @@
-# 🇺🇸 RECEIPTS — U.S. Policy Intelligence & Government Accountability Platform
+# 🇺🇸 UNREDACTED — U.S. Policy Intelligence & Government Accountability Platform
 ### *"We've got yours."*
 ## Full Stack Architecture Strategy v2 — Revised with Politician Donor Intelligence
 
@@ -6,11 +6,10 @@
 
 # THE NAME: **RECEIPTS**
 
-**Primary:** `RECEIPTS`
 **Tagline:** *"We've got yours."*
-**Domain:** `receipts.gov.ai` or `getreceipts.us` or `receipts.fyi`
+**Domain:** `unredacted.gov.ai` or `getreceipts.us` or `receipts.fyi`
 
-### Why RECEIPTS Works
+### Why UNREDACTED Works
 - **Slang meaning**: "Show your receipts" = internet/cultural shorthand for *"prove it" or "show your evidence."* Immediately communicates the platform's mission to a wide audience.
 - **Literal meaning**: Financial receipts = spending records, contracts, transactions. Exactly what the app tracks.
 - **Subversive edge**: Saying to politicians and corporations — *"we have your receipts."* Implied accountability, without being aggressive.
@@ -446,11 +445,11 @@ New report templates:
 
 | Phase | Scope | Timeline |
 |-------|-------|----------|
-| **Phase 1 — MVP** | USASpending + FedReg ETL; spending dashboard + policy agent (chat) | 3 months |
-| **Phase 2 — Donor Intelligence** | FEC + OpenSecrets ETL; Politician module; Donor web graph | +3 months |
-| **Phase 3 — Accountability Index** | Corruption scoring; STOCK Act monitor; Dark money tracker; Company profiles | +3 months |
-| **Phase 4 — State Expansion** | State campaign finance; Socrata multi-portal; State procurement | +6 months |
-| **Phase 5 — Public Platform** | Open API; community reports; mobile app; ESG investor feeds; media embed widgets | +6 months |
+| **Phase 1 — MVP** | USASpending + FedReg ETL; spending dashboard + policy agent (chat) | Sprint 1 |
+| **Phase 2 — Donor Intelligence** | FEC + OpenSecrets ETL; Politician module; Donor web graph | Sprint 2 |
+| **Phase 3 — Accountability Index** | Corruption scoring; STOCK Act monitor; Dark money tracker; Company profiles | Sprint 3 |
+| **Phase 4 — State Expansion** | State campaign finance; Socrata multi-portal; State procurement | Sprint 4 |
+| **Phase 5 — Public Platform** | Open API; community reports; mobile app; ESG investor feeds; media embed widgets | Sprint 5 |
 
 ---
 
@@ -468,5 +467,5 @@ Modeled after br-acc's rigorous legal pack:
 
 ---
 
-*RECEIPTS — Because every dollar leaves a trail.*
+*UNREDACTED — Because every dollar leaves a trail, Powerful, speaks truth-to-power to the people.
 *Built on the World Open Graph architecture (br-acc / AGPL-3.0).*
