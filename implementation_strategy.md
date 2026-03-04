@@ -1,21 +1,8 @@
-# 🇺🇸 UNREDACTED — U.S. Policy Intelligence & Government Accountability Platform
+# UNREDACTED — U.S. Policy Intelligence & Government Accountability Platform
 ### *"We've got yours."*
 ## Full Stack Architecture Strategy v2 — Revised with Politician Donor Intelligence
 
 ---
-
-# THE NAME: **RECEIPTS**
-
-**Tagline:** *"We've got yours."*
-**Domain:** `unredacted.gov.ai` or `getreceipts.us` or `receipts.fyi`
-
-### Why UNREDACTED Works
-- **Slang meaning**: "Show your receipts" = internet/cultural shorthand for *"prove it" or "show your evidence."* Immediately communicates the platform's mission to a wide audience.
-- **Literal meaning**: Financial receipts = spending records, contracts, transactions. Exactly what the app tracks.
-- **Subversive edge**: Saying to politicians and corporations — *"we have your receipts."* Implied accountability, without being aggressive.
-- **Memorable**: One word. No explanation needed. Works as a verb too: *"We receipted them."*
-- **Brandable**: R•E•C•E•I•P•T•S logo treatment, dark/monochrome with red accent (redacted document aesthetic)
-
 **Runner-up names:**
 | Name | Why It Works | Why It Doesn't |
 |------|-------------|----------------|
