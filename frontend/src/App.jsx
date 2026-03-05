@@ -478,7 +478,7 @@ function AiMessage({ structured }) {
       {/* Header row: source list + risk level badge */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontFamily: "monospace", fontSize: 11, color: "#E63946", letterSpacing: 1 }}>
-          ◈ RECEIPTS AI{sources?.length ? ` — ${sources.join(" · ")}` : ""}
+          ◈ UNREDACTED AI{sources?.length ? ` — ${sources.join(" · ")}` : ""}
         </div>
         {riskLevel && (
           <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 9, fontWeight: 700, background: riskColor + "22", color: riskColor, fontFamily: "monospace", letterSpacing: 1 }}>
@@ -635,7 +635,7 @@ function AgentModule() {
       <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "14px 20px", borderBottom: "1px solid #2A2A2A", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2A9D8F", boxShadow: "0 0 8px #2A9D8F" }} />
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2A9D8F", letterSpacing: 2 }}>RECEIPTS INTELLIGENCE AGENT — ONLINE</span>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2A9D8F", letterSpacing: 2 }}>UNREDACTED INTELLIGENCE AGENT — ONLINE</span>
         </div>
 
         <div ref={chatRef} style={{ flex: 1, padding: 20, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -799,9 +799,9 @@ export default function App() {
       {/* Header */}
       <div style={{ background: "#111", borderBottom: "1px solid #1E1E1E", padding: "0 24px", display: "flex", alignItems: "center", gap: 0, height: 52 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 1, marginRight: 40 }}>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>R</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>UN</span>
           <div style={{ width: 7, height: 7, background: "#E63946", borderRadius: "50%", marginBottom: 2, marginLeft: 1, marginRight: 1 }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>CEIPTS</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>REDACTED</span>
         </div>
         <div style={{ flex: 1, display: "flex", alignItems: "center", background: "#0D0D0D", border: "1px solid #1E1E1E", borderRadius: 2, padding: "0 14px", height: 34, maxWidth: 480, gap: 8 }}>
           <span style={{ color: "#444", fontSize: 12 }}>⌕</span>
