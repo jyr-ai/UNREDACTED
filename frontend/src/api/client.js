@@ -49,3 +49,9 @@ export async function fetchRules(params = {}) {
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   return res.json()
 }
+
+export async function fetchSpendingNews(limit = 12) {
+  const res = await fetchWithTimeout(`${BASE}/api/feed/spending-news?limit=${limit}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
