@@ -1,4 +1,4 @@
-# R•CEIPTS — Policy Corruption Intelligence Platform
+# UN•REDACTED — Exposing Greed and corporate-related Corruption in Federal Spending Intelligence Platform
 
 > *Because every dollar leaves a trail.*
 
@@ -59,7 +59,7 @@ Policy Agent         Spending Agent
 ```bash
 # Clone
 git clone <repo-url>
-cd receipts
+cd UNREDACTED
 
 # Backend
 cd backend
