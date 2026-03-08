@@ -287,7 +287,7 @@ function AgentModule() {
       <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "14px 20px", borderBottom: "1px solid #2A2A2A", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2A9D8F", boxShadow: "0 0 8px #2A9D8F" }} />
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2A9D8F", letterSpacing: 2 }}>RECEIPTS INTELLIGENCE AGENT — ONLINE</span>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2A9D8F", letterSpacing: 2 }}>UNREDACTED INTELLIGENCE AGENT — ONLINE</span>
         </div>
 
         <div style={{ flex: 1, padding: 20, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -297,7 +297,7 @@ function AgentModule() {
                 <div style={{ background: "#2A2A2A", border: "1px solid #333", borderRadius: "4px 4px 0 4px", padding: "10px 14px", maxWidth: "80%", fontFamily: "monospace", fontSize: 12, color: "#F0EDE8", lineHeight: 1.5 }}>{msg.text}</div>
               ) : (
                 <div style={{ maxWidth: "90%" }}>
-                  <div style={{ fontFamily: "monospace", fontSize: 11, color: "#E63946", marginBottom: 8, letterSpacing: 1 }}>◈ RECEIPTS AI — {msg.structured.sources.join(" · ")}</div>
+                  <div style={{ fontFamily: "monospace", fontSize: 11, color: "#E63946", marginBottom: 8, letterSpacing: 1 }}>◈ UNREDACTED AI — {msg.structured.sources.join(" · ")}</div>
                   <div style={{ background: "#111", border: "1px solid #2A2A2A", borderRadius: "0 4px 4px 4px", padding: 16 }}>
                     <div style={{ fontFamily: "monospace", fontSize: 12, color: "#CCC", marginBottom: 14, lineHeight: 1.5 }}>{msg.structured.summary}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
@@ -447,9 +447,9 @@ export default function App() {
       {/* Header */}
       <div style={{ background: "#111", borderBottom: "1px solid #1E1E1E", padding: "0 24px", display: "flex", alignItems: "center", gap: 0, height: 52 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 1, marginRight: 40 }}>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>R</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>UN</span>
           <div style={{ width: 7, height: 7, background: "#E63946", borderRadius: "50%", marginBottom: 2, marginLeft: 1, marginRight: 1 }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>CEIPTS</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>REDACTED</span>
         </div>
         <div style={{ flex: 1, display: "flex", alignItems: "center", background: "#0D0D0D", border: "1px solid #1E1E1E", borderRadius: 2, padding: "0 14px", height: 34, maxWidth: 480, gap: 8 }}>
           <span style={{ color: "#444", fontSize: 12 }}>⌕</span>

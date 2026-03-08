@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { queryAgent, fetchContracts } from "./api/client.js";
+import { queryAgent, fetchContracts, fetchSpendingNews } from "./api/client.js";
 
 const MODULES = [
   { id: "dashboard", label: "Dashboard", icon: "⬡" },
@@ -30,13 +30,63 @@ const CHAT_MESSAGES = [
   },
 ];
 
+// Fallback feed items — match the full RSS schema (source, detail, url, type, text, time, risk)
+// Shown while live RSS is loading or if the backend is unreachable
 const FEED_ITEMS = [
-  { type: "CONTRACT", text: "Lockheed Martin awarded $2.1B sole-source contract — DoD", time: "4m ago", risk: "HIGH" },
-  { type: "DONATION", text: "Defense PACs donated $4.2M to Armed Services Committee chairs — FEC", time: "12m ago", risk: "MED" },
-  { type: "TRADE", text: "Sen. Johnson traded $250K in Pfizer — 18 days before FDA vote", time: "31m ago", risk: "HIGH" },
-  { type: "RULE", text: "EPA proposed rule weakened after 847 industry comments — FedReg", time: "1h ago", risk: "HIGH" },
-  { type: "REVOLVE", text: "Former HHS Deputy joins PhRMA lobbying arm — OpenSecrets", time: "2h ago", risk: "MED" },
-  { type: "GRANT", text: "DOE $890M clean energy grants — 67% to states with Senate Energy votes", time: "3h ago", risk: "LOW" },
+  {
+    type: "AUDIT",
+    source: "GAO",
+    text: "GAO: DoD Sole-Source Contracts — Billions Awarded Without Competition",
+    detail: "GAO found that sole-source justifications lacked required documentation in 34% of reviewed awards.",
+    time: "loading…",
+    risk: "HIGH",
+    url: "https://www.gao.gov/reports-testimonies",
+  },
+  {
+    type: "BUDGET",
+    source: "CBO",
+    text: "CBO: Federal Discretionary Spending Exceeds FY2024 Appropriations by $180B",
+    detail: "New CBO analysis projects a $180 billion gap between enacted appropriations and projected outlays.",
+    time: "loading…",
+    risk: "HIGH",
+    url: "https://www.cbo.gov/publications",
+  },
+  {
+    type: "RULE",
+    source: "FedReg",
+    text: "Federal Register: Proposed Rule — Government Procurement Threshold Raised to $500K",
+    detail: "Proposed amendment to FAR Part 13 would raise the simplified acquisition threshold, reducing competition requirements.",
+    time: "loading…",
+    risk: "MED",
+    url: "https://www.federalregister.gov/documents/search?conditions%5Btopics%5D%5B%5D=government-procurement",
+  },
+  {
+    type: "FINANCE",
+    source: "Treasury",
+    text: "Treasury: U.S. Debt Ceiling Suspension Expires — Extraordinary Measures Now in Effect",
+    detail: "Treasury Department has begun deploying extraordinary measures to avoid default as debt ceiling suspension expires.",
+    time: "loading…",
+    risk: "HIGH",
+    url: "https://home.treasury.gov/news/press-releases",
+  },
+  {
+    type: "BUDGET",
+    source: "OMB",
+    text: "OMB Issues Guidance on FY2025 Continuing Resolution Spending Restrictions",
+    detail: "New OMB memorandum outlines agency spending restrictions during continuing resolution period.",
+    time: "loading…",
+    risk: "MED",
+    url: "https://www.whitehouse.gov/omb/information-for-agencies/memoranda/",
+  },
+  {
+    type: "AUDIT",
+    source: "GAO",
+    text: "GAO: Improper Payments Across Federal Programs Totaled $236B in FY2023",
+    detail: "Annual GAO report identifies Medicare, Medicaid, and EITC as top sources of improper federal payments.",
+    time: "loading…",
+    risk: "HIGH",
+    url: "https://www.gao.gov/reports-testimonies",
+  },
 ];
 
 const STATIC_KPIS = [
@@ -160,6 +210,27 @@ function Ticker() {
   );
 }
 
+// ── Source Badge ──────────────────────────────────────────────────────────────
+
+const SOURCE_COLORS = {
+  GAO:      { bg: "#457B9D22", border: "#457B9D66", text: "#457B9D" },
+  CBO:      { bg: "#6A4C9322", border: "#6A4C9366", text: "#6A4C93" },
+  FedReg:   { bg: "#2A9D8F22", border: "#2A9D8F66", text: "#2A9D8F" },
+  Treasury: { bg: "#E9C46A22", border: "#E9C46A66", text: "#E9C46A" },
+  OMB:      { bg: "#F4A26122", border: "#F4A26166", text: "#F4A261" },
+};
+
+function SourceBadge({ source }) {
+  const c = SOURCE_COLORS[source] || { bg: "#33333322", border: "#55555566", text: "#888" };
+  return (
+    <span style={{
+      padding: "1px 5px", borderRadius: 2, fontSize: 8, fontWeight: 700,
+      background: c.bg, border: `1px solid ${c.border}`, color: c.text,
+      fontFamily: "monospace", letterSpacing: 1,
+    }}>{source}</span>
+  );
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 function Dashboard() {
@@ -167,6 +238,14 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // RSS feed state
+  const [feedItems, setFeedItems] = useState(FEED_ITEMS);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState(null);
+  const [feedLastUpdated, setFeedLastUpdated] = useState(null);
+  const [feedCached, setFeedCached] = useState(false);
+
+  // Fetch contracts on mount
   useEffect(() => {
     fetchContracts({ limit: 50 })
       .then(res => {
@@ -175,6 +254,34 @@ function Dashboard() {
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  // Fetch RSS feed + auto-refresh every 5 minutes
+  useEffect(() => {
+    const loadFeed = () => {
+      setFeedLoading(true);
+      setFeedError(null);
+      fetchSpendingNews(14)
+        .then(res => {
+          if (res.success && res.items?.length > 0) {
+            setFeedItems(res.items);
+            setFeedLastUpdated(res.fetchedAt ? new Date(res.fetchedAt) : new Date());
+            setFeedCached(res.cached || false);
+          } else {
+            // Keep static fallback silently
+            setFeedLastUpdated(new Date());
+          }
+        })
+        .catch(e => {
+          setFeedError(e.message);
+          // Fall back to static FEED_ITEMS on error — already set as default state
+        })
+        .finally(() => setFeedLoading(false));
+    };
+
+    loadFeed();
+    const interval = setInterval(loadFeed, 5 * 60 * 1000); // refresh every 5 min
+    return () => clearInterval(interval);
   }, []);
 
   const totalSpend = contracts.reduce((sum, c) => sum + parseFloat(c["Award Amount"] || 0), 0);
@@ -197,6 +304,10 @@ function Dashboard() {
     },
     ...STATIC_KPIS,
   ];
+
+  const feedUpdatedLabel = feedLastUpdated
+    ? feedLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -224,6 +335,7 @@ function Dashboard() {
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>
+        {/* Industry donor chart */}
         <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 20 }}>
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2, marginBottom: 16 }}>▲ INDUSTRY DONOR INFLUENCE — FY2024 ($M PAC CONTRIBUTIONS)</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -241,18 +353,135 @@ function Dashboard() {
           </div>
         </div>
 
-        <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 20, overflow: "hidden" }}>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2, marginBottom: 16 }}>◈ LIVE INTELLIGENCE FEED</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {FEED_ITEMS.map((item, i) => (
-              <div key={i} style={{ borderLeft: `2px solid ${item.risk === "HIGH" ? "#E63946" : item.risk === "MED" ? "#F4A261" : "#2A9D8F"}`, paddingLeft: 10 }}>
-                <div style={{ fontFamily: "monospace", fontSize: 10, color: "#CCC", lineHeight: 1.4 }}>{item.text}</div>
-                <div style={{ display: "flex", gap: 8, marginTop: 4, alignItems: "center" }}>
-                  <span style={{ fontFamily: "monospace", fontSize: 9, color: "#444" }}>{item.time}</span>
-                  <RiskBadge level={item.risk} />
-                </div>
-              </div>
+        {/* ── Live Intelligence Feed ── */}
+        <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+
+          {/* Panel header */}
+          <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #1E1E1E", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: feedLoading ? "#555" : feedError ? "#E63946" : "#E63946",
+                boxShadow: feedLoading || feedError ? "none" : "0 0 6px #E63946",
+                animation: (!feedLoading && !feedError) ? "pulse 2s infinite alternate" : "none",
+              }} />
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2 }}>
+                ◈ LIVE INTELLIGENCE FEED
+              </span>
+            </div>
+            <div style={{ display: "flex", align: "center", gap: 6 }}>
+              {feedLoading && <span style={{ fontFamily: "monospace", fontSize: 8, color: "#555" }}>FETCHING…</span>}
+              {feedCached && !feedLoading && <span style={{ fontFamily: "monospace", fontSize: 8, color: "#333" }}>CACHED</span>}
+              {feedUpdatedLabel && !feedLoading && (
+                <span style={{ fontFamily: "monospace", fontSize: 8, color: "#3A3A3A" }}>↻ {feedUpdatedLabel}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Source attribution row */}
+          <div style={{ padding: "6px 16px", borderBottom: "1px solid #1A1A1A", display: "flex", gap: 4, flexWrap: "wrap", flexShrink: 0, background: "#111" }}>
+            {["GAO", "CBO", "FedReg", "Treasury", "OMB"].map(src => (
+              <SourceBadge key={src} source={src} />
             ))}
+          </div>
+
+          {/* Feed error banner */}
+          {feedError && (
+            <div style={{ padding: "6px 16px", background: "#E6394608", borderBottom: "1px solid #E6394622", fontFamily: "monospace", fontSize: 9, color: "#E63946", flexShrink: 0 }}>
+              ⚠ Live feed unavailable — showing fallback data
+            </div>
+          )}
+
+          {/* Scrollable feed list */}
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "10px 0",
+            minHeight: 0,
+            maxHeight: 420,
+          }}>
+            {feedLoading && feedItems === FEED_ITEMS ? (
+              <div style={{ padding: "16px 16px" }}><Spinner /></div>
+            ) : (
+              feedItems.map((item, i) => {
+                const riskColor = item.risk === "HIGH" ? "#E63946" : item.risk === "MED" ? "#F4A261" : "#2A9D8F";
+                const isClickable = !!item.url;
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: "block",
+                      padding: "8px 16px",
+                      borderLeft: `3px solid ${riskColor}`,
+                      marginBottom: 2,
+                      background: "transparent",
+                    }}
+                  >
+                    {/* Clickable headline title */}
+                    {isClickable ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline",
+                          fontFamily: "monospace",
+                          fontSize: 10,
+                          color: "#D0CCC6",
+                          lineHeight: 1.45,
+                          textDecoration: "none",
+                          cursor: "pointer",
+                          borderBottom: "1px solid transparent",
+                          transition: "color 0.12s, border-bottom-color 0.12s",
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = "#F0EDE8";
+                          e.currentTarget.style.borderBottomColor = "#E6394688";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = "#D0CCC6";
+                          e.currentTarget.style.borderBottomColor = "transparent";
+                        }}
+                      >
+                        {item.text}
+                        <span style={{ marginLeft: 4, fontSize: 8, color: "#E6394699", fontFamily: "monospace", verticalAlign: "middle" }}>↗</span>
+                      </a>
+                    ) : (
+                      <div style={{ fontFamily: "monospace", fontSize: 10, color: "#D0CCC6", lineHeight: 1.45 }}>
+                        {item.text}
+                      </div>
+                    )}
+
+                    {/* Detail / summary if present */}
+                    {item.detail && (
+                      <div style={{ fontFamily: "monospace", fontSize: 9, color: "#555", lineHeight: 1.4, marginTop: 4, marginBottom: 4 }}>
+                        {item.detail}
+                      </div>
+                    )}
+
+                    {/* Meta row: time · risk · source */}
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 5 }}>
+                      <span style={{ fontFamily: "monospace", fontSize: 8, color: "#3A3A3A" }}>{item.time}</span>
+                      <RiskBadge level={item.risk} />
+                      {item.source && <SourceBadge source={item.source} />}
+                      {item.type && !item.source && (
+                        <span style={{ fontFamily: "monospace", fontSize: 8, color: "#444", letterSpacing: 1 }}>{item.type}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: "8px 16px", borderTop: "1px solid #1E1E1E", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#111" }}>
+            <span style={{ fontFamily: "monospace", fontSize: 8, color: "#333" }}>
+              GAO · CBO · Federal Register · Treasury · OMB
+            </span>
+            <span style={{ fontFamily: "monospace", fontSize: 8, color: "#2A2A2A" }}>
+              AUTO-REFRESH 5m
+            </span>
           </div>
         </div>
       </div>
@@ -478,7 +707,7 @@ function AiMessage({ structured }) {
       {/* Header row: source list + risk level badge */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontFamily: "monospace", fontSize: 11, color: "#E63946", letterSpacing: 1 }}>
-          ◈ RECEIPTS AI{sources?.length ? ` — ${sources.join(" · ")}` : ""}
+          ◈ UNREDACTED AI{sources?.length ? ` — ${sources.join(" · ")}` : ""}
         </div>
         {riskLevel && (
           <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 9, fontWeight: 700, background: riskColor + "22", color: riskColor, fontFamily: "monospace", letterSpacing: 1 }}>
@@ -635,7 +864,7 @@ function AgentModule() {
       <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "14px 20px", borderBottom: "1px solid #2A2A2A", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2A9D8F", boxShadow: "0 0 8px #2A9D8F" }} />
-          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2A9D8F", letterSpacing: 2 }}>RECEIPTS INTELLIGENCE AGENT — ONLINE</span>
+          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#2A9D8F", letterSpacing: 2 }}>UNREDACTED INTELLIGENCE AGENT — ONLINE</span>
         </div>
 
         <div ref={chatRef} style={{ flex: 1, padding: 20, overflow: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -799,9 +1028,9 @@ export default function App() {
       {/* Header */}
       <div style={{ background: "#111", borderBottom: "1px solid #1E1E1E", padding: "0 24px", display: "flex", alignItems: "center", gap: 0, height: 52 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 1, marginRight: 40 }}>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>R</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>UN</span>
           <div style={{ width: 7, height: 7, background: "#E63946", borderRadius: "50%", marginBottom: 2, marginLeft: 1, marginRight: 1 }} />
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>CEIPTS</span>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", letterSpacing: 2 }}>REDACTED</span>
         </div>
         <div style={{ flex: 1, display: "flex", alignItems: "center", background: "#0D0D0D", border: "1px solid #1E1E1E", borderRadius: 2, padding: "0 14px", height: 34, maxWidth: 480, gap: 8 }}>
           <span style={{ color: "#444", fontSize: 12 }}>⌕</span>
