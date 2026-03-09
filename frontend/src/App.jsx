@@ -1,11 +1,29 @@
-import { useState, useEffect, useRef } from "react";
-import { queryAgent, fetchContracts, fetchSpendingNews } from "./api/client.js";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  queryAgent,
+  fetchContracts,
+  fetchSpendingNews,
+  searchCandidates,
+  getCandidateTotals,
+  getCandidateContributions,
+  searchCommittees,
+  getCommitteeReceipts,
+  getTopDonorsByEmployer,
+  getDonorNetwork,
+  getIndustryContributions,
+  compareCandidates,
+  getPACSpending,
+  formatCurrency,
+  formatDate,
+  getPartyColor,
+} from "./api/client.js";
 
 const MODULES = [
   { id: "dashboard", label: "Dashboard", icon: "⬡" },
   { id: "agent", label: "AI Intel", icon: "◈" },
   { id: "spending", label: "Spending", icon: "◎" },
   { id: "politicians", label: "Politicians", icon: "◉" },
+  { id: "donors", label: "Donors", icon: "◆" },
   { id: "graph", label: "Entity Graph", icon: "⬡" },
 ];
 
@@ -627,72 +645,672 @@ function SpendingModule() {
   );
 }
 
-// ── Politician Module ─────────────────────────────────────────────────────────
+// ── Politician Module (Phase 2 — Live FEC Data) ──────────────────────────────
 
 function PoliticianModule() {
-  const [selected, setSelected] = useState(0);
-  const pol = POLITICIANS[selected];
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("smith");
+  const [candidates, setCandidates] = useState([]);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [contributions, setContributions] = useState([]);
+  const [totals, setTotals] = useState(null);
+  const [loadingList, setLoadingList] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [error, setError] = useState(null);
+  const [officeFilter, setOfficeFilter] = useState("");
+
+  // Load candidates on search
+  const loadCandidates = useCallback((name, office) => {
+    if (!name.trim()) return;
+    setLoadingList(true);
+    setError(null);
+    setSelectedCandidate(null);
+    setContributions([]);
+    setTotals(null);
+    searchCandidates({ name, office: office || undefined, limit: 15 })
+      .then(res => {
+        const list = res.data || res || [];
+        setCandidates(list);
+        if (list.length > 0) loadCandidateDetail(list[0]);
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoadingList(false));
+  }, []);
+
+  const loadCandidateDetail = async (candidate) => {
+    setSelectedCandidate(candidate);
+    setLoadingDetail(true);
+    setContributions([]);
+    setTotals(null);
+    try {
+      const [totalsRes, contribRes] = await Promise.all([
+        getCandidateTotals(candidate.candidate_id).catch(() => ({ data: null })),
+        getCandidateContributions(candidate.candidate_id, 20, 500).catch(() => ({ data: [] })),
+      ]);
+      setTotals(totalsRes.data || totalsRes);
+      setContributions(contribRes.data || contribRes || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  useEffect(() => { loadCandidates("smith", ""); }, []);
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput);
+    loadCandidates(searchInput, officeFilter);
+  };
+
+  const partyLabel = (p) => {
+    const up = (p || "").toUpperCase();
+    if (up.includes("DEM")) return "D";
+    if (up.includes("REP")) return "R";
+    if (up.includes("IND") || up.includes("NP")) return "I";
+    return p?.slice(0, 1) || "?";
+  };
+
+  const partyFullLabel = (p) => {
+    const up = (p || "").toUpperCase();
+    if (up.includes("DEM")) return "Democrat";
+    if (up.includes("REP")) return "Republican";
+    if (up.includes("IND")) return "Independent";
+    return p || "Unknown";
+  };
+
+  const totalRaised = totals?.receipts || totals?.individual_itemized_contributions || 0;
+  const cashOnHand = totals?.cash_on_hand_end_period || 0;
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "100%" }}>
-      <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, overflow: "hidden" }}>
-        <div style={{ padding: "14px 16px", borderBottom: "1px solid #2A2A2A", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2 }}>◉ POLITICIANS</div>
-        {POLITICIANS.map((p, i) => (
-          <div key={i} onClick={() => setSelected(i)} style={{
-            padding: "14px 16px", borderBottom: "1px solid #1E1E1E", cursor: "pointer",
-            background: selected === i ? "#222" : "transparent",
-            borderLeft: selected === i ? "3px solid #E63946" : "3px solid transparent",
-            transition: "all 0.15s",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div>
-                <div style={{ fontFamily: "monospace", fontSize: 12, color: "#F0EDE8", marginBottom: 2 }}>{p.name}</div>
-                <div style={{ fontFamily: "monospace", fontSize: 10, color: "#555" }}>{p.party} · {p.state}</div>
-              </div>
-              <ScoreBadge score={p.score} />
-            </div>
+    <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, height: "calc(100vh - 200px)" }}>
+      {/* LEFT: search + candidate list */}
+      <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Search */}
+        <div style={{ padding: "12px 14px", borderBottom: "1px solid #2A2A2A" }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2, marginBottom: 10 }}>◉ CANDIDATE SEARCH — FEC</div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            <input
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSearch()}
+              placeholder="Search by name…"
+              style={{ flex: 1, background: "#111", border: "1px solid #2A2A2A", borderRadius: 2, padding: "7px 10px", fontFamily: "monospace", fontSize: 11, color: "#F0EDE8", outline: "none" }}
+            />
+            <button onClick={handleSearch} style={{ background: "#E63946", border: "none", borderRadius: 2, padding: "7px 12px", fontFamily: "monospace", fontSize: 10, color: "#fff", cursor: "pointer", fontWeight: 700 }}>GO</button>
           </div>
-        ))}
+          <div style={{ display: "flex", gap: 4 }}>
+            {["", "H", "S", "P"].map(o => (
+              <button key={o} onClick={() => { setOfficeFilter(o); loadCandidates(searchInput || searchQuery, o); }}
+                style={{ flex: 1, background: officeFilter === o ? "#E6394622" : "#111", border: `1px solid ${officeFilter === o ? "#E63946" : "#2A2A2A"}`, borderRadius: 2, padding: "4px 0", fontFamily: "monospace", fontSize: 9, color: officeFilter === o ? "#E63946" : "#555", cursor: "pointer" }}>
+                {o === "" ? "ALL" : o === "H" ? "HOUSE" : o === "S" ? "SENATE" : "PRES"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Candidate list */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {loadingList ? (
+            <div style={{ padding: 16 }}><Spinner /></div>
+          ) : candidates.length === 0 ? (
+            <div style={{ padding: 20, fontFamily: "monospace", fontSize: 11, color: "#444", textAlign: "center" }}>No candidates found. Try a different search.</div>
+          ) : (
+            candidates.map((c, i) => {
+              const isSelected = selectedCandidate?.candidate_id === c.candidate_id;
+              const party = partyLabel(c.party_full || c.party);
+              const pColor = party === "D" ? "#457B9D" : party === "R" ? "#E63946" : "#888";
+              return (
+                <div key={i} onClick={() => loadCandidateDetail(c)} style={{
+                  padding: "12px 14px", borderBottom: "1px solid #1A1A1A", cursor: "pointer",
+                  background: isSelected ? "#222" : "transparent",
+                  borderLeft: `3px solid ${isSelected ? "#E63946" : "transparent"}`,
+                  transition: "all 0.12s",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#F0EDE8", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 9, color: "#555" }}>{c.office_full || c.office} · {c.state}{c.district ? `-${c.district}` : ""}</div>
+                    </div>
+                    <span style={{ marginLeft: 8, padding: "1px 5px", background: pColor + "22", border: `1px solid ${pColor}55`, borderRadius: 2, fontFamily: "monospace", fontSize: 9, color: pColor, fontWeight: 700, flexShrink: 0 }}>{party}</span>
+                  </div>
+                  {c.election_years && (
+                    <div style={{ fontFamily: "monospace", fontSize: 8, color: "#3A3A3A", marginTop: 4 }}>Cycle: {c.election_years?.slice(-1)[0]}</div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div style={{ padding: "8px 14px", borderTop: "1px solid #1E1E1E", background: "#111", fontFamily: "monospace", fontSize: 8, color: "#333" }}>
+          SOURCE: FEC.GOV CANDIDATE MASTER · LIVE DATA
+        </div>
       </div>
 
-      <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <div>
-            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: "#F0EDE8" }}>{pol.name}</div>
-            <div style={{ fontFamily: "monospace", fontSize: 11, color: "#666", marginTop: 4 }}>{pol.party === "R" ? "Republican" : pol.party === "D" ? "Democrat" : "Independent"} · {pol.state} · U.S. Senate</div>
+      {/* RIGHT: candidate detail */}
+      <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {!selectedCandidate ? (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "monospace", fontSize: 12, color: "#333" }}>
+            Select a candidate to view donor intelligence
           </div>
-          <ScoreBadge score={pol.score} />
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-          {[
-            { label: "Total Donations", value: pol.donors },
-            { label: "Top Industry", value: pol.topIndustry },
-            { label: "Stock Trades", value: pol.trades },
-            { label: "Conflicts Found", value: pol.conflicts },
-          ].map((s, i) => (
-            <div key={i} style={{ background: "#111", borderRadius: 3, padding: "12px 14px" }}>
-              <div style={{ fontFamily: "monospace", fontSize: 9, color: "#555", letterSpacing: 1, marginBottom: 6 }}>{s.label.toUpperCase()}</div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, color: i === 3 && pol.conflicts > 0 ? "#E63946" : "#F0EDE8" }}>{s.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ background: "#0D0D0D", border: "1px solid #E6394633", borderRadius: 3, padding: 14 }}>
-          <div style={{ fontFamily: "monospace", fontSize: 10, color: "#E63946", letterSpacing: 2, marginBottom: 10 }}>⚠ AI-DETECTED CONFLICT SIGNALS</div>
-          {pol.conflicts > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ fontFamily: "monospace", fontSize: 11, color: "#CCC", lineHeight: 1.5, borderLeft: "2px solid #E63946", paddingLeft: 10 }}>
-                Traded {pol.topIndustry} sector stocks 18 days before committee vote. Pattern matches 3 prior cycles. Confidence: 87%
-              </div>
-              <div style={{ fontFamily: "monospace", fontSize: 11, color: "#CCC", lineHeight: 1.5, borderLeft: "2px solid #F4A261", paddingLeft: 10 }}>
-                Top PAC donors received $1.2B in sole-source contracts from oversight committee agencies (FY2023–24)
+        ) : (
+          <>
+            {/* Header */}
+            <div style={{ padding: "18px 20px", borderBottom: "1px solid #2A2A2A", background: "#111" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: "#F0EDE8", marginBottom: 4 }}>{selectedCandidate.name}</div>
+                  <div style={{ fontFamily: "monospace", fontSize: 11, color: "#666" }}>
+                    {partyFullLabel(selectedCandidate.party_full || selectedCandidate.party)} ·{" "}
+                    {selectedCandidate.state}{selectedCandidate.district ? `-${selectedCandidate.district}` : ""} ·{" "}
+                    {selectedCandidate.office_full || selectedCandidate.office}
+                    {selectedCandidate.incumbent_challenge_full ? ` · ${selectedCandidate.incumbent_challenge_full}` : ""}
+                  </div>
+                  <div style={{ fontFamily: "monospace", fontSize: 9, color: "#3A3A3A", marginTop: 4 }}>ID: {selectedCandidate.candidate_id}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontFamily: "monospace", fontSize: 9, color: "#555", marginBottom: 4 }}>CYCLE</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 16, color: "#F0EDE8" }}>{selectedCandidate.election_years?.slice(-1)[0] || "—"}</div>
+                </div>
               </div>
             </div>
-          ) : (
-            <div style={{ fontFamily: "monospace", fontSize: 11, color: "#2A9D8F" }}>✓ No significant conflict signals detected in current cycle</div>
-          )}
-          <div style={{ fontFamily: "monospace", fontSize: 9, color: "#333", marginTop: 10 }}>Inference only — not a legal conclusion. Sources: FEC, USASpending, Senate Disclosure</div>
+
+            {/* Finance KPIs */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, borderBottom: "1px solid #2A2A2A" }}>
+              {[
+                { label: "Total Raised", value: loadingDetail ? "…" : formatDollar(totalRaised), color: "#F4A261" },
+                { label: "Cash on Hand", value: loadingDetail ? "…" : formatDollar(cashOnHand), color: "#2A9D8F" },
+                { label: "Top Contributions", value: loadingDetail ? "…" : contributions.length > 0 ? `${contributions.length} found` : "—", color: "#457B9D" },
+                { label: "Min. Amount Shown", value: "$500+", color: "#888" },
+              ].map((kpi, i) => (
+                <div key={i} style={{ background: "#111", padding: "12px 16px" }}>
+                  <div style={{ fontFamily: "monospace", fontSize: 9, color: "#444", letterSpacing: 1, marginBottom: 6 }}>{kpi.label.toUpperCase()}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 16, color: kpi.color }}>{kpi.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Contributions list */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 0 16px" }}>
+              <div style={{ padding: "12px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2 }}>
+                ◆ TOP CONTRIBUTORS — LIVE FROM FEC
+              </div>
+
+              {loadingDetail ? (
+                <div style={{ padding: "8px 16px" }}><Spinner /></div>
+              ) : contributions.length === 0 ? (
+                <div style={{ padding: "16px 20px", fontFamily: "monospace", fontSize: 11, color: "#3A3A3A" }}>
+                  No itemized contributions found above threshold. This candidate may have limited FEC filings for this cycle.
+                </div>
+              ) : (
+                <>
+                  {/* Bar chart of top 8 donors */}
+                  {contributions.slice(0, 8).length > 1 && (() => {
+                    const maxAmt = Math.max(...contributions.slice(0, 8).map(c => parseFloat(c.contribution_receipt_amount || 0)));
+                    return (
+                      <div style={{ padding: "0 16px 12px", borderBottom: "1px solid #1E1E1E" }}>
+                        {contributions.slice(0, 8).map((c, i) => {
+                          const amt = parseFloat(c.contribution_receipt_amount || 0);
+                          const pct = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
+                          return (
+                            <div key={i} style={{ marginBottom: 6 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                <span style={{ fontFamily: "monospace", fontSize: 9, color: "#888", maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {c.contributor_name || "Anonymous"}
+                                  {c.contributor_employer ? <span style={{ color: "#555" }}> · {c.contributor_employer.slice(0, 20)}</span> : ""}
+                                </span>
+                                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "#F4A261" }}>{formatDollar(amt)}</span>
+                              </div>
+                              <div style={{ background: "#0D0D0D", height: 3, borderRadius: 1 }}>
+                                <div style={{ background: "#F4A261", height: "100%", width: `${pct}%`, borderRadius: 1, transition: "width 0.5s ease" }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Full table */}
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ background: "#0D0D0D" }}>
+                        {["Contributor", "Employer", "Amount", "Date", "State"].map(h => (
+                          <th key={h} style={{ padding: "8px 16px", textAlign: "left", fontFamily: "monospace", fontSize: 8, color: "#444", letterSpacing: 1, borderBottom: "1px solid #1A1A1A" }}>{h.toUpperCase()}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contributions.map((c, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid #141414", background: i % 2 === 0 ? "transparent" : "#111" }}>
+                          <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 10, color: "#DDD", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.contributor_name || "—"}</td>
+                          <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 10, color: "#666", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.contributor_employer || "—"}</td>
+                          <td style={{ padding: "8px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#F4A261", whiteSpace: "nowrap" }}>{formatDollar(c.contribution_receipt_amount)}</td>
+                          <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#555", whiteSpace: "nowrap" }}>{c.contribution_receipt_date ? new Date(c.contribution_receipt_date).toLocaleDateString() : "—"}</td>
+                          <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#444" }}>{c.contributor_state || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: "8px 16px", borderTop: "1px solid #1E1E1E", background: "#111", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <span style={{ fontFamily: "monospace", fontSize: 8, color: "#2A2A2A" }}>DATA SOURCE: FEC.GOV — LIVE API · NOT A LEGAL CONCLUSION</span>
+              {error && <span style={{ fontFamily: "monospace", fontSize: 8, color: "#E63946" }}>⚠ {error}</span>}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Donor Intelligence Module (Phase 2) ──────────────────────────────────────
+
+function DonorModule() {
+  const [view, setView] = useState("search"); // "search" | "employer" | "industry"
+  const [searchInput, setSearchInput] = useState("");
+  const [employerInput, setEmployerInput] = useState("");
+  const [industryInput, setIndustryInput] = useState("");
+
+  // Committee search state
+  const [committees, setCommittees] = useState([]);
+  const [selectedCommittee, setSelectedCommittee] = useState(null);
+  const [receipts, setReceipts] = useState([]);
+  const [loadingCommittees, setLoadingCommittees] = useState(false);
+  const [loadingReceipts, setLoadingReceipts] = useState(false);
+
+  // Employer donor state
+  const [employerDonors, setEmployerDonors] = useState([]);
+  const [loadingEmployer, setLoadingEmployer] = useState(false);
+
+  // Industry contribution state
+  const [industryContribs, setIndustryContribs] = useState([]);
+  const [loadingIndustry, setLoadingIndustry] = useState(false);
+
+  const [error, setError] = useState(null);
+
+  const handleCommitteeSearch = async () => {
+    if (!searchInput.trim()) return;
+    setLoadingCommittees(true);
+    setSelectedCommittee(null);
+    setReceipts([]);
+    setError(null);
+    try {
+      const res = await searchCommittees(searchInput, 12);
+      setCommittees(res.data || res || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoadingCommittees(false);
+    }
+  };
+
+  const handleSelectCommittee = async (committee) => {
+    setSelectedCommittee(committee);
+    setLoadingReceipts(true);
+    setReceipts([]);
+    try {
+      const res = await getCommitteeReceipts(committee.committee_id || committee.id, 25);
+      setReceipts(res.data || res || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoadingReceipts(false);
+    }
+  };
+
+  const handleEmployerSearch = async () => {
+    if (!employerInput.trim()) return;
+    setLoadingEmployer(true);
+    setError(null);
+    try {
+      const res = await getTopDonorsByEmployer(employerInput, 20);
+      setEmployerDonors(res.data || res || []);
+    } catch (e) {
+      setError(e.message);
+      setEmployerDonors([]);
+    } finally {
+      setLoadingEmployer(false);
+    }
+  };
+
+  const handleIndustrySearch = async () => {
+    if (!industryInput.trim()) return;
+    setLoadingIndustry(true);
+    setError(null);
+    try {
+      const keywords = industryInput.split(",").map(k => k.trim()).filter(Boolean);
+      const res = await getIndustryContributions(keywords, 30);
+      setIndustryContribs(res.data || res || []);
+    } catch (e) {
+      setError(e.message);
+      setIndustryContribs([]);
+    } finally {
+      setLoadingIndustry(false);
+    }
+  };
+
+  const INDUSTRY_PRESETS = ["defense,aerospace", "pharma,healthcare", "finance,banking", "technology,software", "energy,oil,gas", "agriculture,agribusiness"];
+
+  const viewBtn = (id, label) => (
+    <button onClick={() => setView(id)} style={{
+      background: view === id ? "#E6394622" : "#111",
+      border: `1px solid ${view === id ? "#E63946" : "#2A2A2A"}`,
+      borderRadius: 2, padding: "7px 14px",
+      fontFamily: "monospace", fontSize: 10,
+      color: view === id ? "#E63946" : "#555",
+      cursor: "pointer", fontWeight: view === id ? 700 : 400,
+    }}>{label}</button>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* View toggle */}
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {viewBtn("search", "◆ COMMITTEE SEARCH")}
+        {viewBtn("employer", "◎ BY EMPLOYER")}
+        {viewBtn("industry", "▲ BY INDUSTRY")}
+        {error && <span style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 10, color: "#E63946" }}>⚠ {error}</span>}
+      </div>
+
+      {/* ── Committee Search View ── */}
+      {view === "search" && (
+        <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: 16 }}>
+          {/* Left: search + committee list */}
+          <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column", overflow: "hidden", maxHeight: "calc(100vh - 260px)" }}>
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid #2A2A2A" }}>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2, marginBottom: 10 }}>PAC / COMMITTEE LOOKUP</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <input
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleCommitteeSearch()}
+                  placeholder="Search committees, PACs…"
+                  style={{ flex: 1, background: "#111", border: "1px solid #2A2A2A", borderRadius: 2, padding: "7px 10px", fontFamily: "monospace", fontSize: 11, color: "#F0EDE8", outline: "none" }}
+                />
+                <button onClick={handleCommitteeSearch} style={{ background: "#E63946", border: "none", borderRadius: 2, padding: "7px 12px", fontFamily: "monospace", fontSize: 10, color: "#fff", cursor: "pointer", fontWeight: 700 }}>FIND</button>
+              </div>
+              <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                {["defense", "pharma", "tech", "energy", "finance"].map(preset => (
+                  <button key={preset} onClick={() => { setSearchInput(preset); }} style={{ background: "#0D0D0D", border: "1px solid #2A2A2A", borderRadius: 2, padding: "3px 7px", fontFamily: "monospace", fontSize: 8, color: "#555", cursor: "pointer" }}>{preset}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {loadingCommittees ? (
+                <div style={{ padding: 16 }}><Spinner /></div>
+              ) : committees.length === 0 ? (
+                <div style={{ padding: 20, fontFamily: "monospace", fontSize: 11, color: "#333", textAlign: "center" }}>Search for a PAC or committee above</div>
+              ) : (
+                committees.map((c, i) => {
+                  const isSelected = selectedCommittee?.committee_id === c.committee_id;
+                  return (
+                    <div key={i} onClick={() => handleSelectCommittee(c)} style={{
+                      padding: "12px 14px", borderBottom: "1px solid #141414", cursor: "pointer",
+                      background: isSelected ? "#222" : "transparent",
+                      borderLeft: `3px solid ${isSelected ? "#E63946" : "transparent"}`,
+                      transition: "all 0.12s",
+                    }}>
+                      <div style={{ fontFamily: "monospace", fontSize: 11, color: "#F0EDE8", marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</div>
+                      <div style={{ fontFamily: "monospace", fontSize: 9, color: "#555", marginBottom: 2 }}>
+                        {c.committee_type_full || c.designation || "Committee"} · {c.state || "—"}
+                        {c.party_full ? ` · ${c.party_full}` : ""}
+                      </div>
+                      {c.receipts != null && (
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#F4A261" }}>
+                          ↑ {formatDollar(c.receipts)} raised
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <div style={{ padding: "6px 14px", borderTop: "1px solid #1E1E1E", background: "#111", fontFamily: "monospace", fontSize: 8, color: "#2A2A2A" }}>FEC.GOV · LIVE DATA</div>
+          </div>
+
+          {/* Right: receipts */}
+          <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, display: "flex", flexDirection: "column", overflow: "hidden", maxHeight: "calc(100vh - 260px)" }}>
+            {!selectedCommittee ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: "#2A2A2A" }}>
+                <div style={{ fontSize: 32 }}>◆</div>
+                <div style={{ fontFamily: "monospace", fontSize: 12 }}>Select a committee to view its receipts</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ padding: "14px 16px", borderBottom: "1px solid #2A2A2A", background: "#111", flexShrink: 0 }}>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, color: "#F0EDE8", marginBottom: 4 }}>{selectedCommittee.name}</div>
+                  <div style={{ display: "flex", gap: 16 }}>
+                    <span style={{ fontFamily: "monospace", fontSize: 9, color: "#555" }}>ID: {selectedCommittee.committee_id}</span>
+                    <span style={{ fontFamily: "monospace", fontSize: 9, color: "#555" }}>TYPE: {selectedCommittee.committee_type_full || "—"}</span>
+                    {selectedCommittee.receipts != null && (
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "#F4A261" }}>RAISED: {formatDollar(selectedCommittee.receipts)}</span>
+                    )}
+                    {selectedCommittee.disbursements != null && (
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: "#E63946" }}>SPENT: {formatDollar(selectedCommittee.disbursements)}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ padding: "10px 16px 4px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2, flexShrink: 0 }}>
+                  ◆ CONTRIBUTION RECEIPTS
+                </div>
+
+                <div style={{ flex: 1, overflowY: "auto" }}>
+                  {loadingReceipts ? (
+                    <div style={{ padding: 16 }}><Spinner /></div>
+                  ) : receipts.length === 0 ? (
+                    <div style={{ padding: "20px 16px", fontFamily: "monospace", fontSize: 11, color: "#333" }}>No receipts found for this committee.</div>
+                  ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ background: "#0D0D0D" }}>
+                          {["Contributor", "Employer", "Amount", "Date", "State", "Type"].map(h => (
+                            <th key={h} style={{ padding: "8px 14px", textAlign: "left", fontFamily: "monospace", fontSize: 8, color: "#444", letterSpacing: 1, borderBottom: "1px solid #1A1A1A" }}>{h.toUpperCase()}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {receipts.map((r, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #141414", background: i % 2 === 0 ? "transparent" : "#111" }}>
+                            <td style={{ padding: "7px 14px", fontFamily: "monospace", fontSize: 10, color: "#DDD", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.contributor_name || r.entity_type_desc || "—"}</td>
+                            <td style={{ padding: "7px 14px", fontFamily: "monospace", fontSize: 9, color: "#666", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.contributor_employer || "—"}</td>
+                            <td style={{ padding: "7px 14px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#F4A261", whiteSpace: "nowrap" }}>{formatDollar(r.contribution_receipt_amount)}</td>
+                            <td style={{ padding: "7px 14px", fontFamily: "monospace", fontSize: 9, color: "#555", whiteSpace: "nowrap" }}>{r.contribution_receipt_date ? new Date(r.contribution_receipt_date).toLocaleDateString() : "—"}</td>
+                            <td style={{ padding: "7px 14px", fontFamily: "monospace", fontSize: 9, color: "#444" }}>{r.contributor_state || "—"}</td>
+                            <td style={{ padding: "7px 14px", fontFamily: "monospace", fontSize: 8, color: "#3A3A3A" }}>{r.receipt_type_full || r.line_number_label || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                <div style={{ padding: "6px 16px", borderTop: "1px solid #1E1E1E", background: "#111", fontFamily: "monospace", fontSize: 8, color: "#2A2A2A", flexShrink: 0 }}>
+                  FEC SCHEDULE A RECEIPTS · LIVE DATA · NOT A LEGAL CONCLUSION
+                </div>
+              </>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* ── By Employer View ── */}
+      {view === "employer" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={employerInput}
+              onChange={e => setEmployerInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleEmployerSearch()}
+              placeholder="Enter employer name (e.g. Goldman Sachs, Boeing, Google)…"
+              style={{ flex: 1, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 2, padding: "10px 14px", fontFamily: "monospace", fontSize: 12, color: "#F0EDE8", outline: "none" }}
+            />
+            <button onClick={handleEmployerSearch} style={{ background: "#E63946", border: "none", borderRadius: 2, padding: "10px 20px", fontFamily: "monospace", fontSize: 12, color: "#fff", cursor: "pointer", fontWeight: 700 }}>SEARCH</button>
+          </div>
+
+          {/* Preset employers */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {["Boeing", "Goldman Sachs", "Raytheon", "Google", "ExxonMobil", "JPMorgan", "Pfizer", "Lockheed"].map(emp => (
+              <button key={emp} onClick={() => { setEmployerInput(emp); }} style={{ background: "#111", border: "1px solid #2A2A2A", borderRadius: 2, padding: "5px 10px", fontFamily: "monospace", fontSize: 10, color: "#666", cursor: "pointer" }}>{emp}</button>
+            ))}
+          </div>
+
+          {loadingEmployer ? (
+            <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 20 }}><Spinner /></div>
+          ) : employerDonors.length > 0 ? (
+            <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #2A2A2A", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2 }}>
+                ◎ DONORS FROM "{employerInput.toUpperCase()}" — {employerDonors.length} FOUND
+              </div>
+              {/* Top donor bar chart */}
+              {employerDonors.slice(0, 8).length > 0 && (() => {
+                const maxAmt = Math.max(...employerDonors.slice(0, 8).map(d => parseFloat(d.contribution_receipt_amount || d.total || 0)));
+                return (
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #1E1E1E" }}>
+                    {employerDonors.slice(0, 8).map((d, i) => {
+                      const amt = parseFloat(d.contribution_receipt_amount || d.total || 0);
+                      const pct = maxAmt > 0 ? (amt / maxAmt) * 100 : 0;
+                      return (
+                        <div key={i} style={{ marginBottom: 8 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                            <span style={{ fontFamily: "monospace", fontSize: 10, color: "#CCC" }}>
+                              {d.contributor_name || d.name || "Unknown"}
+                              {d.contributor_occupation ? <span style={{ color: "#555", fontSize: 9 }}> · {d.contributor_occupation.slice(0, 25)}</span> : ""}
+                            </span>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#F4A261" }}>{formatDollar(amt)}</span>
+                          </div>
+                          <div style={{ background: "#0D0D0D", height: 4, borderRadius: 1 }}>
+                            <div style={{ background: "#F4A261", height: "100%", width: `${pct}%`, borderRadius: 1, transition: "width 0.5s" }} />
+                          </div>
+                          {(d.candidate?.name || d.committee?.name) && (
+                            <div style={{ fontFamily: "monospace", fontSize: 8, color: "#3A3A3A", marginTop: 2 }}>
+                              → {d.candidate?.name || d.committee?.name}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#0D0D0D" }}>
+                    {["Donor Name", "Occupation", "Amount", "Recipient", "Date"].map(h => (
+                      <th key={h} style={{ padding: "8px 16px", textAlign: "left", fontFamily: "monospace", fontSize: 8, color: "#444", letterSpacing: 1, borderBottom: "1px solid #1A1A1A" }}>{h.toUpperCase()}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {employerDonors.map((d, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #141414", background: i % 2 === 0 ? "transparent" : "#111" }}>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 10, color: "#DDD", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.contributor_name || "—"}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#666", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.contributor_occupation || "—"}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#F4A261", whiteSpace: "nowrap" }}>{formatDollar(d.contribution_receipt_amount)}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#888", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.candidate?.name || d.committee?.name || "—"}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#555", whiteSpace: "nowrap" }}>{d.contribution_receipt_date ? new Date(d.contribution_receipt_date).toLocaleDateString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : employerInput && !loadingEmployer ? (
+            <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 20, fontFamily: "monospace", fontSize: 11, color: "#444" }}>No donors found for "{employerInput}"</div>
+          ) : null}
+        </div>
+      )}
+
+      {/* ── By Industry View ── */}
+      {view === "industry" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={industryInput}
+              onChange={e => setIndustryInput(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleIndustrySearch()}
+              placeholder="Enter industry keywords separated by commas (e.g. defense, aerospace)…"
+              style={{ flex: 1, background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 2, padding: "10px 14px", fontFamily: "monospace", fontSize: 12, color: "#F0EDE8", outline: "none" }}
+            />
+            <button onClick={handleIndustrySearch} style={{ background: "#E63946", border: "none", borderRadius: 2, padding: "10px 20px", fontFamily: "monospace", fontSize: 12, color: "#fff", cursor: "pointer", fontWeight: 700 }}>SEARCH</button>
+          </div>
+
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {INDUSTRY_PRESETS.map(preset => (
+              <button key={preset} onClick={() => { setIndustryInput(preset); }} style={{ background: "#111", border: "1px solid #2A2A2A", borderRadius: 2, padding: "5px 10px", fontFamily: "monospace", fontSize: 10, color: "#666", cursor: "pointer" }}>{preset}</button>
+            ))}
+          </div>
+
+          {loadingIndustry ? (
+            <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 20 }}><Spinner /></div>
+          ) : industryContribs.length > 0 ? (
+            <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid #2A2A2A", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", letterSpacing: 2 }}>
+                ▲ INDUSTRY CONTRIBUTIONS — "{industryInput.toUpperCase()}" — {industryContribs.length} RESULTS
+              </div>
+              {/* Aggregate totals by recipient */}
+              {(() => {
+                const byRecipient = {};
+                industryContribs.forEach(c => {
+                  const key = c.committee?.name || c.candidate?.name || "Unknown";
+                  byRecipient[key] = (byRecipient[key] || 0) + parseFloat(c.contribution_receipt_amount || 0);
+                });
+                const sorted = Object.entries(byRecipient).sort((a, b) => b[1] - a[1]).slice(0, 10);
+                const max = sorted[0]?.[1] || 1;
+                return sorted.length > 1 ? (
+                  <div style={{ padding: "12px 16px 4px", borderBottom: "1px solid #1E1E1E" }}>
+                    <div style={{ fontFamily: "monospace", fontSize: 9, color: "#555", letterSpacing: 1, marginBottom: 10 }}>TOP RECIPIENTS BY TOTAL INDUSTRY CONTRIBUTIONS</div>
+                    {sorted.map(([name, total], i) => (
+                      <div key={i} style={{ marginBottom: 7 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span style={{ fontFamily: "monospace", fontSize: 10, color: "#CCC", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{name}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946" }}>{formatDollar(total)}</span>
+                        </div>
+                        <div style={{ background: "#0D0D0D", height: 4, borderRadius: 1 }}>
+                          <div style={{ background: "#E63946", height: "100%", width: `${(total / max) * 100}%`, borderRadius: 1, transition: "width 0.5s" }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null;
+              })()}
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#0D0D0D" }}>
+                    {["Contributor", "Employer", "Amount", "Recipient", "Date"].map(h => (
+                      <th key={h} style={{ padding: "8px 16px", textAlign: "left", fontFamily: "monospace", fontSize: 8, color: "#444", letterSpacing: 1, borderBottom: "1px solid #1A1A1A" }}>{h.toUpperCase()}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {industryContribs.map((c, i) => (
+                    <tr key={i} style={{ borderBottom: "1px solid #141414", background: i % 2 === 0 ? "transparent" : "#111" }}>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 10, color: "#DDD", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.contributor_name || "—"}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#666", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.contributor_employer || "—"}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#E63946", whiteSpace: "nowrap" }}>{formatDollar(c.contribution_receipt_amount)}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#888", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.committee?.name || c.candidate?.name || "—"}</td>
+                      <td style={{ padding: "8px 16px", fontFamily: "monospace", fontSize: 9, color: "#555", whiteSpace: "nowrap" }}>{c.contribution_receipt_date ? new Date(c.contribution_receipt_date).toLocaleDateString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : industryInput && !loadingIndustry ? (
+            <div style={{ background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 4, padding: 20, fontFamily: "monospace", fontSize: 11, color: "#444" }}>No contributions found for "{industryInput}"</div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Disclaimer */}
+      <div style={{ fontFamily: "monospace", fontSize: 9, color: "#2A2A2A" }}>
+        DATA SOURCE: FEC.GOV OPEN API · LIVE · ALL AMOUNTS FROM OFFICIAL FILINGS · NOT A LEGAL CONCLUSION
       </div>
     </div>
   );
@@ -1013,6 +1631,7 @@ export default function App() {
   const renderContent = () => {
     if (active === "dashboard") return <Dashboard />;
     if (active === "politicians") return <PoliticianModule />;
+    if (active === "donors") return <DonorModule />;
     if (active === "agent") return <AgentModule />;
     if (active === "graph") return <GraphModule />;
     if (active === "spending") return <SpendingModule />;
@@ -1075,6 +1694,7 @@ export default function App() {
                active === "politicians" ? "Politician Donor Intelligence" :
                active === "graph" ? "Entity Relationship Graph" :
                active === "spending" ? "Federal Spending Audit" :
+               active === "donors" ? "Donor Intelligence" :
                MODULES.find(m => m.id === active)?.label}
             </h1>
             <div style={{ marginLeft: "auto", fontFamily: "monospace", fontSize: 10, color: "#333" }}>
