@@ -8,6 +8,7 @@ import spendingRouter from './routes/spending.js'
 import policyRouter from './routes/policy.js'
 import donorsRouter from './routes/donors.js'
 import agentRouter from './routes/agent.js'
+import aiAgentRouter from './routes/ai_agent.js'
 import feedRouter from './routes/feed.js'
 
 const app = express()
@@ -47,6 +48,7 @@ app.use('/api/spending', generalLimiter, spendingRouter)
 app.use('/api/policy', generalLimiter, policyRouter)
 app.use('/api/donors', generalLimiter, donorsRouter)
 app.use('/api/agent', agentLimiter, agentRouter)
+app.use('/api/ai-agent', agentLimiter, aiAgentRouter)  // New AI agent service
 app.use('/api/feed', generalLimiter, feedRouter)
 
 // Global error handler
