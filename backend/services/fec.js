@@ -17,16 +17,26 @@ export async function getCommitteeReceipts(committeeId, limit = 20) {
   return res.data.results
 }
 
-export async function searchCandidates({ name, office, state, limit = 10 }) {
+// Get current election cycle (most recent even year)
+function getCurrentElectionYear() {
+  const year = new Date().getFullYear()
+  // Presidential/congressional elections are on even years
+  // If current year is odd, use the previous even year
+  return year % 2 === 0 ? year : year - 1
+}
+
+export async function searchCandidates({ name, office, state, limit = 10, electionYear }) {
+  const year = electionYear || getCurrentElectionYear()
   const res = await axios.get(`${BASE}/candidates/search/`, {
-    params: { q: name, office, state, api_key: KEY, per_page: limit, election_year: 2024 },
+    params: { q: name, office, state, api_key: KEY, per_page: limit, election_year: year },
   })
   return res.data.results
 }
 
-export async function getCandidateRaisedTotals(candidateId) {
+export async function getCandidateRaisedTotals(candidateId, electionYear) {
+  const year = electionYear || getCurrentElectionYear()
   const res = await axios.get(`${BASE}/candidate/${candidateId}/totals/`, {
-    params: { api_key: KEY, election_year: 2024 },
+    params: { api_key: KEY, election_year: year },
   })
   return res.data.results?.[0]
 }
