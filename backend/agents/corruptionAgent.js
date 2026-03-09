@@ -1,11 +1,4 @@
-import Groq from 'groq-sdk'
-
-// Lazy init — dotenv hasn't loaded yet at import time in ESM
-let _groq
-function getGroq() {
-  if (!_groq) _groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-  return _groq
-}
+import { createChatCompletion, safeJsonParse } from '../services/aiService.js'
 
 export async function runCorruptionAgent({ plan, policyResults, spendingResults, donorResults, originalQuery }) {
   // Build context from all three data sources, budget chars across them
@@ -15,14 +8,14 @@ export async function runCorruptionAgent({ plan, policyResults, spendingResults,
 
   const context = `POLICY DATA (Federal Register):\n${policyCtx}\n\nSPENDING DATA (USASpending.gov):\n${spendingCtx}\n\nCAMPAIGN FINANCE DATA (FEC):\n${donorCtx}`
 
-  const response = await getGroq().chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+  const response = await createChatCompletion({
+    model: process.env.AI_PROVIDER === 'groq' ? 'llama-3.3-70b-versatile' : 'deepseek-chat',
     response_format: { type: 'json_object' },
     max_tokens: 1500,
     messages: [
       {
         role: 'system',
-        content: `You are the Corruption Analysis Agent for R•CEIPTS.
+        content: `You are the Corruption Analysis Agent for UNREDACTED.
 You have access to three data sources: federal policy rules, government spending/contracts, and FEC campaign finance.
 Analyze ALL provided data for corruption patterns.
 
@@ -60,5 +53,12 @@ Respond ONLY with valid JSON:
     ],
   })
 
-  return JSON.parse(response.choices[0].message.content)
+  return safeJsonParse(response.choices[0].message.content) || {
+    summary: 'Analysis failed',
+    findings: [],
+    inference: 'Error parsing AI response',
+    riskLevel: 'LOW',
+    sources: [],
+    flags: ['Error processing response'],
+  }
 }

@@ -7,7 +7,16 @@ router.get('/contracts', async (req, res) => {
   try {
     const { keyword, agency, limit } = req.query
     const data = await searchContracts({ keyword, agency, limit: parseInt(limit) || 10 })
-    res.json({ success: true, data })
+    
+    // Determine the fiscal year from the first contract (if any)
+    const fiscalYear = data.length > 0 && data[0].fiscalYear ? data[0].fiscalYear : null
+    
+    res.json({ 
+      success: true, 
+      data,
+      fiscalYear,
+      count: data.length
+    })
   } catch (e) {
     console.error('spending/contracts error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch contract data' })
@@ -28,7 +37,8 @@ router.get('/grants', async (req, res) => {
 router.get('/agency', async (req, res) => {
   try {
     const { year } = req.query
-    const data = await getAgencySpending(parseInt(year) || 2024)
+    // If no year provided, service will use current fiscal year
+    const data = await getAgencySpending(year ? parseInt(year) : null)
     res.json({ success: true, data })
   } catch (e) {
     console.error('spending/agency error:', e.message)
