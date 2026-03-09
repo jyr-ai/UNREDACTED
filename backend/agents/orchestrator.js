@@ -1,26 +1,19 @@
-import Groq from 'groq-sdk'
+import { createChatCompletion, safeJsonParse } from '../services/aiService.js'
 import { runPolicyAgent } from './policyAgent.js'
 import { runSpendingAgent } from './spendingAgent.js'
 import { runCorruptionAgent } from './corruptionAgent.js'
 import { runDonorAgent } from './donorAgent.js'
 
-// Lazy init — dotenv hasn't loaded yet at import time in ESM
-let _groq
-function getGroq() {
-  if (!_groq) _groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-  return _groq
-}
-
 export async function orchestrate(userQuery) {
-  // Step 1: Decompose the query
-  const decomposition = await getGroq().chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+  // Step 1: Decompose the query using DeepSeek (default)
+  const decomposition = await createChatCompletion({
+    model: process.env.AI_PROVIDER === 'groq' ? 'llama-3.3-70b-versatile' : 'deepseek-chat',
     response_format: { type: 'json_object' },
     max_tokens: 500,
     messages: [
       {
         role: 'system',
-        content: `You are the orchestrator for R•CEIPTS, a corruption intelligence platform.
+        content: `You are the orchestrator for UNREDACTED, a corruption intelligence platform.
 Given a user query, decompose it into tasks for sub-agents.
 Respond ONLY with valid JSON:
 {
@@ -36,7 +29,16 @@ Respond ONLY with valid JSON:
       { role: 'user', content: userQuery },
     ],
   })
-  const plan = JSON.parse(decomposition.choices[0].message.content)
+
+  const plan = safeJsonParse(decomposition.choices[0].message.content) || {
+    intent: 'Unknown query',
+    policyTask: null,
+    spendingTask: null,
+    donorTask: null,
+    corruptionFocus: null,
+    entities: [],
+    keywords: [],
+  }
 
   // Step 2: Run all sub-agents in parallel
   const [policyResults, spendingResults, donorResults] = await Promise.all([

@@ -237,6 +237,7 @@ function Dashboard() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [fiscalYear, setFiscalYear] = useState(null);
 
   // RSS feed state
   const [feedItems, setFeedItems] = useState(FEED_ITEMS);
@@ -249,8 +250,12 @@ function Dashboard() {
   useEffect(() => {
     fetchContracts({ limit: 50 })
       .then(res => {
-        if (res.success) setContracts(res.data || []);
-        else setError("Failed to load contract data");
+        if (res.success) {
+          setContracts(res.data || []);
+          setFiscalYear(res.fiscalYear);
+        } else {
+          setError("Failed to load contract data");
+        }
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -289,7 +294,7 @@ function Dashboard() {
 
   const dynamicKPIs = [
     {
-      label: "FY2024 Contracts Loaded",
+      label: fiscalYear ? `FY${fiscalYear} Contracts Loaded` : "Contracts Loaded",
       value: loading ? "…" : error ? "ERR" : contracts.length.toLocaleString(),
       change: loading ? "fetching…" : error ? "API error" : `+${flagged} >$500M`,
       up: true,
@@ -300,7 +305,7 @@ function Dashboard() {
       value: loading ? "…" : error ? "ERR" : formatDollar(totalSpend),
       change: loading ? "calculating…" : `across ${contracts.length} awards`,
       up: true,
-      sub: loading ? "" : "FY2024 · top 50 by amount",
+      sub: loading ? "" : fiscalYear ? `FY${fiscalYear} · top 50 by amount` : "top 50 by amount",
     },
     ...STATIC_KPIS,
   ];

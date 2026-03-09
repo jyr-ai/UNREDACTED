@@ -1,0 +1,198 @@
+"""PostgreSQL connection and utilities."""
+import os
+import psycopg2
+from psycopg2.extras import execute_values, RealDictCursor
+from typing import Optional, List, Dict, Any
+from contextlib import contextmanager
+import logging
+
+logger = logging.getLogger(__name__)
+
+POSTGRES_URI = os.getenv("POSTGRES_URI", "postgresql://postgres:password@localhost:5432/unredacted")
+
+
+class PostgresConnection:
+    """PostgreSQL connection manager."""
+
+    _instance = None
+    _pool = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def get_connection(self):
+        """Get a database connection."""
+        return psycopg2.connect(POSTGRES_URI)
+
+    @contextmanager
+    def cursor(self, cursor_factory=None):
+        """Context manager for database cursor."""
+        conn = self.get_connection()
+        cur = conn.cursor(cursor_factory=cursor_factory)
+        try:
+            yield cur
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()
+
+    def execute(self, query: str, params: Optional[tuple] = None) -> None:
+        """Execute a query."""
+        with self.cursor() as cur:
+            cur.execute(query, params)
+
+    def fetchone(self, query: str, params: Optional[tuple] = None) -> Optional[Dict]:
+        """Fetch a single row."""
+        with self.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, params)
+            return cur.fetchone()
+
+    def fetchall(self, query: str, params: Optional[tuple] = None) -> List[Dict]:
+        """Fetch all rows."""
+        with self.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, params)
+            return cur.fetchall()
+
+    def insert_many(self, table: str, columns: List[str], values: List[tuple]) -> int:
+        """Bulk insert rows. Returns count inserted."""
+        if not values:
+            return 0
+
+        query = f"INSERT INTO {table} ({', '.join(columns)}) VALUES %s ON CONFLICT DO NOTHING"
+        with self.cursor() as cur:
+            execute_values(cur, query, values, page_size=1000)
+            return len(values)
+
+
+def init_tables():
+    """Initialize PostgreSQL tables."""
+    conn = PostgresConnection()
+
+    # Contracts table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS contracts (
+            id SERIAL PRIMARY KEY,
+            award_id VARCHAR(255) UNIQUE NOT NULL,
+            recipient_name VARCHAR(500),
+            recipient_uei VARCHAR(50),
+            awarding_agency VARCHAR(255),
+            awarding_sub_agency VARCHAR(255),
+            award_amount DECIMAL(15, 2),
+            award_date DATE,
+            period_of_performance_start DATE,
+            period_of_performance_end DATE,
+            description TEXT,
+            naics_code VARCHAR(10),
+            naics_description VARCHAR(255),
+            contract_award_type VARCHAR(50),
+            funding_agency VARCHAR(255),
+            place_of_performance_state VARCHAR(10),
+            place_of_performance_country VARCHAR(100),
+            recipient_country_code VARCHAR(10),
+            recipient_state_code VARCHAR(10),
+            recipient_zip VARCHAR(20),
+            base_and_all_options_value DECIMAL(15, 2),
+            current_total_value DECIMAL(15, 2),
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # Grants table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS grants (
+            id SERIAL PRIMARY KEY,
+            award_id VARCHAR(255) UNIQUE NOT NULL,
+            recipient_name VARCHAR(500),
+            recipient_uei VARCHAR(50),
+            awarding_agency VARCHAR(255),
+            award_amount DECIMAL(15, 2),
+            award_date DATE,
+            description TEXT,
+            cfda_number VARCHAR(20),
+            cfda_title VARCHAR(255),
+            award_type VARCHAR(50),
+            funding_opportunity_number VARCHAR(100),
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # Regulations table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS regulations (
+            id SERIAL PRIMARY KEY,
+            document_number VARCHAR(100) UNIQUE NOT NULL,
+            title TEXT,
+            agency_names TEXT[],
+            publication_date DATE,
+            type VARCHAR(50),
+            abstract TEXT,
+            html_url TEXT,
+            pdf_url TEXT,
+            significant BOOLEAN DEFAULT FALSE,
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # ETL Jobs log
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS etl_jobs (
+            id SERIAL PRIMARY KEY,
+            source_name VARCHAR(100) NOT NULL,
+            job_type VARCHAR(50) NOT NULL,
+            status VARCHAR(50) NOT NULL,
+            records_processed INTEGER DEFAULT 0,
+            records_inserted INTEGER DEFAULT 0,
+            records_updated INTEGER DEFAULT 0,
+            records_failed INTEGER DEFAULT 0,
+            duration_seconds DECIMAL(10, 2),
+            error_message TEXT,
+            metadata JSONB,
+            started_at TIMESTAMP DEFAULT NOW(),
+            completed_at TIMESTAMP
+        );
+    """)
+
+    # API request logs
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS api_logs (
+            id SERIAL PRIMARY KEY,
+            endpoint VARCHAR(255),
+            method VARCHAR(10),
+            status_code INTEGER,
+            response_time_ms INTEGER,
+            user_agent TEXT,
+            ip_address INET,
+            query_params JSONB,
+            timestamp TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # Full text search indexes
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contracts_search
+        ON contracts USING gin(to_tsvector('english', COALESCE(description, '') || ' ' || COALESCE(recipient_name, '')));
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_grants_search
+        ON grants USING gin(to_tsvector('english', COALESCE(description, '') || ' ' || COALESCE(recipient_name, '')));
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_regulations_search
+        ON regulations USING gin(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(abstract, '')));
+    """)
+
+    logger.info("PostgreSQL tables initialized")
+    return conn
