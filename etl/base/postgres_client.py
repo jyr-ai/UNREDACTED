@@ -194,5 +194,190 @@ def init_tables():
         ON regulations USING gin(to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(abstract, '')));
     """)
 
+    # ========== PHASE 2: DONOR INTELLIGENCE TABLES ==========
+
+    # Politicians table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS politicians (
+            id SERIAL PRIMARY KEY,
+            bioguide_id VARCHAR(20) UNIQUE,
+            fec_candidate_id VARCHAR(20) UNIQUE,
+            name VARCHAR(255) NOT NULL,
+            party VARCHAR(10),
+            state VARCHAR(2),
+            district VARCHAR(10),
+            chamber VARCHAR(20),
+            office VARCHAR(100),
+            in_office BOOLEAN DEFAULT TRUE,
+            first_elected INTEGER,
+            next_election INTEGER,
+            committees JSONB,
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # Contributions table (FEC Schedule A)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS contributions (
+            id SERIAL PRIMARY KEY,
+            contribution_id VARCHAR(255) UNIQUE NOT NULL,
+            contributor_name VARCHAR(500),
+            contributor_employer VARCHAR(500),
+            contributor_occupation VARCHAR(255),
+            contributor_city VARCHAR(100),
+            contributor_state VARCHAR(2),
+            contributor_zip VARCHAR(10),
+            amount DECIMAL(12, 2),
+            date DATE,
+            committee_id VARCHAR(20),
+            candidate_id VARCHAR(20),
+            receipt_type VARCHAR(50),
+            memo_text TEXT,
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # PAC Committees table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS pac_committees (
+            id SERIAL PRIMARY KEY,
+            committee_id VARCHAR(20) UNIQUE NOT NULL,
+            name VARCHAR(500),
+            committee_type VARCHAR(100),
+            designation VARCHAR(50),
+            party VARCHAR(10),
+            connected_org_name VARCHAR(500),
+            total_receipts DECIMAL(15, 2),
+            total_disbursements DECIMAL(15, 2),
+            cash_on_hand DECIMAL(15, 2),
+            cycle INTEGER,
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # Disbursements table (FEC Schedule B)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS disbursements (
+            id SERIAL PRIMARY KEY,
+            disbursement_id VARCHAR(255) UNIQUE NOT NULL,
+            committee_id VARCHAR(20),
+            recipient_name VARCHAR(500),
+            recipient_state VARCHAR(2),
+            amount DECIMAL(12, 2),
+            date DATE,
+            purpose VARCHAR(500),
+            category VARCHAR(100),
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW()
+        );
+    """)
+
+    # Candidate totals table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS candidate_totals (
+            id SERIAL PRIMARY KEY,
+            candidate_id VARCHAR(20) NOT NULL,
+            cycle INTEGER NOT NULL,
+            total_receipts DECIMAL(15, 2),
+            total_disbursements DECIMAL(15, 2),
+            cash_on_hand DECIMAL(15, 2),
+            individual_contributions DECIMAL(15, 2),
+            pac_contributions DECIMAL(15, 2),
+            other_committees DECIMAL(15, 2),
+            candidate_loans DECIMAL(15, 2),
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(candidate_id, cycle)
+        );
+    """)
+
+    # OpenSecrets summaries table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS opensecrets_summaries (
+            id SERIAL PRIMARY KEY,
+            cid VARCHAR(20) UNIQUE NOT NULL,
+            cycle INTEGER NOT NULL,
+            top_industries JSONB,
+            top_contributors JSONB,
+            total_raised DECIMAL(15, 2),
+            spent DECIMAL(15, 2),
+            cash_on_hand DECIMAL(15, 2),
+            raw_data JSONB,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(cid, cycle)
+        );
+    """)
+
+    # ========== PHASE 2 INDEXES ==========
+
+    # Politician indexes
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_politicians_state_party
+        ON politicians(state, party);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_politicians_chamber
+        ON politicians(chamber);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_politicians_name
+        ON politicians(name);
+    """)
+
+    # Contribution indexes
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contributions_committee
+        ON contributions(committee_id);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contributions_candidate
+        ON contributions(candidate_id);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contributions_date
+        ON contributions(date);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contributions_employer
+        ON contributions(contributor_employer);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_contributions_search
+        ON contributions USING gin(to_tsvector('english',
+            COALESCE(contributor_name, '') || ' ' ||
+            COALESCE(contributor_employer, '') || ' ' ||
+            COALESCE(contributor_occupation, '')));
+    """)
+
+    # PAC Committee indexes
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pac_committees_type
+        ON pac_committees(committee_type);
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pac_committees_party
+        ON pac_committees(party);
+    """)
+
+    # Candidate totals indexes
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_candidate_totals_cycle
+        ON candidate_totals(cycle);
+    """)
+
     logger.info("PostgreSQL tables initialized")
     return conn
