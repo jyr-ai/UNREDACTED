@@ -67,15 +67,12 @@ SCHEMA_CONSTRAINTS = [
     # Entity constraints
     "CREATE CONSTRAINT company_uei IF NOT EXISTS FOR (c:Company) REQUIRE c.uei IS UNIQUE",
     "CREATE CONSTRAINT company_name IF NOT EXISTS FOR (c:Company) REQUIRE c.name IS UNIQUE",
-    "CREATE CONSTRAINT politician_bioguide IF NOT EXISTS FOR (p:Politician) REQUIRE p.bioguide_id IS UNIQUE",
-    "CREATE CONSTRAINT politician_fec_id IF NOT EXISTS FOR (p:Politician) REQUIRE p.fec_candidate_id IS UNIQUE",
+    "CREATE CONSTRAINT politician_id IF NOT EXISTS FOR (p:Politician) REQUIRE p.bioguide_id IS UNIQUE",
     "CREATE CONSTRAINT agency_code IF NOT EXISTS FOR (a:Agency) REQUIRE a.code IS UNIQUE",
     "CREATE CONSTRAINT contract_id IF NOT EXISTS FOR (c:Contract) REQUIRE c.award_id IS UNIQUE",
     "CREATE CONSTRAINT regulation_id IF NOT EXISTS FOR (r:Regulation) REQUIRE r.document_number IS UNIQUE",
-    "CREATE CONSTRAINT pac_committee_id IF NOT EXISTS FOR (p:PAC) REQUIRE p.committee_id IS UNIQUE",
+    "CREATE CONSTRAINT pac_id IF NOT EXISTS FOR (p:PAC) REQUIRE p.committee_id IS UNIQUE",
     "CREATE CONSTRAINT contribution_id IF NOT EXISTS FOR (c:Contribution) REQUIRE c.contribution_id IS UNIQUE",
-    "CREATE CONSTRAINT campaign_id IF NOT EXISTS FOR (c:Campaign) REQUIRE c.committee_id IS UNIQUE",
-    "CREATE CONSTRAINT committee_name IF NOT EXISTS FOR (c:Committee) REQUIRE c.name IS UNIQUE",
 ]
 
 SCHEMA_INDEXES = [
@@ -87,11 +84,6 @@ SCHEMA_INDEXES = [
     "CREATE INDEX company_normalized IF NOT EXISTS FOR (c:Company) ON (c.normalized_name)",
     "CREATE INDEX politician_state IF NOT EXISTS FOR (p:Politician) ON (p.state)",
     "CREATE INDEX politician_party IF NOT EXISTS FOR (p:Politician) ON (p.party)",
-    # Phase 2 indexes
-    "CREATE INDEX politician_name IF NOT EXISTS FOR (p:Politician) ON (p.name)",
-    "CREATE INDEX pac_name IF NOT EXISTS FOR (p:PAC) ON (p.name)",
-    "CREATE INDEX campaign_cycle IF NOT EXISTS FOR (c:Campaign) ON (c.cycle)",
-    "CREATE INDEX contribution_amount IF NOT EXISTS FOR (c:Contribution) ON (c.amount)",
 ]
 
 
