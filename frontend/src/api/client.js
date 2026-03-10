@@ -56,6 +56,19 @@ export async function fetchSpendingNews(limit = 12) {
   return res.json()
 }
 
+export async function fetchAgencySpending(year = null) {
+  const qs = year ? `?year=${year}` : ''
+  const res = await fetchWithTimeout(`${BASE}/api/spending/agency${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSignificantRules(limit = 20) {
+  const res = await fetchWithTimeout(`${BASE}/api/policy/significant?limit=${limit}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
 // ========== PHASE 2: DONOR INTELLIGENCE FUNCTIONS ==========
 
 export async function searchCommittees(keyword, limit = 10) {
