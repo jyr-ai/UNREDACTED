@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
+import Settings from "./components/Settings.jsx";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1467,6 +1468,7 @@ export default function App() {
     if (tab==="donorweb")  return <DonorWeb/>;
     if (tab==="spending")  return <SpendingAudit/>;
     if (tab==="corporate") return <Corporate/>;
+    if (tab==="settings")  return <Settings theme={theme}/>;
   };
 
   return (
@@ -1554,6 +1556,24 @@ export default function App() {
             >
               <span style={{ fontSize:12 }}>◈</span>
               ANALYST {analyst ? "▾" : "▸"}
+            </button>
+
+            {/* SETTINGS BUTTON — far right */}
+            <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
+            <button
+              onClick={() => setTab(t => t==="settings" ? "overview" : "settings")}
+              style={{
+                display:"flex", alignItems:"center", gap:6,
+                background:"transparent", border:"none",
+                borderBottom:`3px solid ${tab==="settings" ? ORANGE : "transparent"}`,
+                padding:"12px 10px",
+                fontFamily:MF, fontSize:10.5, letterSpacing:0.5,
+                color: tab==="settings" ? ORANGE : theme.mid,
+                transition:"color .14s, border-color .14s",
+                whiteSpace:"nowrap",
+              }}
+            >
+              ⚙ Settings
             </button>
           </div>
         </div>

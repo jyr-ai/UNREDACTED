@@ -154,6 +154,40 @@ export async function getPACSpending(committeeId, limit = 20) {
   return res.json()
 }
 
+// ─── Settings API ─────────────────────────────────────────────────────────────
+
+export async function fetchSettings() {
+  const res = await fetchWithTimeout(`${BASE}/api/settings`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function saveSettings(settings) {
+  const res = await fetchWithTimeout(`${BASE}/api/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function testAIConnection() {
+  const res = await fetchWithTimeout(`${BASE}/api/settings/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
 // Helper function to format currency
 export function formatCurrency(amount) {
   return new Intl.NumberFormat('en-US', {
