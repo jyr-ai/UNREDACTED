@@ -56,6 +56,19 @@ export async function fetchSpendingNews(limit = 12) {
   return res.json()
 }
 
+export async function fetchAgencySpending(year = null) {
+  const qs = year ? `?year=${year}` : ''
+  const res = await fetchWithTimeout(`${BASE}/api/spending/agency${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchSignificantRules(limit = 20) {
+  const res = await fetchWithTimeout(`${BASE}/api/policy/significant?limit=${limit}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
 // ========== PHASE 2: DONOR INTELLIGENCE FUNCTIONS ==========
 
 export async function searchCommittees(keyword, limit = 10) {
@@ -138,6 +151,40 @@ export async function getPACSpending(committeeId, limit = 20) {
   const qs = new URLSearchParams({ limit }).toString()
   const res = await fetchWithTimeout(`${BASE}/api/donors/committees/${committeeId}/spending?${qs}`)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+// ─── Settings API ─────────────────────────────────────────────────────────────
+
+export async function fetchSettings() {
+  const res = await fetchWithTimeout(`${BASE}/api/settings`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function saveSettings(settings) {
+  const res = await fetchWithTimeout(`${BASE}/api/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `API error: ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function testAIConnection() {
+  const res = await fetchWithTimeout(`${BASE}/api/settings/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `API error: ${res.status}`)
+  }
   return res.json()
 }
 
