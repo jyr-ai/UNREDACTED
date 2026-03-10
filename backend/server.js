@@ -11,6 +11,11 @@ import agentRouter from './routes/agent.js'
 import aiAgentRouter from './routes/ai_agent.js'
 import feedRouter from './routes/feed.js'
 import settingsRouter from './routes/settings.js'
+// Phase 3 routes
+import corruptionRouter from './routes/corruption.js'
+import companiesRouter from './routes/companies.js'
+import stockActRouter from './routes/stockact.js'
+import darkMoneyRouter from './routes/darkmoney.js'
 
 const app = express()
 
@@ -49,9 +54,14 @@ app.use('/api/spending', generalLimiter, spendingRouter)
 app.use('/api/policy', generalLimiter, policyRouter)
 app.use('/api/donors', generalLimiter, donorsRouter)
 app.use('/api/agent', agentLimiter, agentRouter)
-app.use('/api/ai-agent', agentLimiter, aiAgentRouter)  // New AI agent service
+app.use('/api/ai-agent', agentLimiter, aiAgentRouter)
 app.use('/api/feed', generalLimiter, feedRouter)
 app.use('/api/settings', generalLimiter, settingsRouter)
+// Phase 3 routes
+app.use('/api/corruption', generalLimiter, corruptionRouter)
+app.use('/api/companies', generalLimiter, companiesRouter)
+app.use('/api/stockact', generalLimiter, stockActRouter)
+app.use('/api/darkmoney', generalLimiter, darkMoneyRouter)
 
 // Global error handler
 app.use((err, req, res, next) => {

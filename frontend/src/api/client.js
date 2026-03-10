@@ -154,6 +154,135 @@ export async function getPACSpending(committeeId, limit = 20) {
   return res.json()
 }
 
+// ========== PHASE 3: CORRUPTION INTELLIGENCE, STOCK ACT, DARK MONEY, COMPANY PROFILES ==========
+
+export async function getCompanyRiskScore(companyName) {
+  const qs = new URLSearchParams({ name: companyName }).toString()
+  const res = await fetchWithTimeout(`${BASE}/api/corruption/score/company?${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getPoliticianAccountabilityScore(candidateId) {
+  const qs = new URLSearchParams({ candidateId }).toString()
+  const res = await fetchWithTimeout(`${BASE}/api/corruption/score/politician?${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getAccountabilityLeaderboard(chamber = null, party = null, limit = 50) {
+  const params = { limit }
+  if (chamber) params.chamber = chamber
+  if (party) params.party = party
+  const qs = new URLSearchParams(params).toString()
+  const res = await fetchWithTimeout(`${BASE}/api/corruption/leaderboard?${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getCorruptionPatterns(agencyName = '', lookbackMonths = 12) {
+  const qs = new URLSearchParams({ agencyName, lookbackMonths }).toString()
+  const res = await fetchWithTimeout(`${BASE}/api/corruption/patterns?${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getCorruptionHotspots() {
+  const res = await fetchWithTimeout(`${BASE}/api/corruption/hotspots`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function analyzeCorruption(query) {
+  const res = await fetchWithTimeout(`${BASE}/api/corruption/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  })
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+// Company profile
+export async function searchCompanies(q, limit = 20) {
+  const qs = new URLSearchParams({ q, limit }).toString()
+  const res = await fetchWithTimeout(`${BASE}/api/companies/search?${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getCompanyProfile(name) {
+  const res = await fetchWithTimeout(`${BASE}/api/companies/${encodeURIComponent(name)}/profile`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getCompanyPoliticalFootprint(name) {
+  const res = await fetchWithTimeout(`${BASE}/api/companies/${encodeURIComponent(name)}/political-footprint`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getCompanyConflicts(name) {
+  const res = await fetchWithTimeout(`${BASE}/api/companies/${encodeURIComponent(name)}/conflicts`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+// STOCK Act monitor
+export async function getRecentStockTrades(chamber = null, limit = 50) {
+  const params = { limit }
+  if (chamber) params.chamber = chamber
+  const qs = new URLSearchParams(params).toString()
+  const res = await fetchWithTimeout(`${BASE}/api/stockact/recent?${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getStockActViolations() {
+  const res = await fetchWithTimeout(`${BASE}/api/stockact/violations`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getPoliticianStockTrades(name) {
+  const res = await fetchWithTimeout(`${BASE}/api/stockact/politician/${encodeURIComponent(name)}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getStockActWatchlist() {
+  const res = await fetchWithTimeout(`${BASE}/api/stockact/watchlist`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+// Dark money
+export async function getDarkMoneyOrgs() {
+  const res = await fetchWithTimeout(`${BASE}/api/darkmoney/orgs`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function traceDarkMoneyFlow(committeeId) {
+  const res = await fetchWithTimeout(`${BASE}/api/darkmoney/trace/${encodeURIComponent(committeeId)}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getCandidateDarkMoneyExposure(candidateId) {
+  const res = await fetchWithTimeout(`${BASE}/api/darkmoney/candidate/${encodeURIComponent(candidateId)}/exposure`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
+export async function getDarkMoneyFlowData(cycle = null) {
+  const qs = cycle ? `?cycle=${cycle}` : ''
+  const res = await fetchWithTimeout(`${BASE}/api/darkmoney/flow${qs}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  return res.json()
+}
+
 // ─── Settings API ─────────────────────────────────────────────────────────────
 
 export async function fetchSettings() {

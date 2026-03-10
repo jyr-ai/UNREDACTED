@@ -1,5 +1,9 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import Settings from "./components/Settings.jsx";
+import StockActMonitor from "./components/StockActMonitor.jsx";
+import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
+import CompanyProfile from "./components/CompanyProfile.jsx";
+import AccountabilityIndex from "./components/AccountabilityIndex.jsx";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -1043,12 +1047,16 @@ function Corporate() {
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id:"overview",  label:"Overview"            },
-  { id:"donors",    label:"Donor Intelligence"  },
-  { id:"policy",    label:"Policy Intelligence" },
-  { id:"donorweb",  label:"Donor Web"           },
-  { id:"spending",  label:"Spending Audit"      },
-  { id:"corporate", label:"Corporate"           },
+  { id:"overview",       label:"Overview"              },
+  { id:"donors",         label:"Donor Intelligence"    },
+  { id:"policy",         label:"Policy Intelligence"   },
+  { id:"donorweb",       label:"Donor Web"             },
+  { id:"spending",       label:"Spending Audit"        },
+  { id:"corporate",      label:"Corporate"             },
+  { id:"stockact",       label:"STOCK Act Monitor",    phase:3 },
+  { id:"darkmoney",      label:"Dark Money",           phase:3 },
+  { id:"accountability", label:"Accountability Index", phase:3 },
+  { id:"companyprofile", label:"Company Profile",      phase:3 },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1462,13 +1470,17 @@ export default function App() {
   const theme = dark ? DARK_THEME : LIGHT_THEME;
 
   const renderTab = () => {
-    if (tab==="overview")  return <Overview/>;
-    if (tab==="donors")    return <DonorIntel/>;
-    if (tab==="policy")    return <PolicyIntel/>;
-    if (tab==="donorweb")  return <DonorWeb/>;
-    if (tab==="spending")  return <SpendingAudit/>;
-    if (tab==="corporate") return <Corporate/>;
-    if (tab==="settings")  return <Settings theme={theme}/>;
+    if (tab==="overview")       return <Overview/>;
+    if (tab==="donors")         return <DonorIntel/>;
+    if (tab==="policy")         return <PolicyIntel/>;
+    if (tab==="donorweb")       return <DonorWeb/>;
+    if (tab==="spending")       return <SpendingAudit/>;
+    if (tab==="corporate")      return <Corporate/>;
+    if (tab==="stockact")       return <StockActMonitor theme={theme}/>;
+    if (tab==="darkmoney")      return <DarkMoneyTracker theme={theme}/>;
+    if (tab==="accountability") return <AccountabilityIndex theme={theme}/>;
+    if (tab==="companyprofile") return <CompanyProfile theme={theme}/>;
+    if (tab==="settings")       return <Settings theme={theme}/>;
   };
 
   return (
@@ -1520,7 +1532,11 @@ export default function App() {
                 padding:"12px 16px",
                 fontFamily:MF, fontSize:10.5, letterSpacing:0.5,
                 whiteSpace:"nowrap", transition:"color .14s, border-color .14s",
-              }}>{tb.label}</button>
+                display:"flex", alignItems:"center", gap:5,
+              }}>
+                {tb.label}
+                {tb.phase===3 && <span style={{ background:"#E6394622", border:"1px solid #E6394644", color:"#E63946", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>P3</span>}
+              </button>
             );
           })}
 
