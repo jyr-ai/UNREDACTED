@@ -13,7 +13,7 @@ import feedRouter from './routes/feed.js'
 const app = express()
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: /^http:\/\/localhost:\d+$/,
   methods: ['GET', 'POST'],
 }))
 app.use(express.json({ limit: '10kb' }))

@@ -21,11 +21,75 @@ export async function searchContracts({ keyword, keywords, agency, limit = 10 })
   return res.data.results
 }
 
-export async function getAgencySpending(fiscalYear = 2024) {
-  const res = await axios.get(`${BASE}/references/agency/awards/`, {
-    params: { fiscal_year: fiscalYear, limit: 20 },
+// Get current fiscal year (Oct 1 - Sept 30)
+function getCurrentFiscalYear() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() // 0-11
+  // Fiscal year runs Oct 1 - Sept 30
+  // If we're before October, we're in the previous fiscal year
+  return month < 9 ? year - 1 : year
+}
+
+// Try to get data for a fiscal year, falling back to previous years if no data
+async function tryGetFiscalYearData(targetYear, maxFallbackYears = 3) {
+  for (let year = targetYear; year >= targetYear - maxFallbackYears; year--) {
+    if (year < 2017) break; // USASpending data typically starts around 2017
+
+    const startDate = `${year}-10-01`
+    const endDate = `${year + 1}-09-30`
+
+    try {
+      const res = await axios.post(`${BASE}/search/spending_by_award/`, {
+        filters: {
+          award_type_codes: ['A', 'B', 'C', 'D'],
+          time_period: [{ start_date: startDate, end_date: endDate }],
+        },
+        fields: ['Awarding Agency', 'Award Amount', 'Award Date'],
+        limit: 100,
+        sort: 'Award Amount',
+        order: 'desc',
+      })
+
+      if (res.data.results && res.data.results.length > 0) {
+        console.log(`Found data for FY${year} (${res.data.results.length} results)`)
+
+        // Aggregate by agency
+        const byAgency = {}
+        res.data.results.forEach(r => {
+          const agency = r['Awarding Agency'] || 'Unknown'
+          const amount = parseFloat(r['Award Amount'] || 0)
+          if (!byAgency[agency]) {
+            byAgency[agency] = { agency, totalAmount: 0, count: 0, fiscalYear: year }
+          }
+          byAgency[agency].totalAmount += amount
+          byAgency[agency].count += 1
+        })
+
+        const agencies = Object.values(byAgency)
+          .sort((a, b) => b.totalAmount - a.totalAmount)
+          .slice(0, 20)
+
+        return { agencies, fiscalYear: year }
+      }
+    } catch (e) {
+      console.error(`Error fetching FY${year} data:`, e.message)
+    }
+  }
+
+  console.log(`No data found for FY${targetYear} or previous ${maxFallbackYears} years`)
+  return { agencies: [], fiscalYear: targetYear }
+}
+
+export async function getAgencySpending(fiscalYear) {
+  const targetYear = fiscalYear || getCurrentFiscalYear()
+  const { agencies, fiscalYear: actualYear } = await tryGetFiscalYearData(targetYear)
+
+  agencies.forEach(agency => {
+    agency.fiscalYear = actualYear
   })
-  return res.data.results
+
+  return agencies
 }
 
 export async function searchGrants({ keyword, keywords, limit = 10 }) {
