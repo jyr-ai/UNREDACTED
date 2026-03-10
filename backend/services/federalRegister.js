@@ -16,9 +16,16 @@ function buildFRUrl(path, queryParams, fields) {
   return url.toString()
 }
 
+// Get date from 12 months ago in ISO format
+function getOneYearAgo() {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 1)
+  return date.toISOString().split('T')[0]
+}
+
 export async function searchRules({ keyword, agency, dateFrom, limit = 10 }) {
   const params = {
-    'conditions[publication_date][gte]': dateFrom || '2023-01-01',
+    'conditions[publication_date][gte]': dateFrom || getOneYearAgo(),
     per_page: limit,
     order: 'newest',
   }
@@ -33,7 +40,7 @@ export async function searchRules({ keyword, agency, dateFrom, limit = 10 }) {
 export async function getRecentSignificantRules(limit = 20) {
   const params = {
     'conditions[significant]': 1,
-    'conditions[publication_date][gte]': '2024-01-01',
+    'conditions[publication_date][gte]': getOneYearAgo(),
     per_page: limit,
     order: 'newest',
   }
