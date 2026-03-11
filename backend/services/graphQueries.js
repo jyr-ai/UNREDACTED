@@ -1,4 +1,4 @@
-"""Neo4j graph query service for corruption pattern detection."""
+// Neo4j graph query service for corruption pattern detection.
 import neo4j from 'neo4j-driver'
 
 const NEO4J_URI = process.env.NEO4J_URI || 'bolt://localhost:7687'
