@@ -2,7 +2,7 @@
 
 **The War on Greed starts here.**
 
-UNREDACTED is a corruption intelligence platform that exposes the nexus between government spending, campaign finance, and policy decisions. We are reclaiming transparency in an era of hidden influence and dark money.
+UNREDACTED is an open source intelligence platform that monitors and exposes the nexus between government spending, campaign finance, and policy decisions. We are reclaiming transparency in an era of hidden influence and dark money.
 
 ---
 
