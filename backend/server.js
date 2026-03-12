@@ -48,6 +48,7 @@ app.use((req, res, next) => {
   next()
 })
 
+app.get('/', (req, res) => res.json({ name: 'UNREDACTED MONITOR API', status: 'ok', version: '1.0.0', timestamp: new Date() }))
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }))
 
 app.use('/api/spending', generalLimiter, spendingRouter)
@@ -70,4 +71,4 @@ app.use((err, req, res, next) => {
 })
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`R•CEIPTS backend running on :${PORT}`))
+app.listen(PORT, () => console.log(`UNREDACTED MONITOR backend running on :${PORT}`))
