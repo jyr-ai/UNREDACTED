@@ -1,6 +1,6 @@
 # UNREDACTED
+<img width="957" height="408" alt="image" src="https://github.com/user-attachments/assets/37053269-db60-49bb-abf1-4d2f9847150a" />
 
-![UNREDACTED Homepage](assets/homepage_unredacted.png)
 
 **The War on Greed starts here.**
 
