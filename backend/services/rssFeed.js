@@ -21,7 +21,7 @@ const RSS_SOURCES = [
   {
     id: 'CBO',
     label: 'CBO',
-    url: 'https://www.cbo.gov/publications/feed',
+    url: 'https://www.cbo.gov/publications/all/rss.xml',
     type: 'BUDGET',
   },
   {
