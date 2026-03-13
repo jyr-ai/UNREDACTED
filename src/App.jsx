@@ -551,26 +551,6 @@ function DonorIntel() {
             <Src s="FEC schedule B; OpenSecrets"/>
           </Card>
         </div>
-        <div>
-          <Band label="STOCK Act violations quarterly" color={ORANGE} right="HOUSE/SENATE"/>
-          <Card>
-            <CT h="Q1 2024 saw a record 14 potential violations — the highest since tracking began." sub="Congressional stock trades within 30 days of committee activity"/>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={STOCK} margin={{ left:0, right:22, top:12, bottom:0 }} barCategoryGap="26%">
-                <CartesianGrid {...hg(t)}/>
-                <XAxis dataKey="q" {...ap(t)}/>
-                <YAxis {...ap(t)}/>
-                <Tooltip content={<ETip/>}/>
-                <ReferenceLine y={7} stroke={t.warn} strokeDasharray="4 3"
-                  label={{ value:"avg  7", position:"right", style:{ fontFamily:MF, fontSize:8.5, fill:t.warn } }}/>
-                <Bar dataKey="v" name="Violations" radius={0}>
-                  {STOCK.map((d,i) => <Cell key={i} fill={d.v>=10?ORANGE:d.v>=7?t.warn:t.border}/>)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <Src s="Senate/House financial disclosures; UN*REDACTED pattern engine"/>
-          </Card>
-        </div>
       </div>
     </div>
   );
