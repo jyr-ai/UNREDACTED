@@ -31,6 +31,7 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
     # Beat schedule for periodic tasks
     beat_schedule={
+        # Phase 1 + 2
         "usa_spending_daily": {
             "task": "scheduler.tasks.run_usa_spending_etl",
             "schedule": 86400.0,  # Daily
@@ -38,6 +39,25 @@ celery_app.conf.update(
         "federal_register_hourly": {
             "task": "scheduler.tasks.run_federal_register_etl",
             "schedule": 3600.0,  # Hourly
+        },
+        # Phase 3 — STOCK Act monitoring
+        "senate_disclosures_weekly": {
+            "task": "scheduler.tasks.run_senate_disclosures_etl",
+            "schedule": 604800.0,  # Weekly (Congress updates weekly)
+        },
+        "house_disclosures_weekly": {
+            "task": "scheduler.tasks.run_house_disclosures_etl",
+            "schedule": 604800.0,  # Weekly
+        },
+        # Phase 3 — Corruption scoring
+        "corruption_scoring_daily": {
+            "task": "scheduler.tasks.run_corruption_scoring",
+            "schedule": 86400.0,  # Daily
+        },
+        # Phase 3 — Pattern detection
+        "qpq_detection_daily": {
+            "task": "scheduler.tasks.run_quid_pro_quo_detection",
+            "schedule": 86400.0,  # Daily
         },
     },
 )

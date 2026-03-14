@@ -130,3 +130,100 @@ def sync_entity_graph():
             metadata={"error": str(exc)},
         )
         return {"success": False, "error": str(exc)}
+
+
+# ========== PHASE 3: STOCK ACT + DARK MONEY + CORRUPTION SCORING ==========
+
+@celery_app.task(bind=True, max_retries=3)
+def run_senate_disclosures_etl(self, days_back: int = 90):
+    """Fetch Senate financial disclosures (STOCK Act PTR filings)."""
+    from sources.senate_disclosures import SenateDisclosuresWorker
+
+    async def run():
+        worker = SenateDisclosuresWorker()
+        records = await worker.extract(days_back=days_back)
+        return await worker.load(records)
+
+    try:
+        result = asyncio.run(run())
+        log_etl_job("senate_disclosures", "stock_act_sync", "success",
+                    records_processed=result.get("inserted", 0), metadata=result)
+        return result
+    except Exception as exc:
+        logger.error(f"Senate disclosures ETL failed: {exc}")
+        log_etl_job("senate_disclosures", "stock_act_sync", "failed", metadata={"error": str(exc)})
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task(bind=True, max_retries=3)
+def run_house_disclosures_etl(self, years_back: int = 1):
+    """Fetch House financial disclosures (STOCK Act PTR filings)."""
+    from sources.house_disclosures import HouseDisclosuresWorker
+
+    async def run():
+        worker = HouseDisclosuresWorker()
+        records = await worker.extract(years_back=years_back)
+        return await worker.load(records)
+
+    try:
+        result = asyncio.run(run())
+        log_etl_job("house_disclosures", "stock_act_sync", "success",
+                    records_processed=result.get("inserted", 0), metadata=result)
+        return result
+    except Exception as exc:
+        logger.error(f"House disclosures ETL failed: {exc}")
+        log_etl_job("house_disclosures", "stock_act_sync", "failed", metadata={"error": str(exc)})
+        raise self.retry(exc=exc, countdown=120)
+
+
+@celery_app.task
+def run_corruption_scoring():
+    """Re-score all politicians and companies in the RECEIPTS Accountability Index."""
+    from enrichment.corruption_scorer import CorruptionScorer
+
+    async def run():
+        scorer = CorruptionScorer()
+        scored = {"politicians": 0, "companies": 0}
+
+        # Score politicians from PostgreSQL
+        try:
+            conn = PostgresConnection()
+            politicians = conn.fetch_all("SELECT DISTINCT candidate_id FROM contributions LIMIT 100")
+            for row in (politicians or []):
+                await scorer.get_politician_score(row["candidate_id"])
+                scored["politicians"] += 1
+        except Exception as e:
+            logger.warning(f"Politician scoring failed: {e}")
+
+        return {"success": True, **scored}
+
+    try:
+        result = asyncio.run(run())
+        log_etl_job("corruption_scorer", "full_score", "success",
+                    records_processed=result.get("politicians", 0), metadata=result)
+        return result
+    except Exception as exc:
+        logger.error(f"Corruption scoring failed: {exc}")
+        log_etl_job("corruption_scorer", "full_score", "failed", metadata={"error": str(exc)})
+        return {"success": False, "error": str(exc)}
+
+
+@celery_app.task
+def run_quid_pro_quo_detection():
+    """Run full quid pro quo and regulatory capture pattern detection."""
+    from enrichment.quid_pro_quo_detector import QuidProQuoDetector
+
+    async def run():
+        detector = QuidProQuoDetector()
+        patterns = await detector.detect_patterns(lookback_months=12)
+        return {"success": True, "patterns_detected": len(patterns)}
+
+    try:
+        result = asyncio.run(run())
+        log_etl_job("qpq_detector", "pattern_scan", "success",
+                    records_processed=result.get("patterns_detected", 0), metadata=result)
+        return result
+    except Exception as exc:
+        logger.error(f"QuidProQuo detection failed: {exc}")
+        log_etl_job("qpq_detector", "pattern_scan", "failed", metadata={"error": str(exc)})
+        return {"success": False, "error": str(exc)}

@@ -19,10 +19,10 @@ const RSS_SOURCES = [
     type: 'AUDIT',
   },
   {
-    id: 'PROPUBLICA',
-    label: 'ProPublica',
-    url: 'https://www.propublica.org/feeds/propublica/main',
-    type: 'INVESTIGATION',
+    id: 'CBO',
+    label: 'CBO',
+    url: 'https://www.cbo.gov/publications/all/rss.xml',
+    type: 'BUDGET',
   },
   {
     id: 'GOVINFO',
