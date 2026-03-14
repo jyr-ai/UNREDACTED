@@ -11,9 +11,10 @@ import {
 import {
   queryAgent,
   fetchContracts,
-  fetchSpendingNews,
   fetchAgencySpending,
 } from "./api/client.js";
+import Ticker from "./components/layout/Ticker.jsx";
+import LiveFeedPanel from "./components/LiveFeedPanel.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -252,46 +253,6 @@ function hg(t) {
   return { stroke:t.grid, vertical:false };
 }
 
-// ─── TICKER ───────────────────────────────────────────────────────────────────
-const TICKER_FALLBACK = "● FEC FILING — $12M DARK MONEY Q1 2025          ● STOCK ACT — 3 NEW FLAGS DETECTED          ● CONTRACT — $4.2BN DOD SOLE-SOURCE AWARD          ● FTC ANTITRUST COMMENT: 4 DAYS REMAINING          ● TOP 5 DEFENCE PACS: $18BN THIS CYCLE          ● FORMER FDA HEAD JOINS PFIZER BOARD          ● GAO: DOD AUDIT FAILURE — 6TH CONSECUTIVE YEAR";
-
-function Ticker() {
-  const t = useT();
-  const [x, setX] = useState(0);
-  const [txt, setTxt] = useState(TICKER_FALLBACK);
-
-  // Fetch live RSS feed; fall back to hardcoded text if unavailable
-  useEffect(() => {
-    fetchSpendingNews(14).then(res => {
-      if (res.success && res.items?.length > 0) {
-        const live = res.items
-          .map(item => `● ${item.source || item.type || "INTEL"}: ${item.text}`)
-          .join("          ");
-        setTxt(live);
-      }
-    }).catch(() => { /* keep fallback */ });
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => setX(v => v + 0.55), 24);
-    return () => clearInterval(id);
-  }, []);
-  const W = txt.length * 7;
-  return (
-    <div style={{ height:26, background:t.tickerBg, borderBottom:`1px solid ${t.border}`, display:"flex", alignItems:"center", overflow:"hidden", position:"relative" }}>
-      <div style={{ background:BLUE, height:"100%", display:"flex", alignItems:"center", padding:"0 13px", flexShrink:0, zIndex:2 }}>
-        <span style={{ fontFamily:MF, fontSize:8.5, color:WHITE, letterSpacing:2 }}>LIVE</span>
-      </div>
-      <div style={{ flex:1, overflow:"hidden" }}>
-        <div style={{ whiteSpace:"nowrap", fontFamily:MF, fontSize:9.5, color:t.tickerTx, letterSpacing:0.6, transform:`translateX(-${x % W}px)` }}>
-          &nbsp;&nbsp;&nbsp;{txt}&nbsp;&nbsp;&nbsp;{txt}
-        </div>
-      </div>
-      <div style={{ position:"absolute", right:0, top:0, bottom:0, width:60, background:`linear-gradient(90deg,transparent,${t.tickerBg})`, pointerEvents:"none" }}/>
-    </div>
-  );
-}
-
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
 function Overview() {
   const t = useT();
@@ -331,6 +292,7 @@ function Overview() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>SPECIAL REPORT · FISCAL YEAR 2024</div>
         <h2 style={{ fontFamily:SF, fontSize:36, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:10, maxWidth:680 }}>The price of influence</h2>
@@ -412,10 +374,13 @@ function Overview() {
           <div key={i} style={{ background:t.card, border:`1px solid ${t.border}`, borderTop:`3px solid ${f.c}`, padding:"18px 18px 16px" }}>
             <div style={{ fontFamily:MF, fontSize:8.5, color:f.c, letterSpacing:2, marginBottom:8 }}>▸ KEY FINDING</div>
             <div style={{ fontFamily:SF, fontSize:14, color:t.hi, lineHeight:1.3, fontWeight:700, marginBottom:8 }}>{f.t2}</div>
-            <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:12, color:t.mid, lineHeight:1.65 }}>{f.b}</div>
+          <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:12, color:t.mid, lineHeight:1.65 }}>{f.b}</div>
           </div>
         ))}
       </div>
+
+      {/* ── LIVE INTELLIGENCE FEEDS ── */}
+      <LiveFeedPanel />
     </div>
   );
 }
