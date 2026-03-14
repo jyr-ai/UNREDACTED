@@ -5,6 +5,7 @@ import { ORANGE, BLUE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens
 import { Band, Card, CardTitle, SourceFooter, Legend } from "../components/ui/index.js";
 import { SPEND, TREND } from "../data/spending.js";
 import { fetchContracts } from "../api/client.js";
+import LiveFeedPanel from "../components/LiveFeedPanel.jsx";
 
 function Tip({ active, payload, label, fmt }) {
   const t = useTheme();
@@ -51,6 +52,10 @@ export default function Overview() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+
+      {/* ── LIVE INTELLIGENCE FEEDS (pinned at top of Overview) ── */}
+      <LiveFeedPanel />
+
       <div style={{ borderTop: `3px solid ${ORANGE}`, paddingTop: 16 }}>
         <div style={{ fontFamily: MF, fontSize: 9, color: ORANGE, letterSpacing: 3, marginBottom: 8 }}>SPECIAL REPORT · FISCAL YEAR 2024</div>
         <h2 style={{ fontFamily: SF, fontSize: 36, color: t.hi, fontWeight: 700, lineHeight: 1.1, marginBottom: 10, maxWidth: 680 }}>The price of influence</h2>

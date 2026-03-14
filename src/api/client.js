@@ -66,7 +66,16 @@ export const policy = {
 
 // ── News Feed ─────────────────────────────────────────────────────────────────
 export const feed = {
-  spendingNews: (limit = 12) => request(`/api/feed/spending-news?limit=${limit}`),
+  spendingNews:       (limit = 12)  => request(`/api/feed/spending-news?limit=${limit}`),
+  corruptionNews:     (limit = 15)  => request(`/api/feed/corruption-news?limit=${limit}`),
+  secFilings:         (limit = 15)  => request(`/api/feed/sec-filings?limit=${limit}`),
+  fecCampaign:        (limit = 15)  => request(`/api/feed/fec-campaign?limit=${limit}`),
+  stockAct:           (limit = 15)  => request(`/api/feed/stock-act?limit=${limit}`),
+  politicianSpending: (limit = 15)  => request(`/api/feed/politician-spending?limit=${limit}`),
+  darkMoney:          (limit = 15)  => request(`/api/feed/dark-money?limit=${limit}`),
+  allFeeds:           (limit = 30, category = null) =>
+    request(`/api/feed/all?limit=${limit}${category ? `&category=${category}` : ''}`),
+  categories:         ()            => request('/api/feed/categories'),
 }
 
 // ── Agent ─────────────────────────────────────────────────────────────────────
