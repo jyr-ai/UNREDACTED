@@ -22,6 +22,8 @@
  *   Settings             ✓
  */
 
+export { default as CorruptionWatch } from "./CorruptionWatch.jsx";
+
 // Uncomment each line as the file is extracted from App.jsx:
 // export { default as Overview      } from "./Overview.jsx";
 // export { default as DonorIntel    } from "./DonorIntel.jsx";

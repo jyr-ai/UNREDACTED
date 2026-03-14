@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import Settings from "./components/Settings.jsx";
-import StockActMonitor from "./components/StockActMonitor.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
-import AccountabilityIndex from "./components/AccountabilityIndex.jsx";
+import CorruptionWatch from "./pages/CorruptionWatch.jsx";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -981,44 +980,71 @@ function Corporate() {
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
         <div>
-          <Band label="STOCK Act violations quarterly" color={ORANGE} right="HOUSE/SENATE DISCLOSURES"/>
-          <Card>
-            <CT h="Q1 2024 recorded the most potential violations since tracking began — 14 trades of concern." sub="Congressional stock trades within 30 days of committee activity · quarterly"/>
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={STOCK} margin={{ left:0, right:24, top:12, bottom:0 }} barCategoryGap="26%">
-                <CartesianGrid {...hg(t)}/>
-                <XAxis dataKey="q" {...ap(t)}/>
-                <YAxis {...ap(t)}/>
-                <Tooltip content={<ETip/>}/>
-                <ReferenceLine y={7} stroke={t.warn} strokeDasharray="4 3"
-                  label={{ value:"avg  7", position:"right", style:{ fontFamily:MF, fontSize:8.5, fill:t.warn } }}/>
-                <Bar dataKey="v" name="Violations" radius={0}>
-                  {STOCK.map((d,i) => <Cell key={i} fill={d.v>=10?ORANGE:d.v>=7?t.warn:t.border}/>)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <Src s="Senate/House financial disclosures; UN*REDACTED STOCK Act engine"/>
-          </Card>
         </div>
         <div>
-          <Band label="Accountability score by company"/>
-          <Card>
-            <CT h="Defence sector scores cluster in the critical range. Tech and health score considerably better on average." sub="UN*REDACTED Accountability Score · lower = more risk"/>
-            <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={CORPS} margin={{ left:0, right:16, top:12, bottom:0 }} barCategoryGap="26%">
-                <CartesianGrid {...hg(t)}/>
-                <XAxis dataKey="n" tick={{ fontFamily:MF, fontSize:8, fill:t.mid }} angle={-18} textAnchor="end" height={42} axisLine={{ stroke:t.border }} tickLine={false}/>
-                <YAxis {...ap(t)} domain={[0,100]}/>
-                <Tooltip content={<ETip/>}/>
-                <ReferenceLine y={55} stroke={t.low} strokeDasharray="3 3"
-                  label={{ value:"risk threshold", position:"right", style:{ fontFamily:MF, fontSize:8, fill:t.low } }}/>
-                <Bar dataKey="sc" name="Score" radius={0}>
-                  {CORPS.map((d,i) => <Cell key={i} fill={d.sc<35?ORANGE:d.sc<55?t.warn:t.ok}/>)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            <Src s="UN*REDACTED accountability score methodology · unredacted.fyi/methodology"/>
-          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DONORS PAGE (sub-tab wrapper) ───────────────────────────────────────────
+function DonorsPage({ theme }) {
+  const t = useT();
+  const [subTab, setSubTab] = useState("intel");
+
+  const SUBS = [
+    { id:"intel",     label:"Donor Intelligence" },
+    { id:"web",       label:"Donor Web"          },
+    { id:"darkmoney", label:"Dark Money"         },
+  ];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+      {/* Sub-tab bar */}
+      <div style={{ display:"flex", borderBottom:`1px solid ${t.border}`, marginBottom:-1 }}>
+        {SUBS.map(s => (
+          <button key={s.id} onClick={() => setSubTab(s.id)} style={{
+            background:"none", border:"none", padding:"10px 20px",
+            fontFamily:MF, fontSize:10.5, letterSpacing:0.5,
+            color: subTab===s.id ? ORANGE : t.mid,
+            borderBottom:`3px solid ${subTab===s.id ? ORANGE : "transparent"}`,
+            marginBottom:-1, cursor:"pointer", transition:"color .14s, border-color .14s",
+            whiteSpace:"nowrap",
+          }}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Sub-tab content */}
+      {subTab === "intel"     && <DonorIntel />}
+      {subTab === "web"       && <DonorWeb />}
+      {subTab === "darkmoney" && <DarkMoneyTracker />}
+    </div>
+  );
+}
+
+// ─── CORPORATE & PROFILE (combined) ──────────────────────────────────────────
+function CorporateAndProfile({ theme }) {
+  const t = useT();
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+      <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
+
+          <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>Combined view of corporate accountability scores and detailed company profiles. Left: corporate index rankings. Right: searchable company audit tool.</p>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr", gap:20 }}>
+
+        <div>
+          <Band label="Corporate Accountability Index" right="FY2024 · LOWER SCORE = MORE RISK"/>
+          <Corporate />
+        </div>
+
+        <div>
+          <Band label="Company Profile Audit" right="SEARCH ANY COMPANY"/>
+          <CompanyProfile theme={theme} />
         </div>
       </div>
     </div>
@@ -1028,15 +1054,11 @@ function Corporate() {
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
   { id:"overview",       label:"Overview"              },
-  { id:"donors",         label:"Donor Intelligence"    },
-  { id:"policy",         label:"Policy Intelligence"   },
-  { id:"donorweb",       label:"Donor Web"             },
+  { id:"donors",         label:"Donors Relations"                },
+  { id:"policy",         label:"Policy Learning"   },
   { id:"spending",       label:"Spending Audit"        },
-  { id:"corporate",      label:"Corporate"             },
-  { id:"stockact",       label:"STOCK Act Monitor",    phase:3 },
-  { id:"darkmoney",      label:"Dark Money",           phase:3 },
-  { id:"accountability", label:"Accountability Index", phase:3 },
-  { id:"companyprofile", label:"Company Profile",      phase:3 },
+  { id:"corporate",      label:"Company Profiles"   },
+  { id:"corruptionwatch", label:"Corruption Watch" },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1506,15 +1528,11 @@ export default function App() {
 
   const renderTab = () => {
     if (tab==="overview")       return <Overview/>;
-    if (tab==="donors")         return <DonorIntel/>;
+    if (tab==="donors")         return <DonorsPage theme={theme}/>;
     if (tab==="policy")         return <PolicyIntel/>;
-    if (tab==="donorweb")       return <DonorWeb/>;
     if (tab==="spending")       return <SpendingAudit/>;
-    if (tab==="corporate")      return <Corporate/>;
-    if (tab==="stockact")       return <StockActMonitor theme={theme}/>;
-    if (tab==="darkmoney")      return <DarkMoneyTracker theme={theme}/>;
-    if (tab==="accountability") return <AccountabilityIndex theme={theme}/>;
-    if (tab==="companyprofile") return <CompanyProfile theme={theme}/>;
+    if (tab==="corporate")      return <CorporateAndProfile theme={theme}/>;
+    if (tab==="corruptionwatch") return <CorruptionWatch />;
     if (tab==="settings")       return <Settings theme={theme}/>;
   };
 
@@ -1577,10 +1595,6 @@ export default function App() {
           })}
 
           <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:9 }}>
-            <div style={{ display:"flex", alignItems:"center", background:theme.inputBg, border:`1px solid ${theme.border}`, padding:"0 11px", height:30, gap:6, width:210 }}>
-              <span style={{ color:theme.low, fontSize:13 }}>⌕</span>
-              <input placeholder="Search entities…" style={{ flex:1, background:"none", border:"none", fontFamily:MF, fontSize:10, color:theme.hi, outline:"none" }}/>
-            </div>
             <div style={{ fontFamily:MF, fontSize:8.5, color:theme.low, border:`1px solid ${theme.border}`, padding:"4px 10px" }}>🔔 12</div>
 
             <button onClick={() => setDark(d => !d)} style={{

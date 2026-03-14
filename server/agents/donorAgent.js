@@ -13,38 +13,55 @@ export async function runDonorAgent({ keywords, entities, query }) {
   const keyword = (keywords || []).join(' ') || (entities || [])[0] || query || ''
 
   try {
-    // Enhanced search with multiple data sources
+    // Phase 1: Core lookups — 3 parallel calls (committees, candidates, top donors)
+    // Reduced limits to conserve API quota
     const [committees, candidates, topDonors] = await Promise.all([
-      searchCommittees({ keyword, limit: 10 }),
-      searchCandidates({ name: keyword, limit: 8 }),
-      getTopDonorsByEmployer(keyword, 10),
+      searchCommittees({ keyword, limit: 5 }),
+      searchCandidates({ name: keyword, limit: 5 }),
+      getTopDonorsByEmployer(keyword, 8),
     ])
 
-    // Get additional data for the first candidate and committee if available
+    // Phase 2: Targeted follow-up calls — only when Phase 1 found results.
+    // We run at most 2 follow-up calls to stay well within rate limits.
     let candidateContributions = []
     let committeeContributions = []
     let donorNetwork = null
     let pacSpending = null
 
     if (candidates.length > 0) {
-      const topCandidate = candidates[0]
-      candidateContributions = await getCandidateContributions(topCandidate.candidate_id, 10, 1000)
+      // Fetch top contributions for the single best-matching candidate only
+      candidateContributions = await getCandidateContributions(
+        candidates[0].candidate_id,
+        8,   // reduced from 50
+        1000
+      )
     }
 
     if (committees.length > 0) {
-      const topCommittee = committees[0]
-      committeeContributions = await getCommitteeContributions(topCommittee.committee_id, 10, 1000)
-
-      // Get PAC spending for the top committee
-      pacSpending = await getPACSpending(topCommittee.committee_id, 10)
+      // Fetch contributions for the top committee only
+      committeeContributions = await getCommitteeContributions(
+        committees[0].committee_id,
+        8,   // reduced from 50
+        1000
+      )
     }
 
-    // Try to get donor network if keyword looks like a person name
-    if (keyword.split(' ').length >= 2 && !keyword.includes('inc') && !keyword.includes('llc')) {
+    // PAC spending — only fetch if no candidate contributions found (saves a call)
+    if (committees.length > 0 && candidateContributions.length === 0) {
+      pacSpending = await getPACSpending(committees[0].committee_id, 8)
+    }
+
+    // Donor network — only for person-name queries (multi-word, no corporate suffixes)
+    const looksLikePersonName =
+      keyword.split(' ').length >= 2 &&
+      !/\b(inc|llc|corp|pac|fund|committee|foundation|association|group)\b/i.test(keyword)
+
+    if (looksLikePersonName) {
       try {
-        donorNetwork = await getDonorNetwork(keyword, 15)
+        donorNetwork = await getDonorNetwork(keyword, 12)
       } catch (e) {
-        // Silently fail if donor network not found
+        // Non-fatal — donor network lookup is best-effort
+        console.warn('[donorAgent] Donor network lookup skipped:', e.message)
       }
     }
 
@@ -125,13 +142,19 @@ export async function runDonorAgent({ keywords, entities, query }) {
       }),
     }
   } catch (e) {
-    console.error('donorAgent error:', e.message)
+    const isRateLimit = e.isRateLimit || e.response?.status === 429
+    console.error('[donorAgent] error:', e.message)
     return {
       committees: [],
       candidates: [],
       topDonors: [],
-      analysis: { error: e.message },
-      summary: `Error analyzing donor data: ${e.message}`
+      analysis: {
+        error: e.message,
+        isRateLimit,
+      },
+      summary: isRateLimit
+        ? `FEC API rate limit reached. ${e.message}`
+        : `Error analyzing donor data: ${e.message}`,
     }
   }
 }
@@ -153,11 +176,7 @@ function analyzeDonorPatterns(data) {
   analysis.totalFunds = committeeFunds + candidateFunds
 
   // Analyze political leaning based on party distribution
-  const partyCounts = {
-    democrat: 0,
-    republican: 0,
-    other: 0,
-  }
+  const partyCounts = { democrat: 0, republican: 0, other: 0 }
 
   committees.forEach(c => {
     const party = (c.party || '').toLowerCase()
@@ -185,18 +204,17 @@ function analyzeDonorPatterns(data) {
 
   // Identify notable patterns
   if (committeeContributions.length > 0) {
-    const avgContribution = committeeContributions.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) / committeeContributions.length
+    const avgContribution =
+      committeeContributions.reduce((sum, c) => sum + (parseFloat(c.amount) || 0), 0) /
+      committeeContributions.length
     if (avgContribution > 5000) analysis.notablePatterns.push('High average contribution amount')
   }
 
   if (candidateContributions.length > 0) {
-    const recentContributions = candidateContributions.filter(c => {
-      const date = new Date(c.date)
-      const now = new Date()
-      const sixMonthsAgo = new Date(now.setMonth(now.getMonth() - 6))
-      return date > sixMonthsAgo
-    })
-    if (recentContributions.length > 5) analysis.notablePatterns.push('Active recent donor activity')
+    const now = new Date()
+    const sixMonthsAgo = new Date(now.setMonth(now.getMonth() - 6))
+    const recentContributions = candidateContributions.filter(c => new Date(c.date) > sixMonthsAgo)
+    if (recentContributions.length > 3) analysis.notablePatterns.push('Active recent donor activity')
   }
 
   // Identify top industries from employer data
@@ -217,11 +235,13 @@ function analyzeDonorPatterns(data) {
 
 function generateSummary(data) {
   const { keyword, committeesCount, candidatesCount, topDonorsCount, analysis } = data
-
   const parts = []
 
   if (committeesCount > 0 || candidatesCount > 0) {
-    parts.push(`Found ${committeesCount} political committees and ${candidatesCount} candidates related to "${keyword}".`)
+    parts.push(
+      `Found ${committeesCount} political committee${committeesCount !== 1 ? 's' : ''} and ` +
+      `${candidatesCount} candidate${candidatesCount !== 1 ? 's' : ''} related to "${keyword}".`
+    )
   }
 
   if (topDonorsCount > 0) {

@@ -7,7 +7,7 @@ function NavBar({ active, onSelect }) {
     { id: 'policy', label: 'Policy' },
     { id: 'spending', label: 'Spending' },
     { id: 'donation', label: 'Donation' },
-    { id: 'corruption', label: 'Corruption' },
+    { id: 'corruptionwatch', label: 'Corruption Watch' },
   ];
   return (
     <div style={{ background: t.navBg, borderBottom: `1px solid ${t.border}`, display: "flex" }}>
