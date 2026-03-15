@@ -2,7 +2,12 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { rateLimit } from 'express-rate-limit'
-dotenv.config()
+import { fileURLToPath } from 'url'
+import path from 'path'
+
+// Load .env from the same directory as this file (backend/.env)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.join(__dirname, '.env') })
 
 import spendingRouter from './routes/spending.js'
 import policyRouter from './routes/policy.js'

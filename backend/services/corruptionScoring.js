@@ -11,7 +11,7 @@ import {
 } from './graphQueries.js'
 
 const FEC_BASE = 'https://api.open.fec.gov/v1'
-const KEY = process.env.FEC_API_KEY || 'DEMO_KEY'
+const getKey = () => process.env.FEC_API_KEY || 'DEMO_KEY'
 
 /**
  * Score a company's corruption risk.
@@ -34,7 +34,7 @@ export async function scoreCompany(companyName) {
     let donorLinks = 0
     try {
       const committees = await axios.get(`${FEC_BASE}/committees/`, {
-        params: { q: companyName, api_key: KEY, per_page: 5, committee_type: 'Q' },
+        params: { q: companyName, api_key: getKey(), per_page: 5, committee_type: 'Q' },
         timeout: 8000,
       })
       donorLinks = committees.data?.results?.length || 0
@@ -138,13 +138,13 @@ export async function scorePolitician(candidateId) {
 
     try {
       const candRes = await axios.get(`${FEC_BASE}/candidate/${candidateId}/`, {
-        params: { api_key: KEY },
+        params: { api_key: getKey() },
         timeout: 8000,
       })
       candidate = candRes.data?.results?.[0]
 
       const totalsRes = await axios.get(`${FEC_BASE}/candidate/${candidateId}/totals/`, {
-        params: { api_key: KEY },
+        params: { api_key: getKey() },
         timeout: 8000,
       })
       totals = totalsRes.data?.results?.[0]
@@ -232,9 +232,9 @@ function scoreDisclosureTimeliness(candidate) {
 function buildPoliticianRiskFactors(components, totals) {
   const factors = []
   if (components.donorTransparency < 15) factors.push('Low donor transparency — high proportion of unitemized contributions')
-  if (components.stockActCompliance < 15) factors.push('Potential STOCK Act compliance issues detected')
+  if (components.stockActCompliance !== null && components.stockActCompliance < 15) factors.push('Potential STOCK Act compliance issues detected')
   if (components.voteDonorAlignment < 12) factors.push('High vote-donor alignment detected — votes correlate with top donor industries')
-  if (components.disclosureTimeliness < 15) factors.push('Late or incomplete financial disclosures on record')
+  if (components.disclosureTimeliness !== null && components.disclosureTimeliness < 15) factors.push('Late or incomplete financial disclosures on record')
   if (totals?.other_political_committee_contributions > 5e6) factors.push('Over $5M in PAC contributions — high industry dependence')
   return factors
 }
@@ -245,33 +245,57 @@ function buildPoliticianRiskFactors(components, totals) {
  */
 export async function getLeaderboard(chamber = null, party = null, limit = 50) {
   try {
-    const params = {
-      api_key: KEY,
-      per_page: Math.min(limit, 20),  // FEC rate limiting
-      sort: '-receipts',
-    }
-    if (chamber) params.office = chamber === 'S' ? 'S' : 'H'
-    if (party) params.party = party
+    // Use the most recent complete election cycle (2024) for rich data.
+    // Fall back to current cycle if 2024 returns nothing.
+    const currentYear = new Date().getFullYear()
+    const currentCycle = currentYear % 2 === 0 ? currentYear : currentYear + 1
+    const primaryCycle = currentCycle > 2024 ? 2024 : currentCycle
 
-    const res = await axios.get(`${FEC_BASE}/candidates/`, {
-      params,
+    const buildParams = (cycle) => {
+      const p = {
+        api_key: getKey(),
+        per_page: Math.min(limit, 20),
+        sort: '-receipts',
+        cycle,
+        election_full: false,
+      }
+      if (chamber) p.office = chamber === 'S' ? 'S' : 'H'
+      if (party) p.party = party
+      return p
+    }
+
+    // /candidates/totals/ supports sort by receipts; /candidates/ does not
+    let res = await axios.get(`${FEC_BASE}/candidates/totals/`, {
+      params: buildParams(primaryCycle),
       timeout: 10000,
     })
 
-    const candidates = res.data?.results || []
+    let candidates = res.data?.results || []
+
+    // If primary cycle returned nothing, try current cycle as fallback
+    if (candidates.length === 0 && primaryCycle !== currentCycle) {
+      res = await axios.get(`${FEC_BASE}/candidates/totals/`, {
+        params: buildParams(currentCycle),
+        timeout: 10000,
+      })
+      candidates = res.data?.results || []
+    }
+
     if (candidates.length === 0) return []
 
-    // Score each candidate (limited to avoid rate limits)
-    const scored = await Promise.allSettled(
-      candidates.slice(0, 10).map(c => scorePolitician(c.candidate_id))
-    )
+    // Score candidates sequentially with a small delay to avoid FEC burst rate limits
+    const results = []
+    for (const c of candidates.slice(0, 10)) {
+      try {
+        const scored = await scorePolitician(c.candidate_id)
+        results.push(scored)
+      } catch (e) {
+        // skip failed candidates
+      }
+      await new Promise(r => setTimeout(r, 150))
+    }
 
-    const results = scored
-      .filter(r => r.status === 'fulfilled')
-      .map(r => r.value)
-      .sort((a, b) => b.overallScore - a.overallScore)
-
-    return results
+    return results.sort((a, b) => b.overallScore - a.overallScore)
   } catch (e) {
     console.error('getLeaderboard error:', e.message)
     return []

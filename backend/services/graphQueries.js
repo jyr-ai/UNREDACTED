@@ -26,8 +26,9 @@ export async function closeDriver() {
  * The core "quid pro quo" pattern
  */
 export async function findQuidProQuoPaths({ agencyName, minAmount = 100000, lookbackMonths = 12 }) {
-  const session = getDriver().session()
+  let session
   try {
+    session = getDriver().session()
     const result = await session.run(`
       MATCH path = (c:Company)-[:RECEIVED]->(contract:Contract)<-[:AWARDED]-(a:Agency)<-[:OVERSEES]-(comm:Committee)<-[:SITS_ON]-(p:Politician)
       WHERE a.name CONTAINS $agencyName OR $agencyName = ''
@@ -52,8 +53,11 @@ export async function findQuidProQuoPaths({ agencyName, minAmount = 100000, look
     `, { agencyName, minAmount, lookbackMonths })
 
     return result.records.map(r => r.get('pattern'))
+  } catch (e) {
+    console.warn('Neo4j unavailable (findQuidProQuoPaths):', e.message)
+    return []
   } finally {
-    await session.close()
+    if (session) await session.close()
   }
 }
 
@@ -61,8 +65,9 @@ export async function findQuidProQuoPaths({ agencyName, minAmount = 100000, look
  * Get spending network for a company
  */
 export async function getCompanyNetwork(normalizedName, depth = 2) {
-  const session = getDriver().session()
+  let session
   try {
+    session = getDriver().session()
     const result = await session.run(`
       MATCH path = (c:Company {normalized_name: $normalizedName})-[:RECEIVED|SIMILAR_TO*1..$depth]-(related)
       WITH c, related, relationships(path) as rels
@@ -78,8 +83,11 @@ export async function getCompanyNetwork(normalizedName, depth = 2) {
     `, { normalizedName, depth })
 
     return result.records.map(r => r.get('connection'))
+  } catch (e) {
+    console.warn('Neo4j unavailable (getCompanyNetwork):', e.message)
+    return []
   } finally {
-    await session.close()
+    if (session) await session.close()
   }
 }
 
@@ -87,8 +95,9 @@ export async function getCompanyNetwork(normalizedName, depth = 2) {
  * Get top contractors by agency
  */
 export async function getTopContractorsByAgency(agencyName, limit = 20) {
-  const session = getDriver().session()
+  let session
   try {
+    session = getDriver().session()
     const result = await session.run(`
       MATCH (c:Company)-[:RECEIVED]->(contract:Contract)<-[:AWARDED]-(a:Agency {name: $agencyName})
       WITH c, sum(contract.amount) as totalAmount, count(contract) as contractCount
@@ -103,8 +112,11 @@ export async function getTopContractorsByAgency(agencyName, limit = 20) {
     `, { agencyName, limit })
 
     return result.records.map(r => r.get('contractor'))
+  } catch (e) {
+    console.warn('Neo4j unavailable (getTopContractorsByAgency):', e.message)
+    return []
   } finally {
-    await session.close()
+    if (session) await session.close()
   }
 }
 
@@ -112,8 +124,9 @@ export async function getTopContractorsByAgency(agencyName, limit = 20) {
  * Find regulatory patterns (agency rules related to companies)
  */
 export async function findRegulatoryPatterns({ companyName, lookbackMonths = 12 }) {
-  const session = getDriver().session()
+  let session
   try {
+    session = getDriver().session()
     const result = await session.run(`
       MATCH (c:Company {normalized_name: $companyName})
       MATCH (c)-[:RECEIVED]->(contract:Contract)<-[:AWARDED]-(a:Agency)
@@ -133,8 +146,11 @@ export async function findRegulatoryPatterns({ companyName, lookbackMonths = 12 
     `, { companyName, lookbackMonths })
 
     return result.records.map(r => r.get('pattern'))
+  } catch (e) {
+    console.warn('Neo4j unavailable (findRegulatoryPatterns):', e.message)
+    return []
   } finally {
-    await session.close()
+    if (session) await session.close()
   }
 }
 
@@ -142,8 +158,9 @@ export async function findRegulatoryPatterns({ companyName, lookbackMonths = 12 
  * Get corruption risk score for a company
  */
 export async function getCompanyRiskScore(normalizedName) {
-  const session = getDriver().session()
+  let session
   try {
+    session = getDriver().session()
     // Calculate risk based on multiple factors
     const result = await session.run(`
       MATCH (c:Company {normalized_name: $normalizedName})
@@ -189,8 +206,11 @@ export async function getCompanyRiskScore(normalizedName) {
       politicianConnections: 0,
       riskScore: 0
     }
+  } catch (e) {
+    console.warn('Neo4j unavailable (getCompanyRiskScore):', e.message)
+    return null
   } finally {
-    await session.close()
+    if (session) await session.close()
   }
 }
 

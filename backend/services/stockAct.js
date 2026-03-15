@@ -4,67 +4,56 @@
  * by cross-referencing trade dates with committee activity.
  */
 import axios from 'axios'
+import AdmZip from 'adm-zip'
 
-const FEC_BASE = 'https://api.open.fec.gov/v1'
-const KEY = process.env.FEC_API_KEY || 'DEMO_KEY'
-
-// Senate eFiling search endpoint
-const SENATE_EFTS = 'https://efts.senate.gov/PROD/s_search.json'
-// House disclosures API
-const HOUSE_DISCLOSURES = 'https://disclosures-clerk.house.gov/api/v1/financial-pdfs'
+const HOUSE_FD_ZIP = year => `https://disclosures-clerk.house.gov/public_disc/financial-pdfs/${year}FD.zip`
 
 /**
- * Fetch recent stock trade disclosures (PTRs) from Senate eFiling.
- * Senate PTR = Periodic Transaction Report filed within 45 days of trade.
+ * Senate eFiling (efts.senate.gov) DNS is unreachable — no public replacement available.
  */
 export async function getSenateRecentTrades(limit = 50) {
-  try {
-    const res = await axios.get(SENATE_EFTS, {
-      params: {
-        query: 'ptr',
-        page_size: limit,
-        sort: 'date_filed:desc',
-      },
-      timeout: 10000,
-    })
-
-    const hits = res.data?.hits?.hits || []
-    return hits.map(h => ({
-      chamber: 'senate',
-      senator: h._source?.name || 'Unknown',
-      filingDate: h._source?.date_filed,
-      filingType: h._source?.form_type || 'PTR',
-      url: h._source?.url || null,
-      id: h._id,
-    }))
-  } catch (e) {
-    console.error('Senate eFiling query failed:', e.message)
-    return []
-  }
+  console.warn('[stockAct] Senate eFiling (efts.senate.gov) DNS unreachable — no Senate PTR data available')
+  return []
 }
 
 /**
- * Fetch recent stock trade disclosures from House disclosures clerk.
+ * Fetch recent House PTR (Periodic Transaction Report) filings from the
+ * House Clerk's annual disclosure ZIP. FilingType=P entries are stock trade reports.
  */
 export async function getHouseRecentTrades(limit = 50) {
   try {
     const year = new Date().getFullYear()
-    const res = await axios.get(HOUSE_DISCLOSURES, {
-      params: { year, FilingType: 'P' },  // P = Periodic Transaction Report
-      timeout: 10000,
-    })
+    const res = await axios.get(HOUSE_FD_ZIP(year), { responseType: 'arraybuffer', timeout: 20000 })
+    const zip = new AdmZip(Buffer.from(res.data))
+    const xmlEntry = zip.getEntries().find(e => e.entryName.toLowerCase().endsWith('.xml'))
+    if (!xmlEntry) return []
 
-    const filings = res.data?.filings || []
-    return filings.slice(0, limit).map(f => ({
-      chamber: 'house',
-      representative: f.name || 'Unknown',
-      filingDate: f.file_date,
-      filingType: 'PTR',
-      url: f.pdf_url || null,
-      id: f.document_id,
-    }))
+    const xml = xmlEntry.getData().toString('utf-8')
+    const members = [...xml.matchAll(/<Member>([\s\S]*?)<\/Member>/g)]
+
+    const trades = members
+      .map(m => {
+        const get = tag => m[1].match(new RegExp(`<${tag}>(.*?)<\\/${tag}>`))?.[1]?.trim() || ''
+        const docId = get('DocID')
+        const yr = get('Year')
+        return {
+          chamber: 'house',
+          politician: `${get('First')} ${get('Last')}`.trim(),
+          filingType: get('FilingType'),
+          state: get('StateDst'),
+          year: yr,
+          filingDate: get('FilingDate'),
+          docId,
+          url: docId ? `https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/${yr}/${docId}.pdf` : null,
+        }
+      })
+      .filter(t => t.filingType === 'P')
+      .sort((a, b) => new Date(b.filingDate) - new Date(a.filingDate))
+      .slice(0, limit)
+
+    return trades
   } catch (e) {
-    console.error('House disclosures query failed:', e.message)
+    console.error('House disclosures fetch failed:', e.message)
     return []
   }
 }
@@ -189,9 +178,28 @@ export async function getMarketOutperformance(politicianName) {
 
 /**
  * Get politicians with highest STOCK Act violation risk scores.
+ * Ranks by PTR filing count — most active traders = highest scrutiny.
  */
 export async function getViolationWatchlist() {
-  // Requires parsed trade data from PDF ETL pipeline to detect violations
-  return []
+  const trades = await getHouseRecentTrades(200)
+  const byPolitician = {}
+  for (const t of trades) {
+    if (!byPolitician[t.politician]) {
+      byPolitician[t.politician] = { politician: t.politician, state: t.state, ptrCount: 0, latestFiling: null }
+    }
+    byPolitician[t.politician].ptrCount++
+    if (!byPolitician[t.politician].latestFiling || t.filingDate > byPolitician[t.politician].latestFiling) {
+      byPolitician[t.politician].latestFiling = t.filingDate
+    }
+  }
+  return Object.values(byPolitician)
+    .sort((a, b) => b.ptrCount - a.ptrCount)
+    .slice(0, 20)
+    .map(p => ({
+      ...p,
+      chamber: 'house',
+      violationCount: p.ptrCount,
+      riskScore: Math.min(99, 30 + p.ptrCount * 10),
+    }))
 }
 

@@ -5,7 +5,7 @@
 import axios from 'axios'
 
 const FEC_BASE = 'https://api.open.fec.gov/v1'
-const KEY = process.env.FEC_API_KEY || 'DEMO_KEY'
+const getKey = () => process.env.FEC_API_KEY || 'DEMO_KEY'
 
 /**
  * Find 501(c)(4) organizations and Super PACs with political activity.
@@ -13,14 +13,14 @@ const KEY = process.env.FEC_API_KEY || 'DEMO_KEY'
  */
 export async function getDarkMoneyOrgs(limit = 20) {
   try {
-    // Fetch Super PACs (V = Super PAC, O = Super PAC (Non-Contribution))
-    const [superPacs, nonprofits] = await Promise.allSettled([
-      axios.get(`${FEC_BASE}/committees/`, {
-        params: { committee_type: 'V', api_key: KEY, per_page: Math.ceil(limit / 2), sort: '-total_disbursements' },
+    // Use /totals/pac-party/ — supports sort by disbursements, returns real financial data
+    const [superPacs, nonQual] = await Promise.allSettled([
+      axios.get(`${FEC_BASE}/totals/pac-party/`, {
+        params: { committee_type: 'V', api_key: getKey(), per_page: Math.ceil(limit / 2), sort: '-disbursements', cycle: 2024 },
         timeout: 10000,
       }),
-      axios.get(`${FEC_BASE}/committees/`, {
-        params: { committee_type: 'W', api_key: KEY, per_page: Math.floor(limit / 2), sort: '-total_disbursements' },
+      axios.get(`${FEC_BASE}/totals/pac-party/`, {
+        params: { committee_type: 'W', api_key: getKey(), per_page: Math.floor(limit / 2), sort: '-disbursements', cycle: 2024 },
         timeout: 10000,
       }),
     ])
@@ -33,9 +33,9 @@ export async function getDarkMoneyOrgs(limit = 20) {
       }
     }
 
-    if (nonprofits.status === 'fulfilled') {
-      for (const c of nonprofits.value.data?.results || []) {
-        results.push(normalizeCommittee(c, '501c4'))
+    if (nonQual.status === 'fulfilled') {
+      for (const c of nonQual.value.data?.results || []) {
+        results.push(normalizeCommittee(c, 'super_pac'))
       }
     }
 
@@ -47,25 +47,30 @@ export async function getDarkMoneyOrgs(limit = 20) {
 }
 
 function normalizeCommittee(c, type) {
-  const totalDisbursements = c.total_disbursements || 0
+  // Support both /committees/ (c.name) and /totals/pac-party/ (c.committee_name) shapes
+  const name = c.committee_name || c.name || ''
+  const totalDisbursements = c.disbursements || c.total_disbursements || 0
+  const state = c.committee_state || c.state || null
+  const designation = c.committee_designation || c.organization_type || ''
 
-  // Classify disclosure level based on connected org and filing completeness
+  // Classify disclosure level
+  // /totals/pac-party/ has no connected_organization_name; use designation instead
   let disclosureLevel = 'dark'
   if (c.connected_organization_name) disclosureLevel = 'disclosed'
-  else if (c.organization_type && c.organization_type !== 'Z') disclosureLevel = 'partial'
+  else if (designation && !['U', 'Z'].includes(designation)) disclosureLevel = 'partial'
 
   return {
     id: c.committee_id,
-    name: c.name,
+    name,
     type,
     totalSpend: totalDisbursements,
-    cycle: c.cycles?.[0] || new Date().getFullYear(),
+    cycle: c.cycle || c.cycles?.[0] || new Date().getFullYear(),
     disclosureLevel,
     connectedOrg: c.connected_organization_name || null,
     treasurer: c.treasurer_name || null,
-    state: c.state,
-    linkedCandidates: 0,  // Populated separately
-    issues: inferIssues(c.name),
+    state,
+    linkedCandidates: 0,
+    issues: inferIssues(name),
   }
 }
 
@@ -88,7 +93,7 @@ export async function traceDarkMoneyFlow(committeeId) {
   try {
     // Get committee details
     const committeeRes = await axios.get(`${FEC_BASE}/committee/${committeeId}/`, {
-      params: { api_key: KEY },
+      params: { api_key: getKey() },
       timeout: 10000,
     })
 
@@ -99,7 +104,7 @@ export async function traceDarkMoneyFlow(committeeId) {
     const disbRes = await axios.get(`${FEC_BASE}/schedules/schedule_b/`, {
       params: {
         committee_id: committeeId,
-        api_key: KEY,
+        api_key: getKey(),
         per_page: 20,
         disbursement_purpose_category: 'TRANSFER',
         sort: '-disbursement_date',
@@ -113,7 +118,7 @@ export async function traceDarkMoneyFlow(committeeId) {
     const receiptRes = await axios.get(`${FEC_BASE}/schedules/schedule_a/`, {
       params: {
         committee_id: committeeId,
-        api_key: KEY,
+        api_key: getKey(),
         per_page: 20,
         sort: '-contribution_receipt_amount',
       },
@@ -169,7 +174,7 @@ export async function getCandidateDarkMoneyExposure(candidateId) {
     const res = await axios.get(`${FEC_BASE}/schedules/schedule_e/`, {
       params: {
         candidate_id: candidateId,
-        api_key: KEY,
+        api_key: getKey(),
         per_page: 50,
         sort: '-expenditure_amount',
       },
@@ -223,7 +228,7 @@ export async function getCandidateDarkMoneyExposure(candidateId) {
 export async function inferFundingSource(committeeId) {
   try {
     const res = await axios.get(`${FEC_BASE}/committee/${committeeId}/`, {
-      params: { api_key: KEY },
+      params: { api_key: getKey() },
       timeout: 10000,
     })
 
@@ -290,15 +295,16 @@ export async function getDarkMoneyFlowData(cycle = null) {
       return nodeIndex[id]
     }
 
-    for (const org of orgs) {
-      const sourceId = `unknown_${org.id}`
-      const orgId = `org_${org.id}`
+    // Single shared source node for all unknown donors
+    const totalUnknown = orgs.reduce((s, o) => s + o.totalSpend * 0.8, 0)
+    addNode('unknown_source', 'Unknown Donors', 'source', totalUnknown)
 
-      addNode(sourceId, 'Unknown Donors', 'source', org.totalSpend * 0.8)
+    for (const org of orgs) {
+      const orgId = `org_${org.id}`
       addNode(orgId, org.name, org.type, org.totalSpend)
 
       links.push({
-        source: sourceId,
+        source: 'unknown_source',
         target: orgId,
         amount: org.totalSpend * 0.8,
         disclosure_level: 'dark',
