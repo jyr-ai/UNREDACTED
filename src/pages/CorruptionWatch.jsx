@@ -4,14 +4,16 @@ import { ORANGE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
 import AccountabilityIndex from "../components/AccountabilityIndex.jsx";
 import StockActMonitor from "../components/StockActMonitor.jsx";
 import DarkMoneyTracker from "../components/DarkMoneyTracker.jsx";
+import Watchlist from "../components/Watchlist.jsx";
 
 const SUBTABS = [
   { id: "accountability", label: "Accountability Index" },
   { id: "stockact",       label: "STOCK Act Monitor"   },
   { id: "darkmoney",      label: "Dark Money"           },
+  { id: "watchlist",      label: "My Watchlist"         },
 ];
 
-export default function CorruptionWatch() {
+export default function CorruptionWatch({ onSignInRequest }) {
   const t = useTheme();
   const [sub, setSub] = useState("accountability");
 
@@ -20,14 +22,14 @@ export default function CorruptionWatch() {
       {/* ── Editorial header ─────────────────────────────────── */}
       <div style={{ borderTop: `3px solid ${ORANGE}`, paddingTop: 16 }}>
         <div style={{ fontFamily: MF, fontSize: 9, color: ORANGE, letterSpacing: 3, marginBottom: 8 }}>
-          CORRUPTION SIGNALS · FEC · STOCK ACT · DARK MONEY
+          CORRUPTION SIGNALS · FEC · STOCK ACT · DARK MONEY · WATCHLIST
         </div>
         <h2 style={{ fontFamily: SF, fontSize: 32, color: t.hi, fontWeight: 700, lineHeight: 1.1, marginBottom: 8 }}>
           Corruption Watch
         </h2>
         <p style={{ fontFamily: SF, fontSize: 14, fontStyle: "italic", color: t.mid, lineHeight: 1.7, maxWidth: 640 }}>
-          Politician accountability scores, congressional stock-trade disclosures, and dark money network traces —
-          the full corruption signals layer across FEC filings and House &amp; Senate disclosure portals.
+          Politician accountability scores, congressional stock-trade disclosures, dark money network traces,
+          and your personal watchlist — the full corruption signals layer across FEC filings and House &amp; Senate disclosure portals.
         </p>
       </div>
 
@@ -60,6 +62,7 @@ export default function CorruptionWatch() {
       {sub === "accountability" && <AccountabilityIndex />}
       {sub === "stockact"       && <StockActMonitor />}
       {sub === "darkmoney"      && <DarkMoneyTracker />}
+      {sub === "watchlist"      && <Watchlist onSignInRequest={onSignInRequest} />}
     </div>
   );
 }

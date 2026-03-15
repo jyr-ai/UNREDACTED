@@ -248,7 +248,8 @@ export async function getLeaderboard(chamber = null, party = null, limit = 50) {
     const params = {
       api_key: KEY,
       per_page: Math.min(limit, 20),  // FEC rate limiting
-      sort: '-receipts',
+      election_year: new Date().getFullYear() % 2 === 0 ? new Date().getFullYear() : new Date().getFullYear() - 1,
+      candidate_status: 'C',
     }
     if (chamber) params.office = chamber === 'S' ? 'S' : 'H'
     if (party) params.party = party

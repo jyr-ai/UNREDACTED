@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "node --watch server/dev.js",
+    "dev:server": "node --env-file=.env --watch server/dev.js",
     "dev:all": "concurrently -n \"frontend,backend\" -c \"cyan,yellow\" \"npm:dev\" \"npm:dev:server\"",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server/dev.js",
+    "start": "node --env-file=.env server/dev.js",
     "lint": "eslint ."
   },
   "dependencies": {
