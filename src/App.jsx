@@ -3,6 +3,10 @@ import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import CorruptionWatch from "./pages/CorruptionWatch.jsx";
+import AccountabilityIndex from "./components/AccountabilityIndex.jsx";
+import Auth from "./components/Auth.jsx";
+import Watchlist from "./components/Watchlist.jsx";
+import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -11,9 +15,10 @@ import {
 import {
   queryAgent,
   fetchContracts,
-  fetchSpendingNews,
   fetchAgencySpending,
 } from "./api/client.js";
+import Ticker from "./components/layout/Ticker.jsx";
+import LiveFeedPanel from "./components/LiveFeedPanel.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -253,14 +258,12 @@ function hg(t) {
 }
 
 // ─── TICKER ───────────────────────────────────────────────────────────────────
-const TICKER_FALLBACK = "● FEC FILING — $12M DARK MONEY Q1 2025          ● STOCK ACT — 3 NEW FLAGS DETECTED          ● CONTRACT — $4.2BN DOD SOLE-SOURCE AWARD          ● FTC ANTITRUST COMMENT: 4 DAYS REMAINING          ● TOP 5 DEFENCE PACS: $18BN THIS CYCLE          ● FORMER FDA HEAD JOINS PFIZER BOARD          ● GAO: DOD AUDIT FAILURE — 6TH CONSECUTIVE YEAR";
-
 function Ticker() {
   const t = useT();
   const [x, setX] = useState(0);
-  const [txt, setTxt] = useState(TICKER_FALLBACK);
+  const [txt, setTxt] = useState("");
 
-  // Fetch live RSS feed; fall back to hardcoded text if unavailable
+  // Fetch live RSS feed; show nothing if unavailable
   useEffect(() => {
     fetchSpendingNews(14).then(res => {
       if (res.success && res.items?.length > 0) {
@@ -269,7 +272,7 @@ function Ticker() {
           .join("          ");
         setTxt(live);
       }
-    }).catch(() => { /* keep fallback */ });
+    }).catch(() => { /* no live data — stay silent */ });
   }, []);
 
   useEffect(() => {
@@ -277,6 +280,7 @@ function Ticker() {
     return () => clearInterval(id);
   }, []);
   const W = txt.length * 7;
+  if (!txt) return null;
   return (
     <div style={{ height:26, background:t.tickerBg, borderBottom:`1px solid ${t.border}`, display:"flex", alignItems:"center", overflow:"hidden", position:"relative" }}>
       <div style={{ background:BLUE, height:"100%", display:"flex", alignItems:"center", padding:"0 13px", flexShrink:0, zIndex:2 }}>
@@ -291,6 +295,7 @@ function Ticker() {
     </div>
   );
 }
+
 
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
 function Overview() {
@@ -331,6 +336,7 @@ function Overview() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>SPECIAL REPORT · FISCAL YEAR 2024</div>
         <h2 style={{ fontFamily:SF, fontSize:36, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:10, maxWidth:680 }}>The price of influence</h2>
@@ -412,10 +418,13 @@ function Overview() {
           <div key={i} style={{ background:t.card, border:`1px solid ${t.border}`, borderTop:`3px solid ${f.c}`, padding:"18px 18px 16px" }}>
             <div style={{ fontFamily:MF, fontSize:8.5, color:f.c, letterSpacing:2, marginBottom:8 }}>▸ KEY FINDING</div>
             <div style={{ fontFamily:SF, fontSize:14, color:t.hi, lineHeight:1.3, fontWeight:700, marginBottom:8 }}>{f.t2}</div>
-            <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:12, color:t.mid, lineHeight:1.65 }}>{f.b}</div>
+          <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:12, color:t.mid, lineHeight:1.65 }}>{f.b}</div>
           </div>
         ))}
       </div>
+
+      {/* ── LIVE INTELLIGENCE FEEDS ── */}
+      <LiveFeedPanel />
     </div>
   );
 }
@@ -615,10 +624,18 @@ function PolicyIntel() {
         sources: d.sources || ["FEC","USASpending.gov","FederalRegister.gov"],
       }]);
     } catch(e) {
+      const msg = e.message || ''
+      const isBackendDown = msg.includes('Failed to fetch') || msg.includes('ECONNREFUSED') || msg.includes('NetworkError')
+      const isAILimit    = msg.includes('rate') || msg.includes('limit') || msg.includes('credit') || msg.includes('balance')
+      const title  = isBackendDown ? 'Backend unreachable' : isAILimit ? 'AI quota reached' : 'Query failed'
+      const detail = isBackendDown
+        ? 'Cannot connect to backend on port 3001. Is the server running?'
+        : isAILimit
+        ? 'AI provider quota or credits exhausted. Check your API key settings.'
+        : msg.slice(0, 200)
       setMsgs(m => [...m, { role:"ai",
-        findings:[{ id:"ERROR", title:"Agent unavailable", date:new Date().toLocaleDateString(),
-          detail:`Unable to reach the intelligence backend. Ensure the server is running on port 3001. (${e.message})`, risk:"MED" }],
-        signal:"Ensure the backend server is running on port 3001.",
+        findings:[{ id:"ERROR", title, date:new Date().toLocaleDateString(), detail, risk:"MED" }],
+        signal: detail,
         sources:[],
       }]);
     } finally {
@@ -1057,8 +1074,13 @@ const TABS = [
   { id:"donors",         label:"Donors Relations"                },
   { id:"policy",         label:"Policy Learning"   },
   { id:"spending",       label:"Spending Audit"        },
-  { id:"corporate",      label:"Company Profiles"   },
-  { id:"corruptionwatch", label:"Corruption Watch" },
+  { id:"corporate",      label:"Company Profiles"      },
+  { id:"corruptionwatch", label:"Corruption Watch"     },
+  { id:"stockact",       label:"STOCK Act Monitor",    phase:3 },
+  { id:"darkmoney",      label:"Dark Money",           phase:3 },
+  { id:"accountability", label:"Accountability Index", phase:3 },
+  { id:"companyprofile", label:"Company Profile",      phase:3 },
+  { id:"watchlist",      label:"Watchlist",            phase:4 },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1197,10 +1219,16 @@ function AnalystPanel({ onClose, dark }) {
       }
       setMsgs(m => [...m, { role:"assistant", data:parsed }]);
     } catch(e) {
+      const msg = e.message || ''
+      const isDown  = msg.includes('Failed to fetch') || msg.includes('ECONNREFUSED')
+      const isQuota = msg.includes('rate') || msg.includes('limit') || msg.includes('credit') || msg.includes('balance')
+      const detail  = isDown  ? 'Cannot connect to backend on port 3001. Is the server running?'
+                    : isQuota ? 'AI provider quota exhausted — check API key or add credits.'
+                    : msg.slice(0, 200)
       setMsgs(m => [...m, { role:"assistant", data:{
         routing:[{ agent:"orchestrator", reason:"Error routing query" }],
-        findings:[{ agent:"orchestrator", headline:"Backend unavailable",
-          detail:`Unable to reach intelligence backend on port 3001. (${e.message})`, risk:"INFO", sources:[] }],
+        findings:[{ agent:"orchestrator", headline: isDown ? "Backend unreachable" : isQuota ? "AI quota reached" : "Query failed",
+          detail, risk:"INFO", sources:[] }],
         signal:"", disclaimer:"",
       }}]);
     }
@@ -1465,9 +1493,9 @@ function AnalystPanel({ onClose, dark }) {
 }
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [tab, setTab]       = useState("overview");
-  const [dark, setDark]     = useState(true);
+function AppInner() {
+  const [tab, setTab]         = useState("overview");
+  const [dark, setDark]       = useState(true);
   const [analyst, setAnalyst] = useState(false);
 
   // ── Resizable panel state ──
@@ -1524,6 +1552,8 @@ export default function App() {
     };
   }, [panelWidth]);
 
+  const [showAuth, setShowAuth] = useState(false);
+  const { isAuthenticated, user, profile, signOut } = useAuth();
   const theme = dark ? DARK_THEME : LIGHT_THEME;
 
   const renderTab = () => {
@@ -1533,11 +1563,19 @@ export default function App() {
     if (tab==="spending")       return <SpendingAudit/>;
     if (tab==="corporate")      return <CorporateAndProfile theme={theme}/>;
     if (tab==="corruptionwatch") return <CorruptionWatch />;
+    if (tab==="stockact")       return <StockActMonitor theme={theme}/>;
+    if (tab==="darkmoney")      return <DarkMoneyTracker theme={theme}/>;
+    if (tab==="accountability") return <AccountabilityIndex theme={theme}/>;
+    if (tab==="companyprofile") return <CompanyProfile theme={theme}/>;
+    if (tab==="watchlist")      return <Watchlist theme={theme} onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="settings")       return <Settings theme={theme}/>;
   };
 
   return (
     <ThemeCtx.Provider value={theme}>
+      {/* Auth modal — rendered at root so it overlays everything */}
+      <Auth isOpen={showAuth} onClose={() => setShowAuth(false)} theme={theme}/>
+
       <div style={{ background:theme.bg, minHeight:"100vh", transition:"background .25s", display:"flex", flexDirection:"column" }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500;700&display=swap');
@@ -1590,6 +1628,7 @@ export default function App() {
               }}>
                 {tb.label}
                 {tb.phase===3 && <span style={{ background:"#E6394622", border:"1px solid #E6394644", color:"#E63946", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>P3</span>}
+                {tb.phase===4 && <span style={{ background:"#00CC6622", border:"1px solid #00CC6644", color:"#00CC66", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>NEW</span>}
               </button>
             );
           })}
@@ -1605,6 +1644,51 @@ export default function App() {
               <span style={{ fontSize:12 }}>{dark?"☀":"🌙"}</span>
               <span style={{ letterSpacing:1 }}>{dark?"LIGHT":"DARK"}</span>
             </button>
+
+            {/* LOGIN / PROFILE BUTTON */}
+            {isAuthenticated ? (
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <button
+                  onClick={() => setTab("watchlist")}
+                  title={`Signed in as ${profile?.display_name || user?.email}`}
+                  style={{
+                    display:"flex", alignItems:"center", gap:6,
+                    background:theme.cardB, border:`1px solid ${theme.border}`,
+                    padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid,
+                    transition:"all .2s",
+                  }}
+                >
+                  <span style={{ fontSize:11, color:"#00CC66" }}>◉</span>
+                  <span style={{ letterSpacing:1, maxWidth:80, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                    {profile?.display_name || user?.email?.split("@")[0] || "ACCOUNT"}
+                  </span>
+                </button>
+                <button
+                  onClick={() => signOut()}
+                  title="Sign out"
+                  style={{
+                    background:"none", border:`1px solid ${theme.border}`,
+                    color:theme.low, fontFamily:MF, fontSize:8.5, padding:"5px 8px",
+                    cursor:"pointer",
+                  }}
+                >
+                  ↪
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuth(true)}
+                style={{
+                  display:"flex", alignItems:"center", gap:6,
+                  background:theme.cardB, border:`1px solid ${theme.border}`,
+                  padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid,
+                  transition:"all .2s",
+                }}
+              >
+                <span style={{ fontSize:11 }}>◎</span>
+                <span style={{ letterSpacing:1 }}>SIGN IN</span>
+              </button>
+            )}
 
             {/* ANALYST BUTTON */}
             <button
@@ -1728,5 +1812,14 @@ export default function App() {
         </div>
       </div>
     </ThemeCtx.Provider>
+  );
+}
+
+// Root export wraps AppInner in AuthProvider so auth state is available throughout
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
   );
 }

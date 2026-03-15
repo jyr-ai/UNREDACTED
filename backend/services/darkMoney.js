@@ -25,31 +25,47 @@ export async function getDarkMoneyOrgs(limit = 20) {
       }),
     ])
 
-    const results = []
-
+    const raw = []
     if (superPacs.status === 'fulfilled') {
-      for (const c of superPacs.value.data?.results || []) {
-        results.push(normalizeCommittee(c, 'super_pac'))
-      }
+      for (const c of superPacs.value.data?.results || []) raw.push({ c, type: 'super_pac' })
     }
 
     if (nonQual.status === 'fulfilled') {
-      for (const c of nonQual.value.data?.results || []) {
-        results.push(normalizeCommittee(c, 'super_pac'))
-      }
+      for (const c of nonQual.value.data?.results || []) raw.push({ c, type: '501c4' })
     }
 
-    return results.slice(0, limit)
+    if (raw.length === 0) {
+      console.warn('FEC returned no committee results')
+      return []
+    }
+
+    // Fetch per-committee financial totals in parallel (FEC list endpoint omits these)
+    const withTotals = await Promise.allSettled(
+      raw.slice(0, limit).map(({ c, type }) =>
+        axios.get(`${FEC_BASE}/committee/${c.committee_id}/totals/`, {
+          params: { api_key: getKey() },
+          timeout: 8000,
+        }).then(res => {
+          const totals = res.data?.results?.[0] || {}
+          return normalizeCommittee(c, type, totals)
+        }).catch(() => normalizeCommittee(c, type, {}))
+      )
+    )
+
+    return withTotals
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value)
+      .sort((a, b) => b.totalSpend - a.totalSpend)
   } catch (e) {
     console.error('getDarkMoneyOrgs error:', e.message)
     return []
   }
 }
 
-function normalizeCommittee(c, type) {
+function normalizeCommittee(c, type, totals = {}) {
   // Support both /committees/ (c.name) and /totals/pac-party/ (c.committee_name) shapes
   const name = c.committee_name || c.name || ''
-  const totalDisbursements = c.disbursements || c.total_disbursements || 0
+  const totalDisbursements = totals.disbursements || totals.total_disbursements || c.disbursements || c.total_disbursements || 0
   const state = c.committee_state || c.state || null
   const designation = c.committee_designation || c.organization_type || ''
 
