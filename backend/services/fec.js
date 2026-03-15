@@ -186,12 +186,14 @@ export async function getCandidateRaisedTotals(candidateId, electionYear) {
 
 // ─── Donor Intelligence ───────────────────────────────────────────────────────
 export async function getCandidateContributions(candidateId, limit = 20, minAmount = 1000) {
+  // FEC schedule_a requires two_year_transaction_period alongside candidate_id
   const data = await fecGet('/schedules/schedule_a/', {
     candidate_id: candidateId,
     per_page: Math.min(limit, 20),
     sort: '-contribution_receipt_amount',
     min_amount: minAmount,
     is_individual: true,
+    two_year_transaction_period: getCurrentElectionYear(),
   }, CACHE_TTL.schedules)
   return data.results || []
 }
