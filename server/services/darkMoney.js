@@ -16,11 +16,11 @@ export async function getDarkMoneyOrgs(limit = 20) {
     // Fetch Super PACs (V = Super PAC, O = Super PAC (Non-Contribution))
     const [superPacs, nonprofits] = await Promise.allSettled([
       axios.get(`${FEC_BASE}/committees/`, {
-        params: { committee_type: 'V', api_key: KEY, per_page: Math.ceil(limit / 2), sort: '-total_disbursements' },
+        params: { committee_type: 'V', api_key: KEY, per_page: Math.ceil(limit / 2) },
         timeout: 10000,
       }),
       axios.get(`${FEC_BASE}/committees/`, {
-        params: { committee_type: 'W', api_key: KEY, per_page: Math.floor(limit / 2), sort: '-total_disbursements' },
+        params: { committee_type: 'W', api_key: KEY, per_page: Math.floor(limit / 2) },
         timeout: 10000,
       }),
     ])

@@ -3,9 +3,7 @@ import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import CorruptionWatch from "./pages/CorruptionWatch.jsx";
-import AccountabilityIndex from "./components/AccountabilityIndex.jsx";
 import Auth from "./components/Auth.jsx";
-import Watchlist from "./components/Watchlist.jsx";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area,
@@ -255,45 +253,6 @@ function ap(t) {
 }
 function hg(t) {
   return { stroke:t.grid, vertical:false };
-}
-
-// ─── TICKER ───────────────────────────────────────────────────────────────────
-function Ticker() {
-  const t = useT();
-  const [x, setX] = useState(0);
-  const [txt, setTxt] = useState("");
-
-  // Fetch live RSS feed; show nothing if unavailable
-  useEffect(() => {
-    fetchSpendingNews(14).then(res => {
-      if (res.success && res.items?.length > 0) {
-        const live = res.items
-          .map(item => `● ${item.source || item.type || "INTEL"}: ${item.text}`)
-          .join("          ");
-        setTxt(live);
-      }
-    }).catch(() => { /* no live data — stay silent */ });
-  }, []);
-
-  useEffect(() => {
-    const id = setInterval(() => setX(v => v + 0.55), 24);
-    return () => clearInterval(id);
-  }, []);
-  const W = txt.length * 7;
-  if (!txt) return null;
-  return (
-    <div style={{ height:26, background:t.tickerBg, borderBottom:`1px solid ${t.border}`, display:"flex", alignItems:"center", overflow:"hidden", position:"relative" }}>
-      <div style={{ background:BLUE, height:"100%", display:"flex", alignItems:"center", padding:"0 13px", flexShrink:0, zIndex:2 }}>
-        <span style={{ fontFamily:MF, fontSize:8.5, color:WHITE, letterSpacing:2 }}>LIVE</span>
-      </div>
-      <div style={{ flex:1, overflow:"hidden" }}>
-        <div style={{ whiteSpace:"nowrap", fontFamily:MF, fontSize:9.5, color:t.tickerTx, letterSpacing:0.6, transform:`translateX(-${x % W}px)` }}>
-          &nbsp;&nbsp;&nbsp;{txt}&nbsp;&nbsp;&nbsp;{txt}
-        </div>
-      </div>
-      <div style={{ position:"absolute", right:0, top:0, bottom:0, width:60, background:`linear-gradient(90deg,transparent,${t.tickerBg})`, pointerEvents:"none" }}/>
-    </div>
-  );
 }
 
 
@@ -1070,17 +1029,12 @@ function CorporateAndProfile({ theme }) {
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id:"overview",       label:"Overview"              },
-  { id:"donors",         label:"Donors Relations"                },
-  { id:"policy",         label:"Policy Learning"   },
-  { id:"spending",       label:"Spending Audit"        },
-  { id:"corporate",      label:"Company Profiles"      },
-  { id:"corruptionwatch", label:"Corruption Watch"     },
-  { id:"stockact",       label:"STOCK Act Monitor",    phase:3 },
-  { id:"darkmoney",      label:"Dark Money",           phase:3 },
-  { id:"accountability", label:"Accountability Index", phase:3 },
-  { id:"companyprofile", label:"Company Profile",      phase:3 },
-  { id:"watchlist",      label:"Watchlist",            phase:4 },
+  { id:"overview",        label:"Overview"          },
+  { id:"donors",          label:"Donors Relations"  },
+  { id:"policy",          label:"Policy Learning"   },
+  { id:"spending",        label:"Spending Audit"    },
+  { id:"corporate",       label:"Company Profiles"  },
+  { id:"corruptionwatch", label:"Corruption Watch"  },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1562,12 +1516,7 @@ function AppInner() {
     if (tab==="policy")         return <PolicyIntel/>;
     if (tab==="spending")       return <SpendingAudit/>;
     if (tab==="corporate")      return <CorporateAndProfile theme={theme}/>;
-    if (tab==="corruptionwatch") return <CorruptionWatch />;
-    if (tab==="stockact")       return <StockActMonitor theme={theme}/>;
-    if (tab==="darkmoney")      return <DarkMoneyTracker theme={theme}/>;
-    if (tab==="accountability") return <AccountabilityIndex theme={theme}/>;
-    if (tab==="companyprofile") return <CompanyProfile theme={theme}/>;
-    if (tab==="watchlist")      return <Watchlist theme={theme} onSignInRequest={() => setShowAuth(true)}/>;
+    if (tab==="corruptionwatch") return <CorruptionWatch onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="settings")       return <Settings theme={theme}/>;
   };
 
