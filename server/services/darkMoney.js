@@ -13,7 +13,7 @@ const KEY = process.env.FEC_API_KEY || 'DEMO_KEY'
  */
 export async function getDarkMoneyOrgs(limit = 20) {
   try {
-    // Fetch Super PACs (V = Super PAC, O = Super PAC (Non-Contribution))
+    // FEC /committees/ list endpoint has NO financial totals — must fetch separately
     const [superPacs, nonprofits] = await Promise.allSettled([
       axios.get(`${FEC_BASE}/committees/`, {
         params: { committee_type: 'V', api_key: KEY, per_page: Math.ceil(limit / 2) },
@@ -25,29 +25,38 @@ export async function getDarkMoneyOrgs(limit = 20) {
       }),
     ])
 
-    const results = []
-
+    const raw = []
     if (superPacs.status === 'fulfilled') {
-      for (const c of superPacs.value.data?.results || []) {
-        results.push(normalizeCommittee(c, 'super_pac'))
-      }
+      for (const c of superPacs.value.data?.results || []) raw.push({ c, type: 'super_pac' })
     }
-
     if (nonprofits.status === 'fulfilled') {
-      for (const c of nonprofits.value.data?.results || []) {
-        results.push(normalizeCommittee(c, '501c4'))
-      }
+      for (const c of nonprofits.value.data?.results || []) raw.push({ c, type: '501c4' })
     }
 
-    return results.slice(0, limit)
+    // Fetch individual totals in parallel — the only way to get disbursement figures
+    const withTotals = await Promise.allSettled(
+      raw.slice(0, limit).map(({ c, type }) =>
+        axios.get(`${FEC_BASE}/committee/${c.committee_id}/totals/`, {
+          params: { api_key: KEY },
+          timeout: 8000,
+        }).then(r => {
+          const t = r.data?.results?.[0] || {}
+          return normalizeCommittee(c, type, t)
+        }).catch(() => normalizeCommittee(c, type, {}))
+      )
+    )
+
+    return withTotals
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value)
   } catch (e) {
     console.error('getDarkMoneyOrgs error:', e.message)
     return []
   }
 }
 
-function normalizeCommittee(c, type) {
-  const totalDisbursements = c.total_disbursements || 0
+function normalizeCommittee(c, type, totals = {}) {
+  const totalDisbursements = totals.disbursements || totals.fed_disbursements || 0
 
   // Classify disclosure level based on connected org and filing completeness
   let disclosureLevel = 'dark'
@@ -64,7 +73,7 @@ function normalizeCommittee(c, type) {
     connectedOrg: c.connected_organization_name || null,
     treasurer: c.treasurer_name || null,
     state: c.state,
-    linkedCandidates: 0,  // Populated separately
+    linkedCandidates: 0,
     issues: inferIssues(c.name),
   }
 }
