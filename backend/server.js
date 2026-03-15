@@ -23,6 +23,7 @@ import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
 
 const app = express()
+app.set('etag', false)
 
 app.use(cors({
   origin: /^http:\/\/localhost:\d+$/,
