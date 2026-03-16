@@ -1,6 +1,6 @@
 """Policy Analysis Agent using LangGraph."""
 from typing import Dict, Any, List, Optional
-from langchain_anthropic import ChatAnthropic
+from agents.llm_factory import get_llm
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -31,11 +31,7 @@ class PolicyAnalysisAgent:
     """AI agent for policy analysis and regulatory context."""
 
     def __init__(self):
-        self.llm = ChatAnthropic(
-            model='claude-sonnet-4-6',
-            temperature=0.1,
-            api_key=os.getenv('ANTHROPIC_API_KEY'),
-        )
+        self.llm = get_llm(temperature=0.1)
         self.http = httpx.AsyncClient(timeout=30.0)
         self.workflow = self._build_workflow()
 

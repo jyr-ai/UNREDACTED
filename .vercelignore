@@ -1,6 +1,6 @@
 # Python ETL pipeline — not deployed to Vercel
 etl/
-agents/
+/agents/
 
 # Docker/local infra config
 docker-compose.yml

@@ -1,6 +1,6 @@
 """Donor Intelligence Agent using LangGraph."""
 from typing import Dict, Any, List, Optional
-from langchain_anthropic import ChatAnthropic
+from agents.llm_factory import get_llm
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -25,11 +25,7 @@ class DonorIntelligenceAgent:
 
     def __init__(self):
         # Initialize LLM
-        self.llm = ChatAnthropic(
-            model="claude-sonnet-4-6",
-            temperature=0.1,
-            api_key=os.getenv("ANTHROPIC_API_KEY")
-        )
+        self.llm = get_llm(temperature=0.1)
 
         # Build the workflow graph
         self.workflow = self._build_workflow()

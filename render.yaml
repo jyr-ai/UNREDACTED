@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: unredacted-agents
+    runtime: docker
+    dockerfilePath: ./agents/Dockerfile
+    dockerContext: ./agents
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: AI_PROVIDER
+        value: anthropic          # switch to: deepseek | openai | groq
+      - key: AI_MODEL
+        value: claude-sonnet-4-6  # deepseek: deepseek-chat | openai: gpt-4o | groq: llama-3.3-70b-versatile
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FEC_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

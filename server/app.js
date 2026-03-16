@@ -19,14 +19,25 @@ import darkMoneyRouter from './routes/darkmoney.js'
 const app = express()
 
 // CORS — permissive for API (same-origin on Vercel, cross-origin in local dev)
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  /\.vercel\.app$/,
+  /^https:\/\/unredacted\./,  // custom domain prefix
+]
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:3000',
-    /\.vercel\.app$/,
-  ],
+  origin: (origin, cb) => {
+    // Same-origin requests (Vercel prod) have no Origin header — always allow
+    if (!origin) return cb(null, true)
+    const ok = ALLOWED_ORIGINS.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    )
+    cb(ok ? null : new Error('CORS'), ok)
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
 }))
 
 app.use(express.json({ limit: '10kb' }))
