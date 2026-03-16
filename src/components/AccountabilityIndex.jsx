@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import { useState, useEffect, Fragment } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { getAccountabilityLeaderboard } from '../api/client';
+import { getAccountabilityLeaderboard } from '../api/client.js';
 import { useTheme } from '../theme/index.js';
 import { Band, Card, CardTitle, SourceFooter } from './ui/index.js';
 import { Score } from './charts/index.js';
@@ -219,7 +219,7 @@ export default function AccountabilityIndex() {
                 </thead>
                 <tbody>
                   {sorted.map((p, i) => (
-                    <React.Fragment key={p.candidateId}>
+                    <Fragment key={p.candidateId}>
                       <tr
                         onClick={() => setExpandedId(expandedId === p.candidateId ? null : p.candidateId)}
                         style={{
@@ -275,7 +275,7 @@ export default function AccountabilityIndex() {
                           </td>
                         </tr>
                       )}
-                    </React.Fragment>
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '../theme/index.js'
-import { getRecentStockTrades, getStockActWatchlist } from '../api/client'
+import { getRecentStockTrades, getStockActWatchlist } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
@@ -45,7 +45,7 @@ export default function StockActMonitor() {
     if (filterChamber === 'HOUSE'  && tr.chamber !== 'house')  return false
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
-      return (tr.senator || tr.representative || '').toLowerCase().includes(q)
+      return (tr.politician || tr.senator || tr.representative || '').toLowerCase().includes(q)
     }
     return true
   })
@@ -169,7 +169,7 @@ export default function StockActMonitor() {
                       <span style={{ color: t.mid, fontSize: 11 }}>{(tr.chamber || '').toUpperCase()}</span>
                     </td>
                     <td style={{ padding: '10px 14px', color: t.hi, fontWeight: 600 }}>
-                      {tr.senator || tr.representative || 'Unknown'}
+                      {tr.politician || tr.senator || tr.representative || 'Unknown'}
                     </td>
                     <td style={{ padding: '10px 14px', color: ORANGE }}>{tr.filingType || 'PTR'}</td>
                     <td style={{ padding: '10px 14px', color: t.mid }}>{tr.filingDate || '—'}</td>

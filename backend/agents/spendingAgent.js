@@ -1,7 +1,7 @@
 import { searchContracts, searchGrants } from '../services/usaSpending.js'
 
 export async function runSpendingAgent({ keywords, entities, spendingTask }) {
-  const keyword = keywords?.length ? null : entities?.[0] || ''
+  const keyword = keywords?.length ? keywords.join(' ') : (entities?.[0] || '')
   const kwArray = keywords?.length ? keywords : undefined
   try {
     const [contracts, grants] = await Promise.all([

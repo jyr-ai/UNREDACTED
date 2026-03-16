@@ -21,6 +21,7 @@ import alertsRouter from './routes/alerts.js'
 import flagsRouter from './routes/flags.js'
 
 const app = express()
+app.set('etag', false)
 
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174'],

@@ -1,14 +1,17 @@
 import axios from 'axios'
 
 const BASE = 'https://api.open.fec.gov/v1'
-const KEY = process.env.FEC_API_KEY || 'DEMO_KEY'
-const IS_DEMO = KEY === 'DEMO_KEY'
+const getKey = () => process.env.FEC_API_KEY || 'DEMO_KEY'
+const isDemo = () => getKey() === 'DEMO_KEY'
+
+// Strip undefined / literal "undefined" strings before sending to FEC
+function clean(val) { return val === undefined || val === 'undefined' || val === '' ? undefined : val }
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 // DEMO_KEY: 1,000 calls/day, 30 calls/hour
 // Real key: 1,000 calls/hour (api.data.gov registered key)
 const RATE_LIMIT = {
-  maxPerHour: IS_DEMO ? 25 : 950,      // Leave a buffer below the hard limits
+  get maxPerHour() { return isDemo() ? 25 : 950 },  // Leave a buffer below the hard limits
   windowMs: 60 * 60 * 1000,            // 1 hour window
   callTimestamps: [],                   // Sliding window of call times
 }
@@ -25,7 +28,7 @@ function checkRateLimit() {
     throw new FECRateLimitError(
       `FEC API hourly rate limit reached (${RATE_LIMIT.callTimestamps.length}/${RATE_LIMIT.maxPerHour}). ` +
       `Retry in ${Math.ceil(waitMs / 1000)}s. ` +
-      (IS_DEMO
+      (isDemo()
         ? 'Set FEC_API_KEY in backend .env for higher limits (1000/hour).'
         : 'Current key: registered (1000/hour).')
     )
@@ -94,7 +97,7 @@ async function fecGet(endpoint, params, ttl = CACHE_TTL.search) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const res = await axios.get(`${BASE}${endpoint}`, {
-        params: { ...params, api_key: KEY },
+        params: { ...params, api_key: getKey() },
         timeout: 15000,
       })
       const data = res.data
@@ -114,7 +117,7 @@ async function fecGet(endpoint, params, ttl = CACHE_TTL.search) {
         }
         throw new FECRateLimitError(
           `FEC API rate limited (HTTP 429). ` +
-          (IS_DEMO
+          (isDemo()
             ? 'DEMO_KEY: 1000 calls/day limit reached. Set FEC_API_KEY in backend .env for higher limits.'
             : 'Hourly limit reached. Requests will resume shortly.')
         )
@@ -152,24 +155,26 @@ export async function searchCommittees({ keyword, limit = 10 }) {
 }
 
 export async function getCommitteeReceipts(committeeId, limit = 20) {
-  const data = await fecGet('/schedules/schedule_b/', {
+  // schedule_a = incoming contributions (receipts), not schedule_b (disbursements)
+  const data = await fecGet('/schedules/schedule_a/', {
     committee_id: committeeId,
     per_page: Math.min(limit, 20),
-    sort: '-disbursement_date',
+    sort: '-contribution_receipt_amount',
   }, CACHE_TTL.schedules)
   return data.results || []
 }
 
 // ─── Candidate Endpoints ──────────────────────────────────────────────────────
-export async function searchCandidates({ name, office, state, limit = 10, electionYear }) {
-  const year = electionYear || getCurrentElectionYear()
+export async function searchCandidates({ name, office, state, limit = 10, electionYear, cycle }) {
+  // cycle param allows explicit cycle override; if neither specified, search across all cycles
+  const year = cycle ? parseInt(cycle) : electionYear || null
   const params = {
-    q: name,
+    q: clean(name),
     per_page: Math.min(limit, 20),
-    election_year: year,
   }
-  if (office) params.office = office
-  if (state) params.state = state
+  if (year) params.election_year = year
+  if (office) params.office = clean(office)
+  if (state) params.state = clean(state)
   const data = await fecGet('/candidates/search/', params, CACHE_TTL.search)
   return data.results || []
 }
@@ -205,6 +210,7 @@ export async function getCommitteeContributions(committeeId, limit = 20, minAmou
     sort: '-contribution_receipt_amount',
     min_amount: minAmount,
     is_individual: true,
+    two_year_transaction_period: getCurrentElectionYear(),
   }, CACHE_TTL.schedules)
   return data.results || []
 }
@@ -406,7 +412,7 @@ export function getFecStatus() {
   const now = Date.now()
   const recentCalls = RATE_LIMIT.callTimestamps.filter(t => now - t < RATE_LIMIT.windowMs)
   return {
-    keyType: IS_DEMO ? 'DEMO_KEY' : 'registered',
+    keyType: isDemo() ? 'DEMO_KEY' : 'registered',
     callsThisHour: recentCalls.length,
     hourlyLimit: RATE_LIMIT.maxPerHour,
     cacheEntries: cache.size,

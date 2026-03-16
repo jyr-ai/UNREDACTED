@@ -18,6 +18,9 @@ import darkMoneyRouter from './routes/darkmoney.js'
 
 const app = express()
 
+// Disable ETags so API responses are never served as 304 from browser cache
+app.set('etag', false)
+
 // CORS — permissive for API (same-origin on Vercel, cross-origin in local dev)
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
