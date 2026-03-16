@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: unredacted-agents
+    runtime: docker
+    dockerfilePath: ./agents/Dockerfile
+    dockerContext: ./agents
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: FEC_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
