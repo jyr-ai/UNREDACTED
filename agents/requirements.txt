@@ -1,15 +1,28 @@
-# AI Agent Requirements
-fastapi>=0.104.0
-uvicorn>=0.24.0
-langchain>=0.1.0
-langchain-openai>=0.0.2
-langchain-anthropic>=0.1.0
-langgraph>=0.1.0
-openai>=1.3.0
-anthropic>=0.21.0
-pydantic>=2.4.0
-python-dotenv>=1.0.0
-httpx>=0.25.0
-neo4j>=5.14.0
-psycopg2-binary>=2.9.9
-redis>=5.0.0
+# UNREDACTED AI Agent Service — Python dependencies
+# Pinned for Railway deployment stability
+
+# Web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# LangChain + LangGraph AI stack
+langchain==0.3.14
+langgraph==1.0.10rc1
+
+# Provider SDKs — install all so AI_PROVIDER can be switched via env var
+langchain-anthropic==0.3.3      # AI_PROVIDER=anthropic (default)
+langchain-openai==0.3.4         # AI_PROVIDER=deepseek or openai
+langchain-groq==0.2.3           # AI_PROVIDER=groq
+
+# Underlying SDKs
+anthropic==0.45.0
+openai==1.65.0
+
+# HTTP client (async, used in all agents)
+httpx==0.28.1
+
+# Data validation
+pydantic==2.10.6
+
+# Environment config
+python-dotenv==1.0.1
