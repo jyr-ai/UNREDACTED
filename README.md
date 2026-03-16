@@ -2,10 +2,14 @@
 <img width="957" height="408" alt="image" src="https://github.com/user-attachments/assets/37053269-db60-49bb-abf1-4d2f9847150a" />
 
 
+
+
+
 **The War on Greed starts here.**
 
 UNREDACTED is an open source intelligence platform that monitors and exposes the nexus between government spending, campaign finance, and policy decisions. We are reclaiming transparency in an era of hidden influence and dark money.
 
+Access web demo here: [unredacted.vercel.app](https://unredacted.vercel.app/)
 ---
 
 ## Our Mission: Monitor wasteful federal government spending and corruption inference with AI
@@ -316,7 +320,7 @@ Set `AI_PROVIDER=deepseek|openai|anthropic|groq|qwen|xai|ollama` in `backend/.en
 ## 🛡️ License
 
 GNU Affero General Public License - See LICENSE file
-
+The GNU Affero General Public License is designed specifically to ensure that, in such cases, the modified source code becomes available to the community. It requires the operator of a network server to provide the source code of the modified version running there to the users of that server. Therefore, public use of a modified version, on a publicly accessible server, gives the public access to the source code of the modified version.
 ---
 
 ## Join the War on Greed!!!
