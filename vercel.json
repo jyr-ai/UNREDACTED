@@ -1,15 +1,12 @@
 {
   "functions": {
-    "api/[[...path]].js": {
-      "runtime": "nodejs20.x",
+    "api/[...path].js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
-    {
-      "source": "/((?!api|assets|public|vite\\.svg).*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/:path*", "destination": "/api/[...path]" },
+    { "source": "/((?!assets|vite\\.svg).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
@@ -27,10 +24,7 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=(), payment=()"
-        }
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" }
       ]
     },
     {
