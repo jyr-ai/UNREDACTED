@@ -3,22 +3,42 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from contextlib import asynccontextmanager
 import asyncio
+import logging
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Import agent modules
 from agents.donor_agent import DonorIntelligenceAgent
 from agents.corruption_agent import CorruptionDetectionAgent
 from agents.policy_agent import PolicyAnalysisAgent
 
+# Agents initialized in lifespan (after port binds) so Render detects the port
+donor_agent: DonorIntelligenceAgent = None
+corruption_agent: CorruptionDetectionAgent = None
+policy_agent: PolicyAnalysisAgent = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global donor_agent, corruption_agent, policy_agent
+    logger.info("Initializing AI agents...")
+    donor_agent = DonorIntelligenceAgent()
+    corruption_agent = CorruptionDetectionAgent()
+    policy_agent = PolicyAnalysisAgent()
+    logger.info("All agents ready.")
+    yield
+
+
 app = FastAPI(
     title="UNREDACTED AI Agent Service",
     description="AI-powered donor intelligence and corruption detection",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS — allow frontend + Express backend via env var (comma-separated)
@@ -35,11 +55,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize agents
-donor_agent = DonorIntelligenceAgent()
-corruption_agent = CorruptionDetectionAgent()
-policy_agent = PolicyAnalysisAgent()
 
 # Request/Response models
 class QueryRequest(BaseModel):
