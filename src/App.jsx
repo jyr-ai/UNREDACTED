@@ -14,8 +14,8 @@ import {
   queryAgent,
   fetchContracts,
   fetchAgencySpending,
-  fetchSpendingNews,
 } from "./api/client.js";
+import Ticker from "./components/layout/Ticker.jsx";
 import LiveFeedPanel from "./components/LiveFeedPanel.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────

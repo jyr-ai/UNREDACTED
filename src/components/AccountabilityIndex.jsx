@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, Fragment } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { getAccountabilityLeaderboard } from '../api/client';
+import { getAccountabilityLeaderboard } from '../api/client.js';
 import { useTheme } from '../theme/index.js';
 import { Band, Card, CardTitle, SourceFooter } from './ui/index.js';
 import { Score } from './charts/index.js';

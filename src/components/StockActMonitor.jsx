@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '../theme/index.js'
-import { getRecentStockTrades, getStockActWatchlist } from '../api/client'
+import { getRecentStockTrades, getStockActWatchlist } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useTheme } from '../theme/index.js'
-import { getDarkMoneyOrgs, getDarkMoneyFlowData } from '../api/client'
+import { getDarkMoneyOrgs, getDarkMoneyFlowData } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
