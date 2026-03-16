@@ -7,6 +7,7 @@ import { runDonorAgent } from './donorAgent.js'
 export async function orchestrate(userQuery) {
   // Step 1: Decompose the query using DeepSeek (default)
   const decomposition = await createChatCompletion({
+    model: process.env.AI_PROVIDER === 'groq' ? 'llama-3.3-70b-versatile' : 'deepseek-chat',
     response_format: { type: 'json_object' },
     max_tokens: 500,
     messages: [
