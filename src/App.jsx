@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { track } from "@vercel/analytics";
 import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
@@ -546,6 +547,7 @@ function PolicyIntel() {
   const send = async () => {
     if (!input.trim()) return;
     const q = input; setInput(""); setThinking(true);
+    track("analyst_query", { panel: "policy", query_length: q.length });
     setMsgs(m => [...m, { role:"user", text:q }]);
     try {
       const res = await queryAgent(q);
@@ -1115,6 +1117,7 @@ function AnalystPanel({ onClose, dark }) {
     const q = (text || input).trim();
     if (!q || loading) return;
     setInput("");
+    track("analyst_query", { panel: "main", query_length: q.length });
     setMsgs(m => [...m, { role:"user", content:q }]);
     setLoading(true);
     setRouting(null);
@@ -1565,7 +1568,7 @@ function AppInner() {
           {TABS.map(tb => {
             const on = tab===tb.id;
             return (
-              <button key={tb.id} onClick={() => setTab(tb.id)} style={{
+              <button key={tb.id} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
                 background:"transparent",
                 color: on ? ORANGE : theme.mid,
                 border:"none",
@@ -1585,7 +1588,7 @@ function AppInner() {
           <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:9 }}>
             <div style={{ fontFamily:MF, fontSize:8.5, color:theme.low, border:`1px solid ${theme.border}`, padding:"4px 10px" }}>🔔 12</div>
 
-            <button onClick={() => setDark(d => !d)} style={{
+            <button onClick={() => { const next = !dark; setDark(next); track("theme_toggle", { theme: next ? "dark" : "light" }); }} style={{
               display:"flex", alignItems:"center", gap:6,
               background:theme.cardB, border:`1px solid ${theme.border}`, borderRadius:20,
               padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s",
@@ -1598,7 +1601,7 @@ function AppInner() {
             {isAuthenticated ? (
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                 <button
-                  onClick={() => setTab("watchlist")}
+                  onClick={() => { setTab("watchlist"); track("tab_view", { tab: "watchlist" }); }}
                   title={`Signed in as ${profile?.display_name || user?.email}`}
                   style={{
                     display:"flex", alignItems:"center", gap:6,
@@ -1613,7 +1616,7 @@ function AppInner() {
                   </span>
                 </button>
                 <button
-                  onClick={() => signOut()}
+                  onClick={() => { track("auth_sign_out"); signOut(); }}
                   title="Sign out"
                   style={{
                     background:"none", border:`1px solid ${theme.border}`,
@@ -1626,7 +1629,7 @@ function AppInner() {
               </div>
             ) : (
               <button
-                onClick={() => setShowAuth(true)}
+                onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }}
                 style={{
                   display:"flex", alignItems:"center", gap:6,
                   background:theme.cardB, border:`1px solid ${theme.border}`,
@@ -1641,7 +1644,7 @@ function AppInner() {
 
             {/* ANALYST BUTTON */}
             <button
-              onClick={() => setAnalyst(a => !a)}
+              onClick={() => { const next = !analyst; setAnalyst(next); track("analyst_panel_toggle", { open: next }); }}
               style={{
                 display:"flex", alignItems:"center", gap:7,
                 background: analyst ? ORANGE : ORANGE+"18",
@@ -1660,7 +1663,7 @@ function AppInner() {
             {/* SETTINGS BUTTON — far right */}
             <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
             <button
-              onClick={() => setTab(t => t==="settings" ? "overview" : "settings")}
+              onClick={() => { setTab(t => { const next = t === "settings" ? "overview" : "settings"; track("tab_view", { tab: next }); return next; }); }}
               style={{
                 display:"flex", alignItems:"center", gap:6,
                 background:"transparent", border:"none",
