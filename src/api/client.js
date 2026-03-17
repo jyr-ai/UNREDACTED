@@ -144,6 +144,11 @@ export const darkMoney = {
   orgsIndex:  (limit = 50, level) => request(`/api/darkmoney/organizations/index?limit=${limit}${level ? `&level=${level}` : ''}`),
 }
 
+// ── Version ──────────────────────────────────────────────────────────────────
+export const version = {
+  get: () => request('/api/version'),
+}
+
 // ── Health ────────────────────────────────────────────────────────────────────
 export const health = () => request('/api/health')
 
