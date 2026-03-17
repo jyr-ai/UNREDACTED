@@ -55,6 +55,30 @@ app.use((req, res, next) => {
 
 app.get('/', (req, res) => res.json({ name: 'UNREDACTED MONITOR API', status: 'ok', version: '1.0.0', timestamp: new Date() }))
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }))
+app.get('/api/version', async (req, res) => {
+  try {
+    // Use dynamic import for child_process
+    const childProcess = await import('child_process');
+    const version = childProcess.execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+    // Clean up: remove extra dot in "v.0.1.0" → "v0.1.0"
+    const cleaned = version.replace('v.', 'v');
+    res.json({ version: cleaned, source: 'git' });
+  } catch (error) {
+    console.error('Failed to get git version:', error.message);
+    // Fallback to package.json
+    try {
+      // Use readFileSync to read package.json directly - use correct path
+      const fs = await import('fs');
+      const path = await import('path');
+      const packageJsonPath = path.join(process.cwd(), 'package.json');
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      res.json({ version: `v${packageJson.version}`, source: 'package' });
+    } catch (fallbackError) {
+      console.error('Failed to read package.json:', fallbackError.message);
+      res.status(500).json({ error: 'Could not determine version' });
+    }
+  }
+})
 
 app.use('/api/spending', generalLimiter, spendingRouter)
 app.use('/api/policy', generalLimiter, policyRouter)
