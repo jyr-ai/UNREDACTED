@@ -6,6 +6,7 @@ import { Band, Card, CardTitle, SourceFooter, Legend } from "../components/ui/in
 import { SPEND, TREND } from "../data/spending.js";
 import { fetchContracts } from "../api/client.js";
 import LiveFeedPanel from "../components/LiveFeedPanel.jsx";
+import WarStats from "../components/WarStats.jsx";
 
 function Tip({ active, payload, label, fmt }) {
   const t = useTheme();
@@ -65,14 +66,23 @@ export default function Overview() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}` }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr) minmax(180px,1fr)", borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}` }}>
         {kpis.map((k, i) => (
-          <div key={i} style={{ padding: "18px 20px", borderRight: i < 3 ? `1px solid ${t.border}` : "none" }}>
+          <div key={i} style={{ padding: "18px 20px", borderRight: `1px solid ${t.border}` }}>
             <div style={{ fontFamily: SF, fontSize: 34, color: t.kpiNum, lineHeight: 1, marginBottom: 5 }}>{k.v}</div>
             <div style={{ fontFamily: MF, fontSize: 10.5, color: t.hi, marginBottom: 3 }}>{k.d}</div>
             <div style={{ fontFamily: MF, fontSize: 9, color: t.low }}>{k.s}</div>
           </div>
         ))}
+        <a
+          key="war"
+          href="https://meta-trials.vercel.app/us-iran-conflict"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none', display: 'block' }}
+        >
+          <WarStats />
+        </a>
       </div>
 
       {/* Charts */}

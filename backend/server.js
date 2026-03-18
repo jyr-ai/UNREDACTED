@@ -15,6 +15,7 @@ import corruptionRouter from './routes/corruption.js'
 import companiesRouter from './routes/companies.js'
 import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
+import conflictRouter from './routes/conflict.js'
 // Phase 4: Supabase-backed user features
 import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
@@ -24,7 +25,7 @@ const app = express()
 app.set('etag', false)
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
   methods: ['GET', 'POST', 'DELETE', 'PATCH', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Service-Token'],
 }))
@@ -92,6 +93,7 @@ app.use('/api/corruption', generalLimiter, corruptionRouter)
 app.use('/api/companies', generalLimiter, companiesRouter)
 app.use('/api/stockact', generalLimiter, stockActRouter)
 app.use('/api/darkmoney', generalLimiter, darkMoneyRouter)
+app.use('/api/conflict', generalLimiter, conflictRouter)
 // Phase 4: Supabase-backed user features
 app.use('/api/watchlist', generalLimiter, watchlistRouter)
 app.use('/api/alerts', generalLimiter, alertsRouter)

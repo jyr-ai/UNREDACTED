@@ -20,6 +20,8 @@ import {
 import Ticker from "./components/layout/Ticker.jsx";
 import LiveFeedPanel from "./components/LiveFeedPanel.jsx";
 import { CommunityWidget } from "./components/ui/index.js";
+import WarStats from "./components/WarStats.jsx";
+import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -307,14 +309,25 @@ function Overview() {
         </p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", borderTop:`1px solid ${t.border}`, borderBottom:`1px solid ${t.border}` }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr) minmax(180px,1fr)", borderTop:`1px solid ${t.border}`, borderBottom:`1px solid ${t.border}` }}>
         {kpis.map((k,i) => (
-          <div key={i} style={{ padding:"18px 20px", borderRight:i<3?`1px solid ${t.border}`:"none" }}>
+          <div key={i} style={{ padding:"18px 20px", borderRight:`1px solid ${t.border}` }}>
             <div style={{ fontFamily:SF, fontSize:34, color:t.kpiNum, lineHeight:1, marginBottom:5 }}>{k.v}</div>
             <div style={{ fontFamily:MF, fontSize:10.5, color:t.hi, marginBottom:3 }}>{k.d}</div>
             <div style={{ fontFamily:MF, fontSize:9, color:t.low }}>{k.s}</div>
           </div>
         ))}
+        <a
+          key="war"
+          href="https://meta-trials.vercel.app/us-iran-conflict"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none', display: 'block' }}
+        >
+          <WarThemeProvider theme={t}>
+            <WarStats />
+          </WarThemeProvider>
+        </a>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
@@ -1575,12 +1588,12 @@ function AppInner() {
             </a>
             <div style={{ display:"flex", alignItems:"center", gap:7 }}>
               <div style={{ width:7, height:7, borderRadius:"50%", background:"#00FF88", animation:"pulse 2s infinite alternate" }}/>
-              <span style={{ fontFamily:MF, fontSize:9, color:"rgba(255,255,255,.8)", letterSpacing:2 }}>LIVE</span>
+              <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.8)", letterSpacing:2 }}>LIVE</span>
             </div>
-            <span style={{ fontFamily:MF, fontSize:9, color:"rgba(255,255,255,.55)", letterSpacing:1.5 }}>
+            <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.55)", letterSpacing:1.5 }}>
               GOVERNMENT ACCOUNTABILITY INTELLIGENCE
             </span>
-            <span style={{ fontFamily:MF, fontSize:9, color:"rgba(255,255,255,.4)" }}>
+            <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.4)" }}>
               {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase()}
             </span>
           </div>
@@ -1611,7 +1624,6 @@ function AppInner() {
           })}
 
           <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:9 }}>
-            <div style={{ fontFamily:MF, fontSize:8.5, color:theme.low, border:`1px solid ${theme.border}`, padding:"4px 10px" }}>🔔 12</div>
 
             <button onClick={() => { const next = !dark; setDark(next); track("theme_toggle", { theme: next ? "dark" : "light" }); }} style={{
               display:"flex", alignItems:"center", gap:6,
@@ -1729,7 +1741,7 @@ function AppInner() {
               {renderTab()}
               <div style={{ marginTop:32, borderTop:`1px solid ${theme.border}`, paddingTop:14, display:"flex", justifyContent:"space-between" }}>
                 <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>UN*REDACTED · Public record intelligence · All data from public federal sources</span>
-                <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>Analytical inferences are not legal conclusions · unredacted.fyi</span>
+                <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>Analytical inferences are not legal conclusions · https://unredacted.us/</span>
               </div>
             </div>
           </div>
