@@ -32,6 +32,13 @@ For too long, the American people have been kept in the dark about how their tax
 
 The UN*REDACTED MONITOR exists to give the American people the intelligence tools to hold power accountable.
 
+## OUR HARD ASK
+- We need contributors in adding more data sources
+- We need work done on dark money tracing methods
+- we need contributors to test he validity of the results
+- Add more live featuers to the monitor
+- More beautiful graphs!
+
 ---
 
 ## Data Sources
@@ -275,7 +282,7 @@ docker-compose up -d neo4j postgres redis
 cp backend/.env.example backend/.env
 # Edit backend/.env with your API keys
 
-# Install dependencies and start 
+# Install dependencies and start
 cd backend
 npm install
 npm run dev:all
@@ -317,9 +324,11 @@ Set `AI_PROVIDER=deepseek|openai|anthropic|groq|qwen|xai|ollama` in `backend/.en
 
 ---
 
-## 🛡️ License GNU Affero General Public License - See LICENSE file
+## 🛡️ License GNU Affero General Public License 3.0 - See LICENSE file
 
 The GNU Affero General Public License is designed specifically to ensure that, in such cases, the modified source code becomes available to the community. It requires the operator of a network server to provide the source code of the modified version running there to the users of that server. Therefore, public use of a modified version, on a publicly accessible server, gives the public access to the source code of the modified version.
+
+If the user cannot abide by the APGL-3.0 agreement, then please see our *COMMERCIAL_LICENSE.md*
 ---
 
 ## JOIN THE WAR ON GREED!!!
