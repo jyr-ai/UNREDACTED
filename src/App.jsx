@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { track } from "@vercel/analytics";
+import { useMobile, useTablet } from "./hooks/useMediaQuery.js";
 import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
@@ -264,6 +265,8 @@ function hg(t) {
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
 function Overview() {
   const t = useT();
+  const isMobile = useMobile();
+  const isTablet = useTablet();
   const [liveContracts, setLiveContracts] = useState(null);
 
   useEffect(() => {
@@ -303,16 +306,16 @@ function Overview() {
 
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>SPECIAL REPORT · FISCAL YEAR 2024</div>
-        <h2 style={{ fontFamily:SF, fontSize:36, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:10, maxWidth:680 }}>The price of influence</h2>
-        <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.75, maxWidth:640 }}>
+        <h2 style={{ fontFamily:SF, fontSize: isMobile ? 24 : 36, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:10, maxWidth:680 }}>The price of influence</h2>
+        <p style={{ fontFamily:SF, fontSize: isMobile ? 13 : 14, fontStyle:"italic", color:t.mid, lineHeight:1.75, maxWidth:640 }}>
           American companies that donate most generously to congressional campaigns receive disproportionate federal contracts. A cross-source analysis of FEC, USASpending and procurement data reveals the pattern in stark relief.
         </p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr) minmax(180px,1fr)", borderTop:`1px solid ${t.border}`, borderBottom:`1px solid ${t.border}` }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(3,1fr)" : "repeat(4,1fr) minmax(180px,1fr)", borderTop:`1px solid ${t.border}`, borderBottom:`1px solid ${t.border}` }}>
         {kpis.map((k,i) => (
-          <div key={i} style={{ padding:"18px 20px", borderRight:`1px solid ${t.border}` }}>
-            <div style={{ fontFamily:SF, fontSize:34, color:t.kpiNum, lineHeight:1, marginBottom:5 }}>{k.v}</div>
+          <div key={i} style={{ padding: isMobile ? "12px 14px" : "18px 20px", borderRight:`1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : "none" }}>
+            <div style={{ fontFamily:SF, fontSize: isMobile ? 24 : 34, color:t.kpiNum, lineHeight:1, marginBottom:5 }}>{k.v}</div>
             <div style={{ fontFamily:MF, fontSize:10.5, color:t.hi, marginBottom:3 }}>{k.d}</div>
             <div style={{ fontFamily:MF, fontSize:9, color:t.low }}>{k.s}</div>
           </div>
@@ -330,7 +333,7 @@ function Overview() {
         </a>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20 }}>
         <div>
           <Band label="Federal spending deviation" right="USASPENDING.GOV"/>
           <Card>
@@ -384,7 +387,7 @@ function Overview() {
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(3,1fr)", gap:16 }}>
         {[
           { c:ORANGE, t2:"Defence dominates",        b:"Four of the five lowest accountability scores belong to defence contractors. Sole-source contracts account for 68% of total awards." },
           { c:t.blue, t2:"Pharma's rising footprint",b:"Pharmaceutical PAC spending rose 106% from 2016–2024 — faster than any sector — while drug-pricing legislation stalled in committee." },
@@ -407,7 +410,9 @@ function Overview() {
 // ─── DONOR INTEL ─────────────────────────────────────────────────────────────
 function DonorIntel() {
   const t = useT();
+  const isMobile = useMobile();
   const [sel, setSel] = useState(0);
+  const [polView, setPolView] = useState("list");
   const POLS = [
     { n:"Sen. Robert Hughes (R-TX)",  sc:28, raised:"$4.2m", flags:3 },
     { n:"Rep. Diana Marsh (D-CA)",    sc:71, raised:"$1.8m", flags:0 },
@@ -423,7 +428,7 @@ function DonorIntel() {
         <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>A systematic analysis of PAC contributions, individual donations and independent expenditures across the 2023–24 federal election cycle.</p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1.15fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr", gap: isMobile ? 14 : 20 }}>
         <div>
           <Band label="Top corporate donors — PAC + individual ($m)" right="FEC · FY2024"/>
           <Card>
@@ -505,7 +510,7 @@ function DonorIntel() {
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1.3fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.3fr 1fr", gap: isMobile ? 14 : 20 }}>
         <div>
           <Band label="Industry PAC spending — stacked share" right="2016–2024"/>
           <Card>
@@ -542,6 +547,7 @@ function DonorIntel() {
 // ─── POLICY INTEL ─────────────────────────────────────────────────────────────
 function PolicyIntel() {
   const t = useT();
+  const isMobile = useMobile();
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const bottom = useRef(null);
@@ -626,7 +632,7 @@ function PolicyIntel() {
         <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>AI policy agent</h2>
         <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>Query federal regulations, executive orders, budget justifications and spending data. Every response is grounded in primary federal records.</p>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 260px", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 260px", gap: isMobile ? 14 : 20 }}>
         <div style={{ background:t.card, border:`1px solid ${t.border}`, display:"flex", flexDirection:"column" }}>
           <div style={{ background:t.band, padding:"7px 14px", display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <div style={{ width:6, height:6, borderRadius:"50%", background:"#00FF88", boxShadow:"0 0 6px #00FF88" }}/>
@@ -688,7 +694,7 @@ function PolicyIntel() {
           </div>
         </div>
 
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        {!isMobile && <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           <div>
             <Band label="Policy activity FY2024" right="FED. REGISTER"/>
             <Card>
@@ -716,7 +722,7 @@ function PolicyIntel() {
               </div>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -725,6 +731,7 @@ function PolicyIntel() {
 // ─── DONOR WEB ────────────────────────────────────────────────────────────────
 function DonorWeb() {
   const t = useT();
+  const isMobile = useMobile();
   const [hov, setHov] = useState(null);
   const [view, setView] = useState(0);
   const VIEWS = ["Donor Web","Revolving Door","Dark Money Chain","Regulatory Capture","Follow the Money"];
@@ -736,8 +743,8 @@ function DonorWeb() {
         <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Donor web explorer</h2>
         <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>Visualise the money and influence networks connecting corporations, PACs, elected officials and the agencies they oversee.</p>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 200px", gap:16 }}>
-        <div style={{ background:"#090909", border:`2px solid ${t.border}`, position:"relative", minHeight:480, overflow:"hidden" }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 200px", gap:16 }}>
+        <div style={{ background:"#090909", border:`2px solid ${t.border}`, position:"relative", minHeight: isMobile ? 300 : 480, overflow:"hidden" }}>
           <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle,rgba(255,128,0,0.06) 1px,transparent 1px)", backgroundSize:"28px 28px", pointerEvents:"none" }}/>
           <div style={{ position:"absolute", inset:0, backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px)", pointerEvents:"none", zIndex:1 }}/>
           <div style={{ position:"absolute", top:12, left:14, fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:2, zIndex:3 }}>
@@ -817,6 +824,7 @@ function DonorWeb() {
 // ─── SPENDING AUDIT ───────────────────────────────────────────────────────────
 function SpendingAudit() {
   const t = useT();
+  const isMobile = useMobile();
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
@@ -824,7 +832,7 @@ function SpendingAudit() {
         <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Federal spending audit</h2>
         <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>Actual obligations versus congressional appropriations — anomaly detection across contract awards and agency-level budget variance analysis.</p>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20 }}>
         <div>
           <Band label="Agency budget variance" right="FY2024"/>
           <Card>
@@ -913,6 +921,7 @@ function SpendingAudit() {
 // ─── CORPORATE ────────────────────────────────────────────────────────────────
 function Corporate() {
   const t = useT();
+  const isMobile = useMobile();
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
@@ -966,7 +975,7 @@ function Corporate() {
           </table>
           <div style={{ padding:"7px 14px", background:t.cardB, borderTop:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between" }}>
             <span style={{ fontFamily:MF, fontSize:8.5, color:t.low }}>Sources: FEC; USASpending.gov; UN*REDACTED accountability score. All inferences are analytical — not legal conclusions.</span>
-            <span style={{ fontFamily:MF, fontSize:8.5, color:t.low }}>{new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}).toUpperCase()}</span>
+            {!isMobile && <span style={{ fontFamily:MF, fontSize:8.5, color:t.low }}>{new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}).toUpperCase()}</span>}
           </div>
         </div>
       </div>
@@ -1238,6 +1247,8 @@ function AnalystPanel({ onClose, dark }) {
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {/* Close button — left of agent pills */}
+          <button onClick={onClose} style={{ background:"none", border:`1px solid ${t.border}`, color:t.mid, width:28, height:28, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>×</button>
           {/* Agent status pills */}
           <div style={{ display:"flex", gap:5 }}>
             {Object.entries(AGENT_META).filter(([k])=>k!=="orchestrator").map(([k,v]) => (
@@ -1246,7 +1257,6 @@ function AnalystPanel({ onClose, dark }) {
               </div>
             ))}
           </div>
-          <button onClick={onClose} style={{ background:"none", border:`1px solid ${t.border}`, color:t.mid, width:28, height:28, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
         </div>
       </div>
 
@@ -1260,7 +1270,7 @@ function AnalystPanel({ onClose, dark }) {
               <div style={{ width:52, height:52, borderRadius:"50%", background:ORANGE+"18", border:`2px solid ${ORANGE}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px", boxShadow:`0 0 24px ${ORANGE}28` }}>
                 <span style={{ fontSize:22, color:ORANGE }}>◈</span>
               </div>
-              <div style={{ fontFamily:SF, fontSize:18, color:t.hi, fontWeight:700, marginBottom:6 }}>Analyst Agent</div>
+              <div style={{ fontFamily:SF, fontSize:18, color:t.hi, fontWeight:700, marginBottom:6 }}> Analyst Agent (beta)</div>
               <div style={{ fontFamily:MF, fontSize:10, color:t.mid, lineHeight:1.7, maxWidth:320, margin:"0 auto" }}>
                 Ask anything about government spending, donor networks, policy changes, or corruption signals. I'll route your query to the right agents.
               </div>
@@ -1470,6 +1480,11 @@ function AppInner() {
   const [dark, setDark]         = useState(true);
   const [analyst, setAnalyst]   = useState(false);
   const [appVersion, setAppVersion] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);   // mobile hamburger
+
+  // ── Device detection ──
+  const isMobile = useMobile();
+  const isTablet = useTablet();
 
   // ── Resizable panel state ──
   const [panelWidth, setPanelWidth] = useState(420);
@@ -1576,146 +1591,246 @@ function AppInner() {
         `}</style>
 
         {/* ── MASTHEAD ─────────────────────────────────────────── */}
-        <div style={{ background:ORANGE, height:52, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 32px", flexShrink:0 }}>
-          <div style={{ fontFamily:SF, fontSize:24, color:WHITE, fontWeight:700, letterSpacing:1.5 }}>
-            THE UN<span style={{ opacity:0.7 }}>•</span>REDACTED MONITOR {appVersion && <span style={{ fontSize:14, opacity:0.8 }}>{appVersion}</span>}
+        <div style={{
+          background: ORANGE,
+          height: isMobile ? "auto" : 52,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: isMobile ? "10px 16px" : "0 32px",
+          flexShrink: 0,
+          flexWrap: isMobile ? "wrap" : "nowrap",
+          gap: isMobile ? 6 : 0,
+        }}>
+          {/* Logo / title */}
+          <div style={{ fontFamily:SF, fontSize: isMobile ? 17 : 24, color:WHITE, fontWeight:700, letterSpacing:1.5, flexShrink:0 }}>
+            THE UN<span style={{ opacity:0.7 }}>•</span>REDACTED{isMobile ? "" : " MONITOR"}{" "}
+            {appVersion && <span style={{ fontSize: isMobile ? 11 : 14, opacity:0.8 }}>{appVersion}</span>}
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+
+          {/* Right-hand cluster */}
+          <div style={{ display:"flex", alignItems:"center", gap: isMobile ? 10 : 20 }}>
+            {/* GitHub icon */}
             <a href="https://github.com/policybot-io/UNREDACTED" target="_blank" rel="noopener noreferrer" style={{ display:"flex", alignItems:"center", textDecoration:"none" }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style={{ opacity:0.8, transition:"opacity 0.2s" }} onMouseEnter={e => e.currentTarget.style.opacity=1} onMouseLeave={e => e.currentTarget.style.opacity=0.8}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" style={{ opacity:0.8 }}>
                 <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
               </svg>
             </a>
-            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+            {/* LIVE badge */}
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
               <div style={{ width:7, height:7, borderRadius:"50%", background:"#00FF88", animation:"pulse 2s infinite alternate" }}/>
-              <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.8)", letterSpacing:2 }}>LIVE</span>
+              <span style={{ fontFamily:MF, fontSize: isMobile ? 10 : 12, color:"rgba(255,255,255,.8)", letterSpacing:2 }}>LIVE</span>
             </div>
-            <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.55)", letterSpacing:1.5 }}>
-              GOVERNMENT ACCOUNTABILITY INTELLIGENCE
-            </span>
-            <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.4)" }}>
-              {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase()}
-            </span>
+            {/* Long labels — hidden on mobile */}
+            {!isMobile && (
+              <>
+                <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.55)", letterSpacing:1.5 }}>
+                  GOVERNMENT ACCOUNTABILITY INTELLIGENCE
+                </span>
+                <span style={{ fontFamily:MF, fontSize:12, color:"rgba(255,255,255,.4)" }}>
+                  {new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"}).toUpperCase()}
+                </span>
+              </>
+            )}
+            {/* Date shown on tablet only (condensed) */}
+            {isTablet && !isMobile && null}
           </div>
         </div>
 
         <Ticker/>
 
         {/* ── NAV ──────────────────────────────────────────────── */}
-        <div style={{ background:theme.navBg, borderBottom:`1px solid ${theme.border}`, display:"flex", alignItems:"stretch", padding:"0 20px 0 32px", transition:"background .25s", flexShrink:0 }}>
-          {TABS.map(tb => {
-            const on = tab===tb.id;
-            return (
-              <button key={tb.id} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
-                background:"transparent",
-                color: on ? ORANGE : theme.mid,
-                border:"none",
-                borderBottom:`3px solid ${on?ORANGE:"transparent"}`,
-                padding:"12px 16px",
-                fontFamily:MF, fontSize:10.5, letterSpacing:0.5,
-                whiteSpace:"nowrap", transition:"color .14s, border-color .14s",
-                display:"flex", alignItems:"center", gap:5,
-              }}>
-                {tb.label}
-                {tb.phase===3 && <span style={{ background:"#E6394622", border:"1px solid #E6394644", color:"#E63946", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>P3</span>}
-                {tb.phase===4 && <span style={{ background:"#00CC6622", border:"1px solid #00CC6644", color:"#00CC66", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>NEW</span>}
-              </button>
-            );
-          })}
-
-          <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:9 }}>
-
-            <button onClick={() => { const next = !dark; setDark(next); track("theme_toggle", { theme: next ? "dark" : "light" }); }} style={{
-              display:"flex", alignItems:"center", gap:6,
-              background:theme.cardB, border:`1px solid ${theme.border}`, borderRadius:20,
-              padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s",
+        {isMobile ? (
+          /* ── MOBILE NAV: compact action bar + slide-out drawer ── */
+          <>
+            <div style={{
+              background: theme.navBg, borderBottom:`1px solid ${theme.border}`,
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              padding:"0 12px", height:48, flexShrink:0,
             }}>
-              <span style={{ fontSize:12 }}>{dark?"☀":"🌙"}</span>
-              <span style={{ letterSpacing:1 }}>{dark?"LIGHT":"DARK"}</span>
-            </button>
-
-            {/* LOGIN / PROFILE BUTTON */}
-            {isAuthenticated ? (
-              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                <button
-                  onClick={() => { setTab("watchlist"); track("tab_view", { tab: "watchlist" }); }}
-                  title={`Signed in as ${profile?.display_name || user?.email}`}
-                  style={{
-                    display:"flex", alignItems:"center", gap:6,
-                    background:theme.cardB, border:`1px solid ${theme.border}`,
-                    padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid,
-                    transition:"all .2s",
-                  }}
-                >
-                  <span style={{ fontSize:11, color:"#00CC66" }}>◉</span>
-                  <span style={{ letterSpacing:1, maxWidth:80, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                    {profile?.display_name || user?.email?.split("@")[0] || "ACCOUNT"}
-                  </span>
+              {/* Active tab label */}
+              <span style={{ fontFamily:MF, fontSize:11, color:ORANGE, letterSpacing:1 }}>
+                {TABS.find(t=>t.id===tab)?.label || (tab==="settings" ? "⚙ Settings" : tab)}
+              </span>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                {/* Analyst button — always visible on mobile */}
+                <button onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+                  display:"flex", alignItems:"center", gap:5,
+                  background: analyst ? ORANGE : ORANGE+"18",
+                  border:`1.5px solid ${ORANGE}`, padding:"5px 10px",
+                  fontFamily:MF, fontSize:9, letterSpacing:1,
+                  color: analyst ? WHITE : ORANGE, minHeight:36,
+                }}>
+                  <span style={{ fontSize:12 }}>◈</span>
+                  AI
                 </button>
-                <button
-                  onClick={() => { track("auth_sign_out"); signOut(); }}
-                  title="Sign out"
-                  style={{
-                    background:"none", border:`1px solid ${theme.border}`,
-                    color:theme.low, fontFamily:MF, fontSize:8.5, padding:"5px 8px",
-                    cursor:"pointer",
-                  }}
-                >
-                  ↪
+                {/* Hamburger toggle */}
+                <button onClick={() => setMenuOpen(o=>!o)} style={{
+                  background:"none", border:`1px solid ${theme.border}`,
+                  color:theme.mid, width:36, height:36,
+                  display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4,
+                }}>
+                  {[0,1,2].map(i=>(
+                    <div key={i} style={{ width:16, height:2, background:menuOpen?ORANGE:theme.mid, borderRadius:1,
+                      transform: menuOpen ? (i===0?"rotate(45deg) translate(4px,4px)":i===2?"rotate(-45deg) translate(4px,-4px)":"scaleX(0)") : "none",
+                      transition:"all .2s",
+                    }}/>
+                  ))}
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }}
-                style={{
-                  display:"flex", alignItems:"center", gap:6,
-                  background:theme.cardB, border:`1px solid ${theme.border}`,
-                  padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid,
-                  transition:"all .2s",
-                }}
-              >
-                <span style={{ fontSize:11 }}>◎</span>
-                <span style={{ letterSpacing:1 }}>SIGN IN</span>
-              </button>
+            </div>
+
+            {/* Slide-down drawer */}
+            {menuOpen && (
+              <div style={{
+                position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:200,
+                display:"flex", flexDirection:"column",
+              }}>
+                {/* Backdrop */}
+                <div onClick={() => setMenuOpen(false)} style={{ flex:1, background:"rgba(0,0,0,.6)" }}/>
+                {/* Drawer panel from top */}
+                <div style={{
+                  position:"absolute", top:0, left:0, right:0,
+                  background: theme.navBg, borderBottom:`2px solid ${ORANGE}`,
+                  padding:"16px 0 12px",
+                  maxHeight:"80vh", overflowY:"auto",
+                }}>
+                  {/* Drawer header */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 16px 12px", borderBottom:`1px solid ${theme.border}`, marginBottom:4 }}>
+                    <span style={{ fontFamily:SF, fontSize:14, color:ORANGE, fontWeight:700 }}>UN*REDACTED</span>
+                    <button onClick={() => setMenuOpen(false)} style={{ background:"none", border:"none", color:theme.mid, fontSize:22, lineHeight:1 }}>×</button>
+                  </div>
+                  {/* Nav items */}
+                  {TABS.map(tb => {
+                    const on = tab===tb.id;
+                    return (
+                      <button key={tb.id} onClick={() => { setTab(tb.id); setMenuOpen(false); track("tab_view",{tab:tb.id}); }} style={{
+                        width:"100%", textAlign:"left", background: on ? ORANGE+"18" : "none",
+                        border:"none", borderLeft:`3px solid ${on?ORANGE:"transparent"}`,
+                        padding:"13px 16px", fontFamily:MF, fontSize:12, letterSpacing:0.5,
+                        color: on ? ORANGE : theme.mid,
+                      }}>
+                        {tb.label}
+                      </button>
+                    );
+                  })}
+                  {/* Settings row */}
+                  <button onClick={() => { setTab(t=>t==="settings"?"overview":"settings"); setMenuOpen(false); }} style={{
+                    width:"100%", textAlign:"left", background: tab==="settings" ? ORANGE+"18" : "none",
+                    border:"none", borderLeft:`3px solid ${tab==="settings"?ORANGE:"transparent"}`,
+                    padding:"13px 16px", fontFamily:MF, fontSize:12, color: tab==="settings"?ORANGE:theme.mid,
+                  }}>
+                    ⚙ Settings
+                  </button>
+                  {/* Divider */}
+                  <div style={{ height:1, background:theme.border, margin:"8px 16px" }}/>
+                  {/* Theme + Auth in drawer */}
+                  <div style={{ display:"flex", gap:8, padding:"8px 16px", flexWrap:"wrap" }}>
+                    <button onClick={() => { const next=!dark; setDark(next); track("theme_toggle",{theme:next?"dark":"light"}); }} style={{
+                      display:"flex", alignItems:"center", gap:6, background:theme.cardB,
+                      border:`1px solid ${theme.border}`, borderRadius:20, padding:"6px 12px",
+                      fontFamily:MF, fontSize:10, color:theme.mid,
+                    }}>
+                      <span>{dark?"☀":"🌙"}</span><span>{dark?"LIGHT":"DARK"}</span>
+                    </button>
+                    {isAuthenticated ? (
+                      <button onClick={() => { track("auth_sign_out"); signOut(); setMenuOpen(false); }} style={{
+                        display:"flex", alignItems:"center", gap:6, background:theme.cardB,
+                        border:`1px solid ${theme.border}`, padding:"6px 12px",
+                        fontFamily:MF, fontSize:10, color:theme.mid,
+                      }}>
+                        ↪ Sign out
+                      </button>
+                    ) : (
+                      <button onClick={() => { track("auth_sign_in_click"); setShowAuth(true); setMenuOpen(false); }} style={{
+                        display:"flex", alignItems:"center", gap:6, background:theme.cardB,
+                        border:`1px solid ${theme.border}`, padding:"6px 12px",
+                        fontFamily:MF, fontSize:10, color:theme.mid,
+                      }}>
+                        ◎ Sign In
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
+          </>
+        ) : (
+          /* ── DESKTOP / TABLET NAV ── */
+          <div style={{ background:theme.navBg, borderBottom:`1px solid ${theme.border}`, display:"flex", alignItems:"stretch", padding:"0 20px 0 32px", transition:"background .25s", flexShrink:0, overflowX:"auto" }}>
+            {TABS.map(tb => {
+              const on = tab===tb.id;
+              return (
+                <button key={tb.id} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
+                  background:"transparent",
+                  color: on ? ORANGE : theme.mid,
+                  border:"none",
+                  borderBottom:`3px solid ${on?ORANGE:"transparent"}`,
+                  padding:"12px 16px",
+                  fontFamily:MF, fontSize:10.5, letterSpacing:0.5,
+                  whiteSpace:"nowrap", transition:"color .14s, border-color .14s",
+                  display:"flex", alignItems:"center", gap:5, flexShrink:0,
+                }}>
+                  {tb.label}
+                  {tb.phase===3 && <span style={{ background:"#E6394622", border:"1px solid #E6394644", color:"#E63946", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>P3</span>}
+                  {tb.phase===4 && <span style={{ background:"#00CC6622", border:"1px solid #00CC6644", color:"#00CC66", fontSize:7, padding:"1px 4px", borderRadius:2, fontWeight:700, letterSpacing:0.5 }}>NEW</span>}
+                </button>
+              );
+            })}
 
-            {/* ANALYST BUTTON */}
-            <button
-              onClick={() => { const next = !analyst; setAnalyst(next); track("analyst_panel_toggle", { open: next }); }}
-              style={{
-                display:"flex", alignItems:"center", gap:7,
-                background: analyst ? ORANGE : ORANGE+"18",
-                border:`1.5px solid ${ORANGE}`,
-                padding:"5px 14px",
-                fontFamily:MF, fontSize:9, letterSpacing:1,
-                color: analyst ? WHITE : ORANGE,
-                transition:"all .2s",
-                boxShadow: analyst ? `0 0 16px ${ORANGE}44` : "none",
-              }}
-            >
-              <span style={{ fontSize:12 }}>◈</span>
-              ANALYST {analyst ? "▾" : "▸"}
-            </button>
-
-            {/* SETTINGS BUTTON — far right */}
-            <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
-            <button
-              onClick={() => { setTab(t => { const next = t === "settings" ? "overview" : "settings"; track("tab_view", { tab: next }); return next; }); }}
-              style={{
+            <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:9, flexShrink:0 }}>
+              <button onClick={() => { const next = !dark; setDark(next); track("theme_toggle", { theme: next ? "dark" : "light" }); }} style={{
                 display:"flex", alignItems:"center", gap:6,
-                background:"transparent", border:"none",
-                borderBottom:`3px solid ${tab==="settings" ? ORANGE : "transparent"}`,
-                padding:"12px 10px",
-                fontFamily:MF, fontSize:10.5, letterSpacing:0.5,
-                color: tab==="settings" ? ORANGE : theme.mid,
-                transition:"color .14s, border-color .14s",
-                whiteSpace:"nowrap",
-              }}
-            >
-              ⚙ Settings
-            </button>
+                background:theme.cardB, border:`1px solid ${theme.border}`, borderRadius:20,
+                padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s",
+              }}>
+                <span style={{ fontSize:12 }}>{dark?"☀":"🌙"}</span>
+                <span style={{ letterSpacing:1 }}>{dark?"LIGHT":"DARK"}</span>
+              </button>
+
+              {isAuthenticated ? (
+                <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                  <button
+                    onClick={() => { setTab("watchlist"); track("tab_view", { tab: "watchlist" }); }}
+                    title={`Signed in as ${profile?.display_name || user?.email}`}
+                    style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}
+                  >
+                    <span style={{ fontSize:11, color:"#00CC66" }}>◉</span>
+                    <span style={{ letterSpacing:1, maxWidth:80, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                      {profile?.display_name || user?.email?.split("@")[0] || "ACCOUNT"}
+                    </span>
+                  </button>
+                  <button onClick={() => { track("auth_sign_out"); signOut(); }} title="Sign out" style={{ background:"none", border:`1px solid ${theme.border}`, color:theme.low, fontFamily:MF, fontSize:8.5, padding:"5px 8px", cursor:"pointer" }}>↪</button>
+                </div>
+              ) : (
+                <button onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }} style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}>
+                  <span style={{ fontSize:11 }}>◎</span>
+                  <span style={{ letterSpacing:1 }}>SIGN IN</span>
+                </button>
+              )}
+
+              <button onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+                display:"flex", alignItems:"center", gap:7,
+                background: analyst ? ORANGE : ORANGE+"18", border:`1.5px solid ${ORANGE}`, padding:"5px 14px",
+                fontFamily:MF, fontSize:9, letterSpacing:1, color: analyst ? WHITE : ORANGE, transition:"all .2s",
+                boxShadow: analyst ? `0 0 16px ${ORANGE}44` : "none",
+              }}>
+                <span style={{ fontSize:12 }}>◈</span>
+                ANALYST {analyst ? "▾" : "▸"}
+              </button>
+
+              <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
+              <button onClick={() => { setTab(t => { const next=t==="settings"?"overview":"settings"; track("tab_view",{tab:next}); return next; }); }} style={{
+                display:"flex", alignItems:"center", gap:6, background:"transparent", border:"none",
+                borderBottom:`3px solid ${tab==="settings"?ORANGE:"transparent"}`, padding:"12px 10px",
+                fontFamily:MF, fontSize:10.5, letterSpacing:0.5, color:tab==="settings"?ORANGE:theme.mid,
+                transition:"color .14s, border-color .14s", whiteSpace:"nowrap",
+              }}>
+                ⚙ Settings
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── SPLIT BODY ───────────────────────────────────────── */}
         <div style={{ display:"flex", flex:1, overflow:"hidden", minHeight:0 }}>
@@ -1737,7 +1852,7 @@ function AppInner() {
                 cursor:"col-resize",
               }}
             />
-            <div style={{ maxWidth: analyst ? "none" : 1200, margin:"0 auto", padding:"28px 28px 52px" }} key={tab}>
+            <div style={{ maxWidth: analyst ? "none" : 1200, margin:"0 auto", padding: isMobile ? "14px 14px 48px" : "28px 28px 52px" }} key={tab}>
               {renderTab()}
               <div style={{ marginTop:32, borderTop:`1px solid ${theme.border}`, paddingTop:14, display:"flex", justifyContent:"space-between" }}>
                 <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>UN*REDACTED · Public record intelligence · All data from public federal sources</span>
@@ -1781,22 +1896,28 @@ function AppInner() {
             </div>
           )}
 
-          {/* Analyst panel — slides in from right */}
-          <div
-            ref={panelRef}
-            style={{
-              width:    analyst ? `${panelWidth}px` : "0px",
-              minWidth: analyst ? `${panelWidth}px` : "0px",
-              overflow:"hidden",
-              transition: analyst ? "none" : "width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1)",
-              flexShrink:0,
-              display:"flex", flexDirection:"column",
-            }}
-          >
-            {analyst && (
+          {/* Analyst panel — full-screen overlay on mobile, resizable side panel on desktop */}
+          {isMobile && analyst ? (
+            <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", flexDirection:"column", background: dark?"#0A0A0A":"#FAFAFA" }}>
               <AnalystPanel onClose={() => setAnalyst(false)} dark={dark}/>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div
+              ref={panelRef}
+              style={{
+                width:    analyst ? `${panelWidth}px` : "0px",
+                minWidth: analyst ? `${panelWidth}px` : "0px",
+                overflow:"hidden",
+                transition: analyst ? "none" : "width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1)",
+                flexShrink:0,
+                display:"flex", flexDirection:"column",
+              }}
+            >
+              {analyst && (
+                <AnalystPanel onClose={() => setAnalyst(false)} dark={dark}/>
+              )}
+            </div>
+          )}
 
         </div>
       </div>
