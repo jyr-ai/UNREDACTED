@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../../theme/index.js'
 import { ORANGE, FONT_MONO as MF } from '../../theme/tokens.js'
 import { feed } from '../../api/client.js'
-import { useMobile } from '../../hooks/useMediaQuery.js'
 
 const STATIC_FALLBACK = [
   { text: 'STOCK Act violations up 40% this quarter',           risk: 'HIGH', source: 'UNREDACTED', cat: 'STOCK_ACT' },
@@ -29,7 +28,6 @@ const REFRESH_MS = 5 * 60 * 1000   // 5 minutes
 
 function Ticker() {
   const t = useTheme()
-  const isMobile = useMobile()
   const [items, setItems] = useState(STATIC_FALLBACK)
   const [live, setLive]   = useState(false)
   const timerRef = useRef(null)
@@ -87,7 +85,7 @@ function Ticker() {
       borderBottom: `1px solid ${t.border}`,
       padding: '0 0',
       overflow: 'hidden',
-      height: isMobile ? 34 : 28,
+      height: 28,
       display: 'flex',
       alignItems: 'center',
       position: 'relative',
@@ -96,19 +94,19 @@ function Ticker() {
       <div style={{
         flexShrink: 0,
         display: 'flex', alignItems: 'center', gap: 5,
-        padding: isMobile ? '0 10px' : '0 12px',
+        padding: '0 12px',
         borderRight: `1px solid ${t.border}`,
         height: '100%',
         background: t.tickerBg,
         zIndex: 2,
       }}>
         <div style={{
-          width: isMobile ? 6 : 5, height: isMobile ? 6 : 5, borderRadius: '50%',
+          width: 5, height: 5, borderRadius: '50%',
           background: live ? '#00FF88' : t.border,
           boxShadow: live ? '0 0 5px #00FF88' : 'none',
           flexShrink: 0,
         }} />
-        <span style={{ fontFamily: MF, fontSize: isMobile ? 9 : 8, color: live ? '#00FF88' : t.low, letterSpacing: 1.5 }}>
+        <span style={{ fontFamily: MF, fontSize: 8, color: live ? '#00FF88' : t.low, letterSpacing: 1.5 }}>
           {live ? 'LIVE' : 'INTEL'}
         </span>
       </div>
@@ -157,7 +155,7 @@ function Ticker() {
                 {/* headline */}
                 <span style={{
                   fontFamily: MF,
-                  fontSize: isMobile ? 10.5 : 9.5,
+                  fontSize: 9.5,
                   color: item.risk === 'HIGH' ? t.tickerTx : t.low,
                   letterSpacing: 0.3,
                 }}>
