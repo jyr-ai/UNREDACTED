@@ -1466,10 +1466,10 @@ function AnalystPanel({ onClose, dark }) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function AppInner() {
-  const [tab, setTab]         = useState("overview");
-  const [dark, setDark]       = useState(true);
-  const [analyst, setAnalyst] = useState(false);
-  const [version, setVersion] = useState(null);
+  const [tab, setTab]           = useState("overview");
+  const [dark, setDark]         = useState(true);
+  const [analyst, setAnalyst]   = useState(false);
+  const [appVersion, setAppVersion] = useState(null);
 
   // ── Resizable panel state ──
   const [panelWidth, setPanelWidth] = useState(420);
@@ -1530,7 +1530,7 @@ function AppInner() {
     const fetchVersion = async () => {
       try {
         const result = await version.get();
-        setVersion(result.version);
+        setAppVersion(result.version);
       } catch (error) {
         console.error('Failed to fetch version:', error);
         // Don't set version - will hide it as requested
@@ -1578,7 +1578,7 @@ function AppInner() {
         {/* ── MASTHEAD ─────────────────────────────────────────── */}
         <div style={{ background:ORANGE, height:52, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 32px", flexShrink:0 }}>
           <div style={{ fontFamily:SF, fontSize:24, color:WHITE, fontWeight:700, letterSpacing:1.5 }}>
-            THE UN<span style={{ opacity:0.7 }}>•</span>REDACTED MONITOR {version && <span style={{ fontSize:14, opacity:0.8 }}>{version}</span>}
+            THE UN<span style={{ opacity:0.7 }}>•</span>REDACTED MONITOR {appVersion && <span style={{ fontSize:14, opacity:0.8 }}>{appVersion}</span>}
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:20 }}>
             <a href="https://github.com/policybot-io/UNREDACTED" target="_blank" rel="noopener noreferrer" style={{ display:"flex", alignItems:"center", textDecoration:"none" }}>
