@@ -5,6 +5,7 @@ import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import CorruptionWatch from "./pages/CorruptionWatch.jsx";
+import CampaignWatch from "./pages/CampaignWatch.jsx";
 import Auth from "./components/Auth.jsx";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import {
@@ -1061,6 +1062,7 @@ const TABS = [
   { id:"spending",        label:"Spending Audit"    },
   { id:"corporate",       label:"Company Profiles"  },
   { id:"corruptionwatch", label:"Corruption Watch"  },
+  { id:"campaignwatch",   label:"Campaign Watch"    },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1565,6 +1567,7 @@ function AppInner() {
     if (tab==="spending")       return <SpendingAudit/>;
     if (tab==="corporate")      return <CorporateAndProfile theme={theme}/>;
     if (tab==="corruptionwatch") return <CorruptionWatch onSignInRequest={() => setShowAuth(true)}/>;
+    if (tab==="campaignwatch")  return <CampaignWatch/>;
     if (tab==="settings")       return <Settings theme={theme}/>;
   };
 

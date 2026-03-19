@@ -16,6 +16,8 @@ import companiesRouter from './routes/companies.js'
 import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
+// Campaign Watch route for 2026 election map
+import campaignWatchRouter from './routes/campaignWatch.js'
 // Phase 4: Supabase-backed user features
 import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
@@ -94,6 +96,8 @@ app.use('/api/companies', generalLimiter, companiesRouter)
 app.use('/api/stockact', generalLimiter, stockActRouter)
 app.use('/api/darkmoney', generalLimiter, darkMoneyRouter)
 app.use('/api/conflict', generalLimiter, conflictRouter)
+// Campaign Watch route for 2026 election map
+app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
 // Phase 4: Supabase-backed user features
 app.use('/api/watchlist', generalLimiter, watchlistRouter)
 app.use('/api/alerts', generalLimiter, alertsRouter)
