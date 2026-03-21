@@ -8,17 +8,38 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not set')
+const SUPABASE_CONFIGURED = !!(SUPABASE_URL && SUPABASE_ANON_KEY)
+
+if (!SUPABASE_CONFIGURED) {
+  console.warn('[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY not set — auth features disabled')
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken:  true,
-    persistSession:    true,
-    detectSessionInUrl: true,
-  },
+// No-op client so the app runs without Supabase configured
+const noopSubscription = { unsubscribe: () => {} }
+const noopChannel = { on() { return this }, subscribe: () => ({}) }
+const noopAuth = {
+  getSession:         async () => ({ data: { session: null }, error: null }),
+  getUser:            async () => ({ data: { user: null } }),
+  signInWithPassword: async () => ({ data: {}, error: { message: 'Supabase not configured' } }),
+  signUp:             async () => ({ data: {}, error: { message: 'Supabase not configured' } }),
+  signOut:            async () => ({ error: null }),
+  onAuthStateChange:  () => ({ data: { subscription: noopSubscription } }),
+}
+const noopFrom = () => ({
+  select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
+  update: () => ({ eq: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) }) }),
 })
+const noopClient = { auth: noopAuth, from: noopFrom, channel: () => noopChannel }
+
+export const supabase = SUPABASE_CONFIGURED
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        autoRefreshToken:  true,
+        persistSession:    true,
+        detectSessionInUrl: true,
+      },
+    })
+  : noopClient
 
 // ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
 
