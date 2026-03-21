@@ -279,69 +279,6 @@ const CampaignWatch = () => {
         </div>
       )}
 
-      {/* ── Rankings + Elections ──────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 22 }}>
-        <div>
-          <Band label="Corruption index rankings" right="LOWER SCORE = HIGHER RISK" />
-          <ErrorBoundary label="Rankings" theme={t}>
-            <Card>
-              {corruptionLoading ? (
-                <div style={{ padding: 20, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.mid }}>Loading corruption data…</div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-                  {sortedStates.map(state => {
-                    const color = corruptionColor(state.corruptionIndex);
-                    return (
-                      <div key={state.stateCode} onClick={() => handleStateClick(state.stateCode)}
-                        style={{ padding: 10, background: t.cardB || t.ink, border: `1px solid ${t.border}`, borderLeft: `4px solid ${color}`, cursor: 'pointer' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.hi, fontWeight: 700 }}>{state.stateCode}</span>
-                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 14, fontWeight: 700, color }}>{state.corruptionIndex ?? '—'}</span>
-                        </div>
-                        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.mid, marginTop: 3 }}>{STATE_NAMES[state.stateCode] || state.stateCode}</div>
-                        {state.totalRaised > 0 && (
-                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low, marginTop: 2 }}>{fmtM(state.totalRaised)} raised</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </ErrorBoundary>
-        </div>
-
-        <div>
-          <Band label="Upcoming elections" right="2026 CYCLE" />
-          <Card>
-            {electionsLoading ? (
-              <div style={{ padding: 20, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.mid }}>Loading elections…</div>
-            ) : elections.length === 0 ? (
-              <div style={{ padding: 20, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.mid }}>No upcoming elections data available.</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {elections.slice(0, 8).map((el, i) => {
-                  const days = el.electionDay ? daysUntil(el.electionDay) : null;
-                  return (
-                    <div key={i} style={{ padding: '10px 12px', background: t.cardB, border: `1px solid ${t.border}`, borderLeft: `3px solid ${days !== null && days < 30 ? t.warn : t.accent}` }}>
-                      <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.hi, marginBottom: 3 }}>{el.name || 'Election'}</div>
-                      {el.electionDay && (
-                        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.mid }}>
-                          {new Date(el.electionDay).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
-                          {days !== null && (
-                            <span style={{ marginLeft: 8, color: days < 30 ? t.warn : t.accent }}>{days === 0 ? 'TODAY' : `${days}d`}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
-        </div>
-      </div>
-
       {/* ── Representatives panel ─────────────────────────────────────── */}
       <div>
         <Band label="Find Your Representatives" right="CONGRESS.GOV + GOOGLE CIVIC" />

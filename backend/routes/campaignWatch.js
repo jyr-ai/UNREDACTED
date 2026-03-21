@@ -183,21 +183,47 @@ router.get('/state/:stateCode/ai-analysis', async (req, res) => {
 
 /**
  * GET /api/campaign-watch/state/:stateCode/representatives
- * Elected officials via Google Civic API. Cached 24 hours.
+ * Elected officials via Google Civic API (deprecated) → Congress.gov fallback.
  */
 router.get('/state/:stateCode/representatives', async (req, res) => {
   const code = validateState(req.params.stateCode, res)
   if (!code) return
   try {
-    const reps = await googleCivicService.getRepresentativesByState(code)
-    if (!reps) {
+    // 1. Try Google Civic (deprecated — will be null immediately via circuit-breaker)
+    let reps = await googleCivicService.getRepresentativesByState(code)
+
+    // 2. Fallback to Congress.gov when Civic is unavailable
+    if (!reps || (reps.officials || []).length === 0) {
+      const members = await congressGovService.getMembersByState(code)
+      if (members && members.length > 0) {
+        const officials = members.map(m => ({
+          name:     m.name,
+          office:   m.chamber === 'Senate'
+            ? `U.S. Senator · ${code}`
+            : `U.S. Representative · ${code}${m.district ? ` District ${m.district}` : ''}`,
+          party:    m.partyName || m.party || '',
+          chamber:  m.chamber,
+          phones:   [],
+          urls:     m.officialUrl ? [m.officialUrl] : [],
+          photoUrl: m.depiction || null,
+          channels: [],
+        }))
+        return res.json({
+          success: true,
+          data: { officials, source: 'congress.gov' },
+          note: 'Showing federal representatives from Congress.gov.',
+          lastUpdated: new Date().toISOString(),
+        })
+      }
+      // Both sources failed
       return res.json({
         success: true,
-        data: { officials: [], federalSenators: [], federalRepresentatives: [], stateExecutive: [] },
-        note: 'Google Civic API unavailable or no data for this state',
+        data: { officials: [] },
+        note: 'Representative data temporarily unavailable.',
         lastUpdated: new Date().toISOString(),
       })
     }
+
     res.json({ success: true, data: reps, lastUpdated: new Date().toISOString() })
   } catch (error) {
     console.error(`Error fetching representatives for ${req.params.stateCode}:`, error)

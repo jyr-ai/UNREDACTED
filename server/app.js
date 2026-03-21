@@ -16,6 +16,8 @@ import companiesRouter from './routes/companies.js'
 import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
+// Campaign Watch — lives in backend/ (shared between dev and prod)
+import campaignWatchRouter from '../backend/routes/campaignWatch.js'
 
 const app = express()
 
@@ -95,7 +97,8 @@ app.use('/api/corruption',  generalLimiter, corruptionRouter)
 app.use('/api/companies',   generalLimiter, companiesRouter)
 app.use('/api/stockact',    generalLimiter, stockActRouter)
 app.use('/api/darkmoney',   generalLimiter, darkMoneyRouter)
-app.use('/api/conflict',    generalLimiter, conflictRouter)
+app.use('/api/conflict',       generalLimiter, conflictRouter)
+app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {

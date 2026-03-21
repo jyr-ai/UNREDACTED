@@ -29,6 +29,11 @@ const STATE_CAPITALS = {
   WI: 'Madison, WI',     WY: 'Cheyenne, WY',            DC: 'Washington, DC',
 }
 
+// ─── Circuit-breaker: Google Civic API was deprecated on May 1 2025 ──────────
+// Once we see a "Method not found" 404 we know the whole API is gone, so we
+// skip every future call immediately instead of making pointless network hops.
+let apiDead = false
+
 // ─── In-Memory Cache ──────────────────────────────────────────────────────────
 const cache = new Map()
 
@@ -55,6 +60,9 @@ function setCached(key, data, ttl) {
 
 // ─── Core Fetch ───────────────────────────────────────────────────────────────
 async function civicGet(endpoint, params = {}) {
+  // Circuit-breaker: skip immediately if the API is known to be dead
+  if (apiDead) return null
+
   const apiKey = getKey()
   if (!apiKey) {
     console.warn('[Google Civic] GOOGLE_CIVIC_API_KEY not set — skipping request')
@@ -73,7 +81,13 @@ async function civicGet(endpoint, params = {}) {
       return null
     }
     if (err.response?.status === 404) {
-      return null  // No data for this address
+      // "Method not found" means the endpoint was deprecated — mark the whole API dead
+      const reason = err.response?.data?.error?.errors?.[0]?.reason
+      if (reason === 'notFound' || err.response?.data?.error?.message?.includes('Method not found')) {
+        apiDead = true
+        console.warn('[Google Civic] API returned "Method not found" — endpoint is deprecated. Switching to Congress.gov fallback.')
+      }
+      return null
     }
     console.error(`[Google Civic] Error fetching ${endpoint}:`, err.message)
     return null
@@ -248,6 +262,7 @@ export async function getElectionList() {
 export function getCivicStatus() {
   return {
     keyConfigured: !!getKey(),
+    apiDead,
     cacheEntries:  cache.size,
     supportedStates: Object.keys(STATE_CAPITALS).length,
   }

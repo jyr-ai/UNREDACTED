@@ -18,6 +18,9 @@ import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
 // Campaign Watch route for 2026 election map
 import campaignWatchRouter from './routes/campaignWatch.js'
+// Gas price routes — EIA state prices + MyGasFeed station data
+import gasPricesRouter  from './routes/gasPrices.js'
+import gasStationsRouter from './routes/gasStations.js'
 // Phase 4: Supabase-backed user features
 import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
@@ -98,6 +101,9 @@ app.use('/api/darkmoney', generalLimiter, darkMoneyRouter)
 app.use('/api/conflict', generalLimiter, conflictRouter)
 // Campaign Watch route for 2026 election map
 app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
+// Gas price routes — EIA state prices + MyGasFeed station data
+app.use('/api/gas/prices',   generalLimiter, gasPricesRouter)
+app.use('/api/gas/stations', generalLimiter, gasStationsRouter)
 // Phase 4: Supabase-backed user features
 app.use('/api/watchlist', generalLimiter, watchlistRouter)
 app.use('/api/alerts', generalLimiter, alertsRouter)

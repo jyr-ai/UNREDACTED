@@ -1478,7 +1478,7 @@ function AnalystPanel({ onClose, dark }) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function AppInner() {
-  const [tab, setTab]           = useState("overview");
+  const [tab, setTab]           = useState("campaignwatch");
   const [dark, setDark]         = useState(true);
   const [analyst, setAnalyst]   = useState(false);
   const [appVersion, setAppVersion] = useState(null);

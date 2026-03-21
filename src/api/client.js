@@ -144,6 +144,19 @@ export const darkMoney = {
   orgsIndex:  (limit = 50, level) => request(`/api/darkmoney/organizations/index?limit=${limit}${level ? `&level=${level}` : ''}`),
 }
 
+// ── Gas Prices ────────────────────────────────────────────────────────────────
+export const gasPrices = {
+  states:   () => request('/api/gas/prices/states'),
+  national: () => request('/api/gas/prices/national'),
+  state:    (code) => request(`/api/gas/prices/state/${code}`),
+  stations: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/api/gas/stations${qs ? `?${qs}` : ''}`)
+  },
+  search: (q, fuel = 'regular', sort = 'distance', radius = 10) =>
+    request(`/api/gas/stations/search?q=${encodeURIComponent(q)}&fuel=${fuel}&sort=${sort}&radius=${radius}`),
+}
+
 // ── Campaign Watch ────────────────────────────────────────────────────────────
 export const campaignWatch = {
   states:          ()           => request('/api/campaign-watch/states'),
