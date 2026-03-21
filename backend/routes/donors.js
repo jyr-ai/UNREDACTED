@@ -40,8 +40,8 @@ router.get('/committees/:id/receipts', async (req, res) => {
 
 router.get('/candidates', async (req, res) => {
   try {
-    const { name, office, state, limit } = req.query
-    const data = await searchCandidates({ name, office, state, limit: parseInt(limit) || 10 })
+    const { name, office, state, limit, cycle } = req.query
+    const data = await searchCandidates({ name, office, state, limit: parseInt(limit) || 10, cycle })
     res.json({ success: true, data })
   } catch (e) {
     console.error('donors/candidates error:', e.message)

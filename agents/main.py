@@ -1,38 +1,60 @@
-"""FastAPI + LangGraph AI Agent Service for Donor Intelligence."""
-from fastapi import FastAPI, HTTPException
+"""FastAPI + LangGraph AI Agent Service for UNREDACTED."""
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from contextlib import asynccontextmanager
+import asyncio
+import logging
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # Import agent modules
 from agents.donor_agent import DonorIntelligenceAgent
 from agents.corruption_agent import CorruptionDetectionAgent
 from agents.policy_agent import PolicyAnalysisAgent
 
+# Agents initialized in lifespan (after port binds) so Render detects the port
+donor_agent: DonorIntelligenceAgent = None
+corruption_agent: CorruptionDetectionAgent = None
+policy_agent: PolicyAnalysisAgent = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global donor_agent, corruption_agent, policy_agent
+    logger.info("Initializing AI agents...")
+    donor_agent = DonorIntelligenceAgent()
+    corruption_agent = CorruptionDetectionAgent()
+    policy_agent = PolicyAnalysisAgent()
+    logger.info("All agents ready.")
+    yield
+
+
 app = FastAPI(
     title="UNREDACTED AI Agent Service",
     description="AI-powered donor intelligence and corruption detection",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
-# CORS configuration
+# CORS — allow frontend + Express backend via env var (comma-separated)
+_raw_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:3000"
+)
+CORS_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite dev server
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize agents
-donor_agent = DonorIntelligenceAgent()
-corruption_agent = CorruptionDetectionAgent()
-policy_agent = PolicyAnalysisAgent()
 
 # Request/Response models
 class QueryRequest(BaseModel):
@@ -130,27 +152,19 @@ async def orchestrate_agents(request: MultiAgentRequest):
     try:
         results = {}
 
-        # Run selected agents in parallel (in production, use asyncio.gather)
+        # Run selected agents in parallel
+        tasks = {}
         if request.use_donor_agent:
-            try:
-                donor_result = await donor_agent.analyze(request.query)
-                results["donor"] = donor_result
-            except Exception as e:
-                results["donor"] = {"error": str(e)}
-
+            tasks["donor"] = donor_agent.analyze(request.query)
         if request.use_corruption_agent:
-            try:
-                corruption_result = await corruption_agent.analyze(request.query)
-                results["corruption"] = corruption_result
-            except Exception as e:
-                results["corruption"] = {"error": str(e)}
-
+            tasks["corruption"] = corruption_agent.analyze(request.query)
         if request.use_policy_agent:
-            try:
-                policy_result = await policy_agent.analyze(request.query)
-                results["policy"] = policy_result
-            except Exception as e:
-                results["policy"] = {"error": str(e)}
+            tasks["policy"] = policy_agent.analyze(request.query)
+
+        if tasks:
+            task_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+            for key, result in zip(tasks.keys(), task_results):
+                results[key] = {"error": str(result)} if isinstance(result, Exception) else result
 
         # Generate integrated summary
         integrated_summary = generate_integrated_summary(results)

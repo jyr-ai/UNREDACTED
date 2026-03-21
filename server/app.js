@@ -15,18 +15,33 @@ import corruptionRouter from './routes/corruption.js'
 import companiesRouter from './routes/companies.js'
 import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
+import conflictRouter from './routes/conflict.js'
 
 const app = express()
 
+// Disable ETags so API responses are never served as 304 from browser cache
+app.set('etag', false)
+
 // CORS — permissive for API (same-origin on Vercel, cross-origin in local dev)
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  /\.vercel\.app$/,
+  /^https:\/\/unredacted\./,  // custom domain prefix
+]
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:3000',
-    /\.vercel\.app$/,
-  ],
+  origin: (origin, cb) => {
+    // Same-origin requests (Vercel prod) have no Origin header — always allow
+    if (!origin) return cb(null, true)
+    const ok = ALLOWED_ORIGINS.some(o =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    )
+    cb(ok ? null : new Error('CORS'), ok)
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
 }))
 
 app.use(express.json({ limit: '10kb' }))
@@ -53,8 +68,20 @@ app.use((req, _res, next) => {
   next()
 })
 
-// ── Health check ─────────────────────────────────────────────────────────────
+// ── Health check & version ────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date() }))
+
+app.get('/api/version', async (_req, res) => {
+  try {
+    const fs = await import('fs')
+    const path = await import('path')
+    const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'))
+    res.json({ version: `v${pkg.version}`, source: 'package' })
+  } catch (e) {
+    console.error('version error:', e.message)
+    res.json({ version: 'v1.0.0', source: 'fallback' })
+  }
+})
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/spending',    generalLimiter, spendingRouter)
@@ -68,6 +95,7 @@ app.use('/api/corruption',  generalLimiter, corruptionRouter)
 app.use('/api/companies',   generalLimiter, companiesRouter)
 app.use('/api/stockact',    generalLimiter, stockActRouter)
 app.use('/api/darkmoney',   generalLimiter, darkMoneyRouter)
+app.use('/api/conflict',    generalLimiter, conflictRouter)
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useTheme } from '../theme/index.js'
-import { getDarkMoneyOrgs, getDarkMoneyFlowData } from '../api/client'
+import { getDarkMoneyOrgs, getDarkMoneyFlowData } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
@@ -38,7 +38,7 @@ function FlowDiagram({ nodes, links, t }) {
       </div>
     )
   }
-  const fmt = v => `$${(v / 1e6).toFixed(1)}M`
+  const fmt = v => `$${(v / 1e6).toFixed(2)}M`
   const sources = nodes.filter(n => n.type === 'source')
   const orgs    = nodes.filter(n => n.type !== 'source')
   const cols = [
@@ -106,7 +106,7 @@ export default function DarkMoneyTracker() {
   const totalPartial   = orgs.filter(o => o.disclosureLevel === 'partial')  .reduce((s, o) => s + (o.totalSpend || 0), 0)
   const totalDisclosed = orgs.filter(o => o.disclosureLevel === 'disclosed').reduce((s, o) => s + (o.totalSpend || 0), 0)
   const totalAll       = totalDark + totalPartial + totalDisclosed
-  const fmt = v => `$${(v / 1e6).toFixed(1)}M`
+  const fmt = v => `$${(v / 1e6).toFixed(2)}M`
 
   // Aggregate spending by issue area for chart
   const issueMap = {}
@@ -303,7 +303,7 @@ export default function DarkMoneyTracker() {
                     <YAxis tick={{ fill: t.mid, fontSize: 10 }} unit="M" />
                     <Tooltip
                       contentStyle={{ background: t.cardB, border: `1px solid ${t.border}`, fontFamily: MF, fontSize: 11 }}
-                      formatter={(v, name) => [`$${v.toFixed(1)}M`, name]}
+                      formatter={(v, name) => [`$${v.toFixed(2)}M`, name]}
                     />
                     <Bar dataKey="dark"      stackId="a" name="Dark (no disclosure)" fill={RED}    />
                     <Bar dataKey="partial"   stackId="a" name="Partial disclosure"   fill={YELLOW} />

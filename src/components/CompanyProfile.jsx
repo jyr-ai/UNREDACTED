@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getCompanyProfile, getCompanyPoliticalFootprint, getCompanyConflicts } from '../api/client'
+import { getCompanyProfile, getCompanyPoliticalFootprint, getCompanyConflicts } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
