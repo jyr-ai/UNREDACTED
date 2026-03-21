@@ -1,43 +1,88 @@
 // backend/services/eiaService.js
 // Fetches weekly retail gasoline prices from the U.S. Energy Information Administration.
-// Docs: https://www.eia.gov/opendata/
+// EIA Open Data API v2 documentation: https://www.eia.gov/opendata/documentation.php
+// Dataset: Petroleum & Other Liquids — Gasoline and Diesel Retail Prices
+// Endpoint: GET https://api.eia.gov/v2/petroleum/pri/gnd/data/
 // Converted to ESM for the UNREDACTED backend (type: "module")
 
 import axios from 'axios'
 
 const EIA_BASE = 'https://api.eia.gov/v2'
 
-// EIA v2 series IDs — weekly regular-grade retail gas prices by state
-// Format: "EMM_EPM0_PTE_{STATE_CODE}_DPG"
-const STATE_SERIES_IDS = {
-  CT: 'EMM_EPM0_PTE_SCT_DPG', RI: 'EMM_EPM0_PTE_SRI_DPG',
-  MA: 'EMM_EPM0_PTE_SMA_DPG', VT: 'EMM_EPM0_PTE_SVT_DPG',
-  NH: 'EMM_EPM0_PTE_SNH_DPG', ME: 'EMM_EPM0_PTE_SME_DPG',
-  NY: 'EMM_EPM0_PTE_SNY_DPG', NJ: 'EMM_EPM0_PTE_SNJ_DPG',
-  PA: 'EMM_EPM0_PTE_SPA_DPG', OH: 'EMM_EPM0_PTE_SOH_DPG',
-  MI: 'EMM_EPM0_PTE_SMI_DPG', IL: 'EMM_EPM0_PTE_SIL_DPG',
-  IN: 'EMM_EPM0_PTE_SIN_DPG', WI: 'EMM_EPM0_PTE_SWI_DPG',
-  MN: 'EMM_EPM0_PTE_SMN_DPG', VA: 'EMM_EPM0_PTE_SVA_DPG',
-  MD: 'EMM_EPM0_PTE_SMD_DPG', DE: 'EMM_EPM0_PTE_SDE_DPG',
-  NC: 'EMM_EPM0_PTE_SNC_DPG', SC: 'EMM_EPM0_PTE_SSC_DPG',
-  GA: 'EMM_EPM0_PTE_SGA_DPG', FL: 'EMM_EPM0_PTE_SFL_DPG',
-  TN: 'EMM_EPM0_PTE_STN_DPG', AL: 'EMM_EPM0_PTE_SAL_DPG',
-  MS: 'EMM_EPM0_PTE_SMS_DPG', KY: 'EMM_EPM0_PTE_SKY_DPG',
-  WV: 'EMM_EPM0_PTE_SWV_DPG', TX: 'EMM_EPM0_PTE_STX_DPG',
-  LA: 'EMM_EPM0_PTE_SLA_DPG', AR: 'EMM_EPM0_PTE_SAR_DPG',
-  OK: 'EMM_EPM0_PTE_SOK_DPG', MO: 'EMM_EPM0_PTE_SMO_DPG',
-  KS: 'EMM_EPM0_PTE_SKS_DPG', NE: 'EMM_EPM0_PTE_SNE_DPG',
-  IA: 'EMM_EPM0_PTE_SIA_DPG', ND: 'EMM_EPM0_PTE_SND_DPG',
-  SD: 'EMM_EPM0_PTE_SSD_DPG', CO: 'EMM_EPM0_PTE_SCO_DPG',
-  WY: 'EMM_EPM0_PTE_SWY_DPG', MT: 'EMM_EPM0_PTE_SMT_DPG',
-  ID: 'EMM_EPM0_PTE_SID_DPG', UT: 'EMM_EPM0_PTE_SUT_DPG',
-  NV: 'EMM_EPM0_PTE_SNV_DPG', AZ: 'EMM_EPM0_PTE_SAZ_DPG',
-  NM: 'EMM_EPM0_PTE_SNM_DPG', CA: 'EMM_EPM0_PTE_SCA_DPG',
-  OR: 'EMM_EPM0_PTE_SOR_DPG', WA: 'EMM_EPM0_PTE_SWA_DPG',
-  AK: 'EMM_EPM0_PTE_SAK_DPG', HI: 'EMM_EPM0_PTE_SHI_DPG',
+/**
+ * EIA v2 API — Gas price coverage overview
+ * ─────────────────────────────────────────
+ * EIA tracks weekly retail regular gasoline prices at two levels:
+ *   1. Individual states  — 9 states: CA, CO, FL, MA, MN, NY, OH, TX, WA
+ *   2. PADD sub-districts — 8 regions covering all 50 states
+ *
+ * Strategy:
+ *   • Fetch both state AND PADD district prices in one query
+ *   • Apply individual state price where available
+ *   • Apply PADD sub-district price as regional average for remaining states
+ *   • Fall back to mock data ONLY for states not covered by either
+ *
+ * facets:
+ *   product  EPM0  = Regular gasoline
+ *   process  PTE   = Retail sales including taxes
+ *   duoarea  SXX   = State code (e.g. SCA, STX)
+ *            RXX   = PADD district code (e.g. R1X, R20)
+ *            NUS   = US national average
+ */
+
+// ── Individual state duoarea codes (EIA tracks these directly) ───────────────
+const STATE_DUOAREA = {
+  AL: 'SAL', AK: 'SAK', AZ: 'SAZ', AR: 'SAR', CA: 'SCA', CO: 'SCO',
+  CT: 'SCT', DE: 'SDE', FL: 'SFL', GA: 'SGA', HI: 'SHI', ID: 'SID',
+  IL: 'SIL', IN: 'SIN', IA: 'SIA', KS: 'SKS', KY: 'SKY', LA: 'SLA',
+  ME: 'SME', MD: 'SMD', MA: 'SMA', MI: 'SMI', MN: 'SMN', MS: 'SMS',
+  MO: 'SMO', MT: 'SMT', NE: 'SNE', NV: 'SNV', NH: 'SNH', NJ: 'SNJ',
+  NM: 'SNM', NY: 'SNY', NC: 'SNC', ND: 'SND', OH: 'SOH', OK: 'SOK',
+  OR: 'SOR', PA: 'SPA', RI: 'SRI', SC: 'SSC', SD: 'SSD', TN: 'STN',
+  TX: 'STX', UT: 'SUT', VT: 'SVT', VA: 'SVA', WA: 'SWA', WV: 'SWV',
+  WI: 'SWI', WY: 'SWY',
 }
 
-// Realistic fallback mock data — used when EIA key is absent / API unreachable
+// Reverse map: EIA duoarea code → state abbreviation
+const DUOAREA_TO_STATE = Object.fromEntries(
+  Object.entries(STATE_DUOAREA).map(([abbr, code]) => [code, abbr])
+)
+
+// ── PADD sub-district duoarea codes ──────────────────────────────────────────
+// EIA PADD (Petroleum Administration for Defense Districts)
+//   R1X = PADD 1A New England
+//   R1Y = PADD 1B Central Atlantic
+//   R1Z = PADD 1C Lower Atlantic
+//   R20 = PADD 2  Midwest
+//   R30 = PADD 3  Gulf Coast
+//   R40 = PADD 4  Rocky Mountain
+//   R50 = PADD 5  West Coast excl. Alaska
+//   PAD5 or R5XCA = Alaska (handled by national fallback)
+const PADD_CODES = ['R1X', 'R1Y', 'R1Z', 'R20', 'R30', 'R40', 'R50']
+
+// State → PADD sub-district (used to apply regional price when no state-level data)
+const STATE_TO_PADD = {
+  // PADD 1A — New England
+  CT: 'R1X', MA: 'R1X', ME: 'R1X', NH: 'R1X', RI: 'R1X', VT: 'R1X',
+  // PADD 1B — Central Atlantic
+  DE: 'R1Y', MD: 'R1Y', NJ: 'R1Y', NY: 'R1Y', PA: 'R1Y',
+  // PADD 1C — Lower Atlantic
+  FL: 'R1Z', GA: 'R1Z', NC: 'R1Z', SC: 'R1Z', VA: 'R1Z', WV: 'R1Z',
+  // PADD 2 — Midwest
+  IL: 'R20', IN: 'R20', IA: 'R20', KS: 'R20', KY: 'R20', MI: 'R20',
+  MN: 'R20', MO: 'R20', NE: 'R20', ND: 'R20', OH: 'R20', OK: 'R20',
+  SD: 'R20', TN: 'R20', WI: 'R20',
+  // PADD 3 — Gulf Coast
+  AL: 'R30', AR: 'R30', LA: 'R30', MS: 'R30', NM: 'R30', TX: 'R30',
+  // PADD 4 — Rocky Mountain
+  CO: 'R40', ID: 'R40', MT: 'R40', UT: 'R40', WY: 'R40',
+  // PADD 5 — West Coast (AZ, HI are included in PADD 5 reporting)
+  AZ: 'R50', CA: 'R50', HI: 'R50', NV: 'R50', OR: 'R50', WA: 'R50',
+  // AK uses national average (no PADD 5 sub-district tracked by EIA separately)
+  AK: 'NUS',
+}
+
+// Realistic fallback mock data — last resort when API is completely unavailable
 const MOCK_FALLBACK = {
   AL: 3.05, AK: 3.89, AZ: 3.41, AR: 2.98, CA: 4.72, CO: 3.28, CT: 3.65, DE: 3.22,
   FL: 3.38, GA: 3.01, HI: 4.95, ID: 3.35, IL: 3.59, IN: 3.14, IA: 3.09, KS: 2.97,
@@ -49,7 +94,13 @@ const MOCK_FALLBACK = {
 }
 
 /**
- * Fetch the most recent weekly state gas prices from EIA.
+ * Fetch the most recent weekly state-level regular gasoline prices from EIA v2.
+ *
+ * Coverage strategy (3 tiers):
+ *   1. Direct state data  — 9 EIA-tracked states get individual live prices
+ *   2. PADD district data — 41 remaining states get their regional average
+ *   3. Mock fallback      — only if EIA API is completely unreachable
+ *
  * @returns {{ prices: Object, updatedAt: string, source: string, sourceUrl: string }}
  */
 export async function getStatePrices() {
@@ -61,46 +112,99 @@ export async function getStatePrices() {
   }
 
   try {
+    const params = new URLSearchParams()
+    params.append('api_key', apiKey)
+    params.append('frequency', 'weekly')
+    params.append('data[]', 'value')
+
+    // Filter: regular gasoline (EPM0) at retail with taxes (PTE)
+    params.append('facets[product][]', 'EPM0')
+    params.append('facets[process][]', 'PTE')
+
+    // Include individual state codes AND PADD district codes AND national average
+    for (const code of Object.values(STATE_DUOAREA)) {
+      params.append('facets[duoarea][]', code)
+    }
+    for (const code of PADD_CODES) {
+      params.append('facets[duoarea][]', code)
+    }
+    params.append('facets[duoarea][]', 'NUS')  // national average for AK fallback
+
+    // Sort newest first; fetch enough rows for multiple weeks per area
+    params.append('sort[0][column]', 'period')
+    params.append('sort[0][direction]', 'desc')
+    params.append('length', '500')
+
     const { data } = await axios.get(`${EIA_BASE}/petroleum/pri/gnd/data/`, {
-      params: {
-        api_key: apiKey,
-        frequency: 'weekly',
-        'data[]': 'value',
-        sort: '[{"column":"period","direction":"desc"}]',
-        length: Object.keys(STATE_SERIES_IDS).length,
-      },
-      timeout: 8000,
+      params,
+      timeout: 15000,
     })
 
-    const prices = {}
     const rows = data?.response?.data || []
 
-    // Reverse-map EIA series ID → state abbreviation
-    const reverseMap = Object.fromEntries(
-      Object.entries(STATE_SERIES_IDS).map(([abbr, id]) => [id, abbr])
-    )
+    if (rows.length === 0) {
+      console.warn('[EIA] Empty response — falling back to mock data')
+      return buildMockResponse()
+    }
 
+    // ── Pass 1: collect the most recent value per duoarea ────────────────────
+    const areaPrice  = {}   // duoarea code → latest price
     let latestPeriod = null
+
     for (const row of rows) {
-      const abbr = reverseMap[row.series]
-      if (abbr && row.value) {
-        if (!prices[abbr]) {
-          prices[abbr] = parseFloat(row.value)
-          if (!latestPeriod) latestPeriod = row.period
-        }
+      if (row.value != null && !areaPrice[row.duoarea]) {
+        areaPrice[row.duoarea] = parseFloat(row.value)
+        if (!latestPeriod || row.period > latestPeriod) latestPeriod = row.period
       }
     }
 
-    // Fill gaps with mock
-    for (const [abbr, val] of Object.entries(MOCK_FALLBACK)) {
-      if (!prices[abbr]) prices[abbr] = val
+    const nationalAvg = areaPrice['NUS'] || null
+
+    // ── Pass 2: assign a price to every state ────────────────────────────────
+    const prices       = {}
+    let liveState      = 0
+    let liveDistrict   = 0
+    let usedMock       = 0
+
+    for (const abbr of Object.keys(STATE_DUOAREA)) {
+      const stateCode   = STATE_DUOAREA[abbr]
+      const paddCode    = STATE_TO_PADD[abbr]
+
+      if (areaPrice[stateCode] != null) {
+        // Tier 1 — individual EIA state series
+        prices[abbr] = areaPrice[stateCode]
+        liveState++
+      } else if (paddCode && areaPrice[paddCode] != null) {
+        // Tier 2 — PADD district average (much better than mock)
+        prices[abbr] = areaPrice[paddCode]
+        liveDistrict++
+      } else if (nationalAvg != null) {
+        // Tier 3 — national average (e.g. AK when PADD 5 not available)
+        prices[abbr] = nationalAvg
+        liveDistrict++
+      } else {
+        // Last resort — static mock fallback
+        prices[abbr] = MOCK_FALLBACK[abbr]
+        usedMock++
+      }
     }
+
+    console.info(
+      `[EIA] Gas prices loaded — ` +
+      `${liveState} state-level live, ` +
+      `${liveDistrict} PADD district, ` +
+      `${usedMock} mock fallback | period: ${latestPeriod}`
+    )
+
+    const sourceDesc = usedMock === 0
+      ? `EIA Weekly Retail Gasoline Prices — ${liveState} states + ${liveDistrict} PADD districts`
+      : `EIA Retail Gas Prices (${usedMock} states used mock)`
 
     return {
       prices,
-      updatedAt: latestPeriod || new Date().toISOString(),
-      source: 'EIA Weekly Retail Gasoline Prices',
-      sourceUrl: 'https://www.eia.gov/petroleum/gasdiesel/',
+      updatedAt:  latestPeriod || new Date().toISOString().slice(0, 10),
+      source:     sourceDesc,
+      sourceUrl:  'https://www.eia.gov/petroleum/gasdiesel/',
     }
   } catch (err) {
     console.error('[EIA] API error:', err.message)
@@ -109,57 +213,70 @@ export async function getStatePrices() {
 }
 
 /**
- * Fetch the US national average price.
+ * Fetch the US national average weekly regular gasoline price from EIA v2.
+ * duoarea=NUS, product=EPM0, process=PTE — US weekly regular retail gas price
+ *
  * @returns {{ average: number, updatedAt: string, source: string }}
  */
 export async function getNationalAverage() {
   const apiKey = process.env.EIA_API_KEY
 
   if (!apiKey || apiKey === 'your_eia_api_key_here') {
-    const vals = Object.values(MOCK_FALLBACK)
-    return {
-      average: parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(3)),
-      updatedAt: new Date().toISOString(),
-      source: 'mock',
-    }
+    return buildMockNational()
   }
 
   try {
+    const params = new URLSearchParams()
+    params.append('api_key', apiKey)
+    params.append('frequency', 'weekly')
+    params.append('data[]', 'value')
+    params.append('facets[product][]', 'EPM0')
+    params.append('facets[process][]', 'PTE')
+    params.append('facets[duoarea][]', 'NUS')
+    params.append('sort[0][column]', 'period')
+    params.append('sort[0][direction]', 'desc')
+    params.append('length', '1')
+
     const { data } = await axios.get(`${EIA_BASE}/petroleum/pri/gnd/data/`, {
-      params: {
-        api_key: apiKey,
-        frequency: 'weekly',
-        'data[]': 'value',
-        'facets[series][]': 'EMM_EPM0_PTE_NUS_DPG',
-        sort: '[{"column":"period","direction":"desc"}]',
-        length: 1,
-      },
+      params,
       timeout: 8000,
     })
 
     const row = data?.response?.data?.[0]
+
+    if (!row?.value) {
+      console.warn('[EIA] No national average row returned')
+      return buildMockNational()
+    }
+
     return {
-      average: row ? parseFloat(row.value) : 3.25,
-      updatedAt: row?.period || new Date().toISOString(),
-      source: 'EIA Weekly Retail Gasoline Prices',
-      sourceUrl: 'https://www.eia.gov/petroleum/gasdiesel/',
+      average:    parseFloat(row.value),
+      updatedAt:  row.period,
+      source:     'EIA Weekly Retail Gasoline Prices',
+      sourceUrl:  'https://www.eia.gov/petroleum/gasdiesel/',
     }
   } catch (err) {
     console.error('[EIA] national avg error:', err.message)
-    const vals = Object.values(MOCK_FALLBACK)
-    return {
-      average: parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(3)),
-      updatedAt: new Date().toISOString(),
-      source: 'mock',
-    }
+    return buildMockNational()
   }
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
 function buildMockResponse() {
   return {
-    prices: MOCK_FALLBACK,
-    updatedAt: new Date().toISOString(),
-    source: 'mock — add EIA_API_KEY to backend/.env for live data',
-    sourceUrl: 'https://www.eia.gov/opendata/register.php',
+    prices:     MOCK_FALLBACK,
+    updatedAt:  new Date().toISOString().slice(0, 10),
+    source:     'mock — add EIA_API_KEY to backend/.env for live data',
+    sourceUrl:  'https://www.eia.gov/opendata/register.php',
+  }
+}
+
+function buildMockNational() {
+  const vals = Object.values(MOCK_FALLBACK)
+  return {
+    average:    parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(3)),
+    updatedAt:  new Date().toISOString().slice(0, 10),
+    source:     'mock',
   }
 }

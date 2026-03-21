@@ -4,8 +4,7 @@
  *  • ~40 tier-1 metros (zoom ≥ 2)
  *  • ~110 tier-2 regional cities (zoom ≥ 3.5)
  *  • ⛰️ Mountain range terrain lines
- *  • ⛽ Gas price choropleth + city-pinned price badges
- *  • GasPricePanel sidebar on city click
+ *  • ⛽ Gas price choropleth + city-pinned price badges (auto-loaded on startup)
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
@@ -19,7 +18,6 @@ import { DATA_CENTERS, STATE_FIPS_TO_ABBR } from '../data/geo'
 import US_CITIES, { getCitiesForZoom } from '../data/usCities'
 import MOUNTAIN_RANGES from '../data/mountainRanges'
 import { gasPrices as gasPricesApi } from '../api/client.js'
-import GasPricePanel from './GasPricePanel.jsx'
 
 // ── Layer definitions ────────────────────────────────────────────────────────
 const LAYER_DEFS = [
@@ -47,7 +45,7 @@ const INIT_LAYERS = {
   population:   false,
   powerGrid:    false,
   agriculture:  false,
-  gasPrices:    false,
+  gasPrices:    true,   // auto-enabled: gas prices load on startup
   cities:       true,
   terrain:      false,
 }
@@ -79,9 +77,6 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
   // Gas price data
   const [gasData,      setGasData]      = useState(null)   // { prices, updatedAt, source }
   const [gasLoading,   setGasLoading]   = useState(false)
-
-  // GasPricePanel state
-  const [gasPanel,     setGasPanel]     = useState(null)   // { cityName, stateCode }
 
   const toggleLayer = useCallback((id, checked) => {
     setActiveLayers(prev => ({ ...prev, [id]: checked }))
@@ -308,17 +303,12 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
           .attr('class', `city city-${city.tier}`)
           .attr('transform', `translate(${p[0]},${p[1]})`)
           .attr('data-tier', city.tier)
-          .style('cursor', 'pointer')
+          .style('cursor', 'default')
           .on('mouseover', function () {
             d3.select(this).select('.city-label').style('opacity', 1)
           })
           .on('mouseout', function () {
             d3.select(this).select('.city-label').style('opacity', 0)
-          })
-          .on('click', () => {
-            if (activeLayers.gasPrices) {
-              setGasPanel({ cityName: city.name, stateCode: city.state })
-            }
           })
 
         // City dot
@@ -595,15 +585,6 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         </div>
       </div>
 
-      {/* GasPricePanel — slides in on city click when gas layer is active */}
-      {gasPanel && activeLayers.gasPrices && (
-        <GasPricePanel
-          cityName={gasPanel.cityName}
-          stateCode={gasPanel.stateCode}
-          statePriceData={gasData}
-          onClose={() => setGasPanel(null)}
-        />
-      )}
     </div>
   )
 }
