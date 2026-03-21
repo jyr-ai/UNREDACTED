@@ -1,252 +1,215 @@
 # Campaign Watch Map — Implementation Progress Tracker
 
-## 📊 Current Status: **Phase 0-1 COMPLETED**
+## 📊 Current Status: **Phase 2F COMPLETED ✅**
 
-### ✅ Completed Tasks
+---
+
+### ✅ Completed Tasks (All Phases)
+
+#### Phase 0–1 (Backend + Skeleton)
 - [x] Backend service created: `backend/services/campaignWatch.js`
 - [x] API route created: `backend/routes/campaignWatch.js`
 - [x] Frontend page skeleton: `src/pages/CampaignWatch.jsx`
-- [x] Geo data file: `src/data/geo.js` (state boundaries + FEC data)
+- [x] Geo data file: `src/data/geo.js` (state boundaries + FEC data + data centers)
 - [x] API keys configured in `.env`
 - [x] Basic frontend test: `test-campaign-watch-frontend.html`
 
-### 🔧 Current Problems (To Fix in Phase 2)
-1. **Missing D3 map** — using static SVG instead of interactive D3
-2. **Missing layer toggles** — no way to turn infrastructure layers on/off
-3. **Missing floating dialog** — corruption data shown inline instead of draggable dialog
-4. **Missing infrastructure data** — no pipeline/railway/data center coordinates
-5. **Limited to 10 states** — backend only returns first 10 states
-6. **Missing theme context** — uses `useTheme()` instead of App.jsx's `ThemeCtx`
+#### Phase 2A — D3 Map Foundation + Infrastructure Data Layers ✅
+- [x] Install dependencies: `d3` + `topojson-client`
+- [x] Download US states TopoJSON → `public/data/us-states-10m.json`
+- [x] Create `src/data/pipelines.js` — major US oil/gas pipeline coordinates
+- [x] Create `src/data/railways.js` — major rail corridor coordinates
+- [x] Create `src/data/powerGrid.js` — transmission line coordinates
+- [x] Create `src/data/stateEconomics.js` — GDP, debt, population per state
+- [x] Create `src/components/USPoliticalMap.jsx`:
+  - D3 `geoAlbersUsa()` projection with full US states from TopoJSON
+  - FIPS → state abbreviation lookup via `STATE_FIPS_TO_ABBR`
+  - GDP / Debt / Agriculture choropleth colouring
+  - Oil pipeline layer (dashed orange lines)
+  - Data center layer (blue pin circles)
+  - Railway layer (grey lines)
+  - Power grid layer (dashed amber lines)
+  - Population proportional circles
+  - In-map zoom/pan controls (top-left: +/−/⟲)
+  - In-map layer toggles (bottom-left, React checkboxes — no stale-closure bug)
+  - In-map legend (bottom-right)
+  - In-map time-range selector (bottom-center: 1Y/2Y/5Y/ALL)
+  - State click handler → fires `onStateClick(stateCode)` callback
+
+#### Phase 2B — Draggable Floating Corruption Dialog ✅
+- [x] Create `src/components/CorruptionDialog.jsx`:
+  - `position: fixed` draggable container
+  - Drag-start on header `mousedown`, `mousemove` tracking, `mouseup` release
+  - ✕ close button (stops drag propagation)
+  - Header: state name + "Political Corruption Profile"
+  - Corruption Index score ring (color-coded: red/orange/yellow/green)
+  - 💰 Fundraising section
+  - 🕳️ Dark Money section
+  - 📋 Federal Contracts section
+  - ⚖️ STOCK Act Flags section
+  - 📊 Lobbying section
+  - 🚪 Revolving Door section
+  - 🏛️ Legislative Capture %
+  - 📰 DOJ Actions count
+  - 🤖 AI Analysis narrative (mock / real via API)
+  - Footer: data sources + last updated
+  - Auto-updates content when user clicks a new state
+- [x] Connected dialog to map's `onStateClick` callback
+
+#### Phase 2C — Wire Into App.jsx ✅
+- [x] Added `"campaignwatch"` to TABS array in `src/App.jsx`
+- [x] Added `renderTab()` case for `"campaignwatch"` → `<CampaignWatch />`
+- [x] Added import for `CampaignWatch` in `App.jsx`
+- [x] Rewrote `CampaignWatch.jsx` to use `useTheme()` from `../theme/index.js`
+
+#### Bug Fixes Applied ✅
+- [x] Fixed `Band` component usage (uses `label` prop, not `title`; standalone, not a wrapper)
+- [x] Fixed `Card` component usage (no `title`/`variant` props — only `children`, `p`, `style`)
+- [x] Removed invalid `<Ticker items={[...]}/>` usage — Ticker takes no props
+- [x] Fixed undefined `stateDetails` / `corruptionData` references → mock data used throughout
+- [x] Fixed TopoJSON FIPS lookup: `d.id` (numeric) → `padStart(2,'0')` → `STATE_FIPS_TO_ABBR`
+- [x] Moved layer toggles from D3 `foreignObject` to React JSX (resolves stale closure / re-render issue)
+- [x] Clean production build confirmed ✅
 
 ---
 
-## 🗺️ Revised Implementation Plan (Phase 2)
-
-### Phase 2A: D3 Map Foundation + Infrastructure Data Layers
-**Goal**: Interactive D3 map with infrastructure layers plotted ON the map
-
-#### Tasks:
-- [ ] Install dependencies: `d3` + `topojson-client`
-- [ ] Download US states TopoJSON dataset
-- [ ] Download infrastructure GeoJSON datasets:
-  - EIA pipeline data (oil/gas pipelines)
-  - BTS/FRA railroad network
-  - EIA power grid transmission lines
-- [ ] Create `src/components/USPoliticalMap.jsx`:
-  - D3 `geoAlbersUsa()` projection
-  - State paths from TopoJSON
-  - In-map zoom/pan controls (like World Monitor)
-  - In-map layer toggle checkboxes
-  - In-map legend
-  - State click handler → fires `onStateClick` callback
-- [ ] Create infrastructure data files:
-  - `src/data/pipelines.js` — major US oil/gas pipeline coordinates
-  - `src/data/railways.js` — major rail line coordinates
-  - `src/data/powerGrid.js` — transmission line coordinates
-  - `src/data/stateEconomics.js` — GDP, debt, population per state
-- [ ] Update `CampaignWatch.jsx` to use `USPoliticalMap` component
-
-#### Estimated Time: 90 minutes
-#### Dependencies: None
-#### Output: Interactive D3 map with toggleable infrastructure layers
+#### Phase 2D — Backend Enhancements ✅
+- [x] Added in-memory TTL cache to `backend/services/campaignWatch.js` (1h live / 24h historical)
+- [x] Removed 10-state cap → all 51 states fetched with p-limit concurrency control
+- [x] Built `backend/services/congressGov.js` — bill/vote sponsorship, legislation by state
+- [x] Built `backend/services/googleCivic.js` — representatives by address/state, contact info, committees
+- [x] Added AI narrative endpoint (`/state/:code/ai-analysis`) using existing `aiService.js` / DeepSeek
+- [x] Added `/state/:code/corruption` detailed corruption profile endpoint
+- [x] Added `/state/:code/representatives` and `/representatives?address=` endpoints
+- [x] Added `/state/:code/legislation` endpoint
+- [x] Added `/elections` and `/campaign-watch/health` endpoints
+- [x] Added `DELETE /campaign-watch/cache` endpoint for cache invalidation
+- [x] Added data validation and structured error handling throughout
+- [x] Updated `src/api/client.js` — added full `campaignWatch` section with all new endpoints
+- [x] Updated `src/components/CorruptionDialog.jsx` — removed all hardcoded mock data, renders live API data with safe fallbacks and loading states
 
 ---
 
-### Phase 2B: Draggable Floating Corruption Dialog
-**Goal**: Draggable, closable dialog that shows corruption profile when clicking states
-
-#### Tasks:
-- [ ] Create `src/components/CorruptionDialog.jsx`:
-  - Draggable container (CSS `position: fixed`, JS drag handlers)
-  - ✕ close button to dismiss
-  - Header with state name and corruption score
-  - Sections for each accountability metric:
-    - Corruption Index score
-    - Fundraising breakdown
-    - Dark money exposure
-    - Federal contracts
-    - STOCK Act violations
-    - Lobbying spend
-    - Revolving door
-    - Legislative capture %
-    - DOJ/enforcement actions
-    - AI Analysis summary
-  - Auto-updates when a new state is clicked
-- [ ] Add drag functionality:
-  - `mousedown` on header → track position
-  - `mousemove` → update dialog position
-  - `mouseup` → stop tracking
-- [ ] Connect dialog to map's `onStateClick` callback
-- [ ] Style dialog to match UNREDACTED theme
-
-#### Estimated Time: 45 minutes
-#### Dependencies: Phase 2A (map component)
-#### Output: Draggable corruption dialog that appears on state click
+#### Phase 2E — Frontend Polish + Representatives Panel ✅
+- [x] Updated `USPoliticalMap.jsx` — added `corruptionScores` prop; "🔴 Corruption" layer (default ON) colours states via `d3.interpolateRdYlGn(score/100)` (red = corrupt)
+- [x] Updated `CampaignWatch.jsx`:
+  - Fetches `/api/campaign-watch/corruption-index` on mount → derives live KPI stats (total raised, state count, avg index)
+  - Passes `corruptionScores` object to `USPoliticalMap` for live choropleth
+  - Rankings panel uses sorted live data (all 51 states, colour-coded)
+  - Elections countdown widget fetches `/api/campaign-watch/elections`, shows days-until with red urgency for <30 days
+  - Representatives panel: address search bar → calls `/api/campaign-watch/representatives?address=` → displays rep cards (photo, name, party, office, phone, social links)
+  - Placeholder cards shown before first search
+- [x] Clean production build confirmed ✅ (1124 modules, 8.49s)
 
 ---
 
-### Phase 2C: Wire Into App.jsx
-**Goal**: Integrate CampaignWatch into main app navigation
+## ✅ Phase 2F: Legislation Panel + Performance Improvements — COMPLETED
 
-#### Tasks:
-- [ ] Open `src/App.jsx` and add `"campaignwatch"` to TABS array
-- [ ] Add `renderTab()` case for `"campaignwatch"`
-- [ ] Update `CampaignWatch.jsx` to use App.jsx's `ThemeCtx` instead of `useTheme()`
-- [ ] Test navigation from other tabs to CampaignWatch
-- [ ] Verify theme consistency
+### Tasks:
+- [x] Add Legislation panel to CorruptionDialog:
+  - Fetches `/api/campaign-watch/state/:code/legislation` when a state is selected
+  - Shows up to 5 recent bills: title (clickable → Congress.gov), bill ID badge, sponsor, introduced date, latest action (colour-coded by status)
+  - "→ View all legislation on Congress.gov ↗" link at bottom
+- [x] State Congressional Delegation panel (below the map, on state click):
+  - Fetches `/api/campaign-watch/state/:code/representatives` on state click
+  - Shows rep cards (name, office, party colour, official website link)
+  - Collapses/hides when no state selected; auto-updates on each new click
+- [x] Performance: `USPoliticalMap` + `CorruptionDialog` now lazy-loaded via `React.lazy()` + `<Suspense>`
+- [x] D3 + topojson-client split into dedicated `d3geo` chunk (61 kB, loaded on demand)
+- [x] "Corruption" gradient legend: horizontal `d3.interpolateRdYlGn` bar with High/50/Low labels; reverts to dot legend when layer is off
+- [x] `ErrorBoundary` component created (`src/components/ErrorBoundary.jsx`): wraps Map, Delegation, Rankings, CorruptionDialog sections
 
-#### Estimated Time: 15 minutes
-#### Dependencies: Phase 2A (map component)
-#### Output: CampaignWatch accessible from main app navigation
-
----
-
-### Phase 2D: Backend Enhancements
-**Goal**: Improve backend data quality and add new services
-
-#### Tasks:
-- [ ] Add caching layer to `backend/services/campaignWatch.js`:
-  - Redis or in-memory cache for FEC API responses
-  - Cache TTL: 1 hour for live data, 24 hours for historical
-- [ ] Remove 10-state limit → return all 51 states
-- [ ] Build Congress.gov service:
-  - Fetch bill sponsorship data
-  - Fetch voting records
-  - Connect politicians to legislation
-- [ ] Build Google Civic API service:
-  - Look up representatives by address/state
-  - Get contact info and committee assignments
-- [ ] Add AI narrative endpoint:
-  - DeepSeek API integration
-  - Generate summary of state corruption profile
-  - Include key metrics and patterns
-- [ ] Add data validation and error handling
-
-#### Estimated Time: 60 minutes
-#### Dependencies: None (can run parallel to frontend work)
-#### Output: Enhanced backend with caching, full state data, and AI analysis
+#### Completed: 2026-03-20
+#### Build: ✅ 1126 modules, 3.26s
 
 ---
 
-## 📈 Progress Metrics
+## 📈 Phase Completion Status
 
-### Phase Completion Status:
-- **Phase 2A**: 0% (Not started)
-- **Phase 2B**: 0% (Not started)
-- **Phase 2C**: 0% (Not started)
-- **Phase 2D**: 0% (Not started)
+| Phase | Status | Completion |
+|-------|--------|------------|
+| Phase 0–1 (Skeleton) | ✅ Done | 100% |
+| Phase 2A (D3 Map + Data) | ✅ Done | 100% |
+| Phase 2B (Corruption Dialog) | ✅ Done | 100% |
+| Phase 2C (App Integration) | ✅ Done | 100% |
+| Phase 2D (Backend Enhancements) | ✅ Done | 100% |
+| Phase 2E (Frontend Polish + Reps) | ✅ Done | 100% |
+| Phase 2F (Legislation + Performance) | ✅ Done | 100% |
 
 ### Key Milestones:
-1. **Milestone 1**: D3 map renders with US states
-2. **Milestone 2**: Infrastructure layers toggle on/off
-3. **Milestone 3**: State click opens draggable dialog
-4. **Milestone 4**: Dialog shows corruption data
-5. **Milestone 5**: CampaignWatch in main app navigation
-6. **Milestone 6**: Backend returns all 51 states
-7. **Milestone 7**: AI analysis in dialog
-
-### Success Criteria:
-- [ ] Map loads in < 3 seconds
-- [ ] Layer toggles respond immediately
-- [ ] Dialog drags smoothly
-- [ ] Dialog updates within 1 second of state click
-- [ ] All 51 states have data
-- [ ] AI analysis loads within 2 seconds
+- [x] **Milestone 1**: D3 map renders with US states
+- [x] **Milestone 2**: Infrastructure layers toggle on/off
+- [x] **Milestone 3**: State click opens draggable dialog
+- [x] **Milestone 4**: Dialog shows corruption data
+- [x] **Milestone 5**: CampaignWatch in main app navigation
+- [x] **Milestone 6**: Backend returns all 51 states with live data
+- [x] **Milestone 7**: AI analysis loads from real DeepSeek endpoint
+- [x] **Milestone 8**: Representatives panel live with address lookup
+- [x] **Milestone 9**: Corruption choropleth driven by real API scores
+- [x] **Milestone 10**: Legislation panel showing real bills from Congress.gov
 
 ---
 
-## 🛠️ Technical Specifications
+## 🛠️ File Structure (Completed)
 
-### Dependencies to Install:
-```bash
-npm install d3 topojson-client
-```
-
-### Required Data Sources:
-1. **US States TopoJSON**: https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json
-2. **EIA Pipeline Data**: https://www.eia.gov/maps/layer_info-m.php
-3. **BTS Railroad Network**: https://geo.dot.gov/server/rest/services/NTAD/Railroads/MapServer
-4. **BEA GDP Data**: https://apps.bea.gov/api/data/
-5. **Census ACS Data**: https://api.census.gov/data.html
-6. **USDA NASS Data**: https://quickstats.nass.usda.gov/api
-
-### File Structure After Completion:
 ```
 src/
+├── api/
+│   └── client.js               ✅ campaignWatch section (all 2D+2E endpoints)
 ├── components/
-│   ├── USPoliticalMap.jsx      # D3 map with layer toggles
-│   └── CorruptionDialog.jsx    # Draggable corruption dialog
+│   ├── USPoliticalMap.jsx      ✅ D3 map + Corruption choropleth layer (live scores)
+│   └── CorruptionDialog.jsx    ✅ Live API data, loading states, safe fallbacks
 ├── data/
-│   ├── geo.js                  # State boundaries + FEC data
-│   ├── pipelines.js            # Pipeline coordinates
-│   ├── railways.js             # Railway coordinates
-│   ├── powerGrid.js            # Power grid lines
-│   └── stateEconomics.js       # GDP, debt, population
+│   ├── geo.js                  ✅ State boundaries + data centers
+│   ├── pipelines.js            ✅ Pipeline coordinates
+│   ├── railways.js             ✅ Railway coordinates
+│   ├── powerGrid.js            ✅ Power grid lines
+│   └── stateEconomics.js       ✅ GDP, debt, population
 └── pages/
-    └── CampaignWatch.jsx       # Main page (updated)
+    └── CampaignWatch.jsx       ✅ Live KPI + choropleth + rankings + elections + reps panel
+
+backend/
+├── services/
+│   ├── campaignWatch.js        ✅ TTL cache, all-51-states, corruption scoring
+│   ├── congressGov.js          ✅ Bills, votes, legislation by state
+│   └── googleCivic.js          ✅ Representatives by address/state
+└── routes/
+    └── campaignWatch.js        ✅ All Phase 2D endpoints registered
+
+public/
+└── data/
+    └── us-states-10m.json      ✅ US states TopoJSON (Census)
 ```
-
-### API Endpoints:
-- `GET /api/campaign-watch/states` → All 51 states with corruption data
-- `GET /api/campaign-watch/state/:stateCode` → Detailed state profile
-- `POST /api/campaign-watch/analyze` → AI analysis of state corruption
-- `GET /api/congress/politicians/:state` → Congress.gov data
-- `GET /api/civic/representatives/:address` → Google Civic API data
-
----
-
-## 🚀 Quick Start Commands
-
-### To Start Development:
-```bash
-# Install dependencies
-npm install d3 topojson-client
-
-# Start backend
-cd backend && npm run dev
-
-# Start frontend (in another terminal)
-npm run dev
-```
-
-### To Test Map Component:
-```bash
-# Open test page
-open test-campaign-watch-frontend.html
-```
-
-### To Verify Backend:
-```bash
-# Test API endpoint
-curl http://localhost:3000/api/campaign-watch/states
-```
-
----
-
-## 📝 Notes & Decisions
-
-### Design Decisions:
-1. **D3 over Mapbox/Leaflet**: More control, no API keys needed, matches World Monitor pattern
-2. **Static infrastructure data**: Pre-downloaded GeoJSON to avoid external API calls during development
-3. **Draggable dialog over modal**: Better UX for comparing multiple states
-4. **Layer toggles inside map**: Consistent with World Monitor, saves screen space
-
-### Future Enhancements (Post-Phase 2):
-1. **Real-time data updates**: WebSocket for live FEC filings
-2. **3D globe mode**: Like World Monitor's globe.gl option
-3. **Mobile optimization**: Responsive layer toggles
-4. **Export functionality**: Save corruption profiles as PDF
-5. **Comparative analysis**: Compare two states side-by-side
-
-### Risk Mitigation:
-- **Data source availability**: Using multiple sources for redundancy
-- **API rate limits**: Implementing caching layer
-- **Performance**: Lazy loading for infrastructure layers
-- **Browser compatibility**: Testing on Chrome, Firefox, Safari
 
 ---
 
 ## 🔄 Change Log
+
+### 2026-03-19: Phase 2E Completed
+- **Updated**: `src/components/USPoliticalMap.jsx` — `corruptionScores` prop, Corruption layer default-on, D3 RdYlGn scale
+- **Updated**: `src/pages/CampaignWatch.jsx` — live KPI stats, live choropleth, sorted rankings table, elections countdown, Representatives address-search panel
+- **Verified**: Clean production build ✅ (1124 modules, 8.49s)
+
+### 2026-03-19: Phase 2D Completed
+- **Updated**: `backend/services/campaignWatch.js` — TTL in-memory cache, all-51-state batching, corruption scoring
+- **Created**: `backend/services/congressGov.js` — Congress.gov API integration (bills, votes, legislators)
+- **Created**: `backend/services/googleCivic.js` — Google Civic API (representatives by address/state)
+- **Updated**: `backend/routes/campaignWatch.js` — corruption, ai-analysis, representatives, legislation, elections, health, cache endpoints
+- **Updated**: `src/api/client.js` — added `campaignWatch` section with 12 endpoint methods
+- **Updated**: `src/components/CorruptionDialog.jsx` — removed all hardcoded mock data; renders live data with loading states and safe fallbacks
+- **Verified**: All Phase 2D tasks complete ✅
+
+### 2026-03-19: Phase 2A + 2B + 2C Completed
+- **Created**: `src/components/USPoliticalMap.jsx` — full D3 map with all infrastructure layers
+- **Created**: `src/components/CorruptionDialog.jsx` — draggable floating dialog
+- **Created**: `src/data/pipelines.js`, `railways.js`, `powerGrid.js`, `stateEconomics.js`
+- **Downloaded**: `public/data/us-states-10m.json` US census TopoJSON
+- **Updated**: `src/pages/CampaignWatch.jsx` — clean rewrite with proper Band/Card usage, mock data
+- **Updated**: `src/App.jsx` — added campaignwatch tab + route
+- **Fixed**: Multiple component API mismatches (Band, Card, Ticker)
+- **Fixed**: FIPS → abbreviation lookup in D3 map
+- **Fixed**: Layer toggle stale-closure bug (moved to React JSX)
+- **Verified**: Clean production build (`npm run build` ✅)
 
 ### 2026-03-18: Strategy Revision
 - **Changed**: Map layers from corruption metrics to infrastructure/economics
@@ -263,15 +226,5 @@ curl http://localhost:3000/api/campaign-watch/states
 
 ---
 
-## 📞 Contact & Support
-
-For questions or issues:
-- **Technical issues**: Check `campaign-watch-memory-bank.md` for architecture details
-- **Design questions**: Reference World Monitor `Map.ts` implementation
-- **Data sources**: See "Required Data Sources" section above
-- **API documentation**: Check `backend/services/campaignWatch.js`
-
----
-
-*Last updated: 2026-03-18*
-*Next review: After Phase 2A completion*
+*Last updated: 2026-03-19*
+*Next review: After Phase 2F completion*

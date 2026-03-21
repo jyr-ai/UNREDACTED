@@ -25,10 +25,13 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
+      manualChunks: {
           // Split vendor libs into separate cacheable chunks
           vendor: ['react', 'react-dom'],
           charts: ['recharts'],
+          // D3 + topojson are only needed on the Campaign Watch page
+          // Lazy-importing USPoliticalMap ensures this chunk is loaded on demand
+          d3geo: ['d3', 'topojson-client'],
         },
       },
     },

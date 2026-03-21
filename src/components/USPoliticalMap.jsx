@@ -14,10 +14,11 @@ import { STATE_ECONOMICS } from '../data/stateEconomics';
 import { DATA_CENTERS, STATE_FIPS_TO_ABBR } from '../data/geo';
 
 const LAYER_DEFS = [
+  { id: 'corruption',   name: '🔴 Corruption' },
+  { id: 'gdpEconomy',   name: '💰 GDP/Economy' },
   { id: 'oilPipelines', name: '🛢️ Oil Pipelines' },
   { id: 'dataCenters',  name: '🖥️ Data Centers' },
   { id: 'railways',     name: '🚂 Railways' },
-  { id: 'gdpEconomy',   name: '💰 GDP/Economy' },
   { id: 'stateDebt',    name: '📊 State Debt' },
   { id: 'population',   name: '👥 Population' },
   { id: 'powerGrid',    name: '⚡ Power Grid' },
@@ -25,10 +26,11 @@ const LAYER_DEFS = [
 ];
 
 const INIT_LAYERS = {
-  oilPipelines: true,
+  corruption:   true,
+  oilPipelines: false,
   dataCenters:  true,
   railways:     false,
-  gdpEconomy:   true,
+  gdpEconomy:   false,
   stateDebt:    false,
   population:   false,
   powerGrid:    false,
@@ -46,7 +48,7 @@ const STATE_CENTROIDS = {
   MO: [-91.8318, 37.9643], VA: [-79.0193, 37.4316],
 };
 
-const USPoliticalMap = ({ onStateClick, theme }) => {
+const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
   const svgRef       = useRef(null);
   const containerRef = useRef(null);
   const zoomRef      = useRef(null);
@@ -111,8 +113,13 @@ const USPoliticalMap = ({ onStateClick, theme }) => {
           const abbr = STATE_FIPS_TO_ABBR[fips];
           const eco  = abbr ? STATE_ECONOMICS[abbr] : null;
 
+          // Corruption choropleth — lower score = more corrupt = red
+          if (activeLayers.corruption && abbr && corruptionScores[abbr] != null) {
+            const score = corruptionScores[abbr]; // 0–100, lower = worse
+            return d3.interpolateRdYlGn(score / 100);
+          }
           if (eco && activeLayers.gdpEconomy) {
-            const maxGdp = 3600000; // CA GDP approx
+            const maxGdp = 3600000;
             return d3.interpolateRdYlGn(1 - (eco.gdp / maxGdp) * 0.8);
           }
           if (eco && activeLayers.stateDebt) {
@@ -265,25 +272,82 @@ const USPoliticalMap = ({ onStateClick, theme }) => {
     });
 
     // ── Legend (bottom-right) ──────────────────────────────────────────────────
-    const LW = 150, LH = 108;
+    // Height grows by ~28px when corruption gradient bar is shown
+    const showGradient = activeLayers.corruption;
+    const LW = 160;
+    const LH = showGradient ? 136 : 108;
     const leg = svg.append('g').attr('transform', `translate(${width - LW - 12}, ${height - LH - 12})`);
     leg.append('rect').attr('width', LW).attr('height', LH)
       .attr('fill', theme.card).attr('stroke', theme.border).attr('rx', 4).attr('opacity', 0.95);
     leg.append('text').attr('x', 8).attr('y', 18)
       .attr('fill', theme.accent).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
       .style('letter-spacing', '1.5px').text('LEGEND');
-    [
-      { label: '🛢️ Oil Pipelines', color: theme.accent, y: 34 },
-      { label: '🖥️ Data Centers',  color: theme.blue || '#4A7FFF', y: 50 },
-      { label: '🚂 Railways',      color: theme.mid,   y: 66 },
-      { label: '⚡ Power Grid',    color: theme.warn || '#FF8000', y: 82 },
-      { label: '👥 Population',    color: theme.blue || '#4A7FFF', y: 98 },
-    ].forEach(item => {
-      leg.append('circle').attr('cx', 12).attr('cy', item.y - 4).attr('r', 4).attr('fill', item.color);
-      leg.append('text').attr('x', 22).attr('y', item.y)
-        .attr('fill', theme.mid).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
-        .text(item.label);
-    });
+
+    // Corruption gradient bar — only shown when corruption layer is ON
+    if (showGradient) {
+      // Build a linear gradient definition
+      const gradId = 'corr-legend-grad';
+      const defs = svg.append('defs');
+      const grad = defs.append('linearGradient')
+        .attr('id', gradId).attr('x1', '0%').attr('y1', '0%').attr('x2', '100%').attr('y2', '0%');
+      // d3.interpolateRdYlGn: 0 = red (high risk), 1 = green (low risk)
+      [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+        grad.append('stop')
+          .attr('offset', `${t * 100}%`)
+          .attr('stop-color', d3.interpolateRdYlGn(t));
+      });
+
+      // Gradient rect
+      leg.append('rect')
+        .attr('x', 8).attr('y', 26).attr('width', LW - 16).attr('height', 12)
+        .attr('rx', 2)
+        .attr('fill', `url(#${gradId})`);
+
+      // Labels below gradient
+      leg.append('text').attr('x', 8).attr('y', 50)
+        .attr('fill', theme.low).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '7.5px')
+        .text('High Risk');
+      leg.append('text').attr('x', LW - 8).attr('y', 50)
+        .attr('text-anchor', 'end')
+        .attr('fill', theme.low).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '7.5px')
+        .text('Low Risk');
+      leg.append('text').attr('x', LW / 2).attr('y', 50)
+        .attr('text-anchor', 'middle')
+        .attr('fill', theme.low).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '7.5px')
+        .text('50');
+
+      // Separator line
+      leg.append('line')
+        .attr('x1', 8).attr('y1', 56).attr('x2', LW - 8).attr('y2', 56)
+        .attr('stroke', theme.border).attr('stroke-width', 0.5);
+
+      // Remaining layer items shifted down by 28px
+      [
+        { label: '🛢️ Oil Pipelines', color: theme.accent,           y: 72 },
+        { label: '🖥️ Data Centers',  color: theme.blue || '#4A7FFF', y: 88 },
+        { label: '🚂 Railways',      color: theme.mid,               y: 104 },
+        { label: '⚡ Power Grid',    color: theme.warn || '#FF8000', y: 120 },
+      ].forEach(item => {
+        leg.append('circle').attr('cx', 12).attr('cy', item.y - 4).attr('r', 4).attr('fill', item.color);
+        leg.append('text').attr('x', 22).attr('y', item.y)
+          .attr('fill', theme.mid).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
+          .text(item.label);
+      });
+    } else {
+      // Standard dot legend when corruption layer is off
+      [
+        { label: '🔴 Corruption',    color: '#ff4444',              y: 34 },
+        { label: '🛢️ Oil Pipelines', color: theme.accent,           y: 50 },
+        { label: '🖥️ Data Centers',  color: theme.blue || '#4A7FFF', y: 66 },
+        { label: '🚂 Railways',      color: theme.mid,               y: 82 },
+        { label: '⚡ Power Grid',    color: theme.warn || '#FF8000', y: 98 },
+      ].forEach(item => {
+        leg.append('circle').attr('cx', 12).attr('cy', item.y - 4).attr('r', 4).attr('fill', item.color);
+        leg.append('text').attr('x', 22).attr('y', item.y)
+          .attr('fill', theme.mid).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
+          .text(item.label);
+      });
+    }
 
     // ── Time-range buttons (bottom-center) ────────────────────────────────────
     const TR_W = 160, TR_H = 48;
@@ -310,7 +374,7 @@ const USPoliticalMap = ({ onStateClick, theme }) => {
         .text(range);
     });
 
-  }, [activeLayers, timeRange, theme, ready, onStateClick]);
+  }, [activeLayers, timeRange, theme, ready, onStateClick, corruptionScores]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (

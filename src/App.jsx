@@ -1056,13 +1056,13 @@ function CorporateAndProfile({ theme }) {
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
+  { id:"campaignwatch",   label:"News Map"          },
   { id:"overview",        label:"Overview"          },
   { id:"donors",          label:"Donors Relations"  },
   { id:"policy",          label:"Policy Learning"   },
   { id:"spending",        label:"Spending Audit"    },
   { id:"corporate",       label:"Company Profiles"  },
   { id:"corruptionwatch", label:"Corruption Watch"  },
-  { id:"campaignwatch",   label:"Campaign Watch"    },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────

@@ -144,6 +144,23 @@ export const darkMoney = {
   orgsIndex:  (limit = 50, level) => request(`/api/darkmoney/organizations/index?limit=${limit}${level ? `&level=${level}` : ''}`),
 }
 
+// ── Campaign Watch ────────────────────────────────────────────────────────────
+export const campaignWatch = {
+  states:          ()           => request('/api/campaign-watch/states'),
+  state:           (stateCode)  => request(`/api/campaign-watch/state/${stateCode}`),
+  moneyFlows:      (limit = 20) => request(`/api/campaign-watch/money-flows?limit=${limit}`),
+  corruptionIndex: ()           => request('/api/campaign-watch/corruption-index'),
+  // Phase 2D — new endpoints
+  corruptionProfile: (stateCode) => request(`/api/campaign-watch/state/${stateCode}/corruption`),
+  aiAnalysis:        (stateCode) => request(`/api/campaign-watch/state/${stateCode}/ai-analysis`),
+  representatives:   (stateCode) => request(`/api/campaign-watch/state/${stateCode}/representatives`),
+  repsByAddress:     (address)   => request(`/api/campaign-watch/representatives?address=${encodeURIComponent(address)}`),
+  legislation:       (stateCode, limit = 20) => request(`/api/campaign-watch/state/${stateCode}/legislation?limit=${limit}`),
+  elections:         ()          => request('/api/campaign-watch/elections'),
+  health:            ()          => request('/api/campaign-watch/health'),
+  clearCache:        (prefix)    => request(`/api/campaign-watch/cache${prefix ? `?prefix=${prefix}` : ''}`, { method: 'DELETE' }),
+}
+
 // ── Version ──────────────────────────────────────────────────────────────────
 export const version = {
   get: () => request('/api/version'),
@@ -174,5 +191,5 @@ export const getStockActWatchlist         = ()       => stockAct.watchlist()
 
 export default {
   spending, donors, policy, feed, agent, aiAgent, settings,
-  corruption, companies, stockAct, darkMoney, health,
+  corruption, companies, stockAct, darkMoney, campaignWatch, health,
 }
