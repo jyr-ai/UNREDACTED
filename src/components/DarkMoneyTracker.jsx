@@ -7,8 +7,8 @@ const ORANGE = '#FF8000'
 const RED    = '#E63946'
 const GREEN  = '#2DC653'
 const YELLOW = '#FFB84D'
-const MF     = "'IBM Plex Mono','Courier New',monospace"
-const SF     = "'Playfair Display',Georgia,serif"
+const MF     = "'Roboto', sans-serif"
+const SF     = "'Roboto', sans-serif"
 
 const DISCLOSURE_COLORS = { dark: RED, partial: YELLOW, disclosed: GREEN }
 const DISCLOSURE_LABELS = {
