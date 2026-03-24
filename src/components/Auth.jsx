@@ -1,14 +1,14 @@
 /**
  * Auth modal component — sign in / sign up toggle.
  * Matches the UNREDACTED dark/light theme system.
- * Uses IBM Plex Mono font throughout.
+ * Uses Roboto font throughout.
  * Orange accent (#FF8000) for all interactive elements.
  */
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 const ORANGE = '#FF8000'
-const MF     = "'IBM Plex Mono','Courier New',monospace"
+const MF     = "'Roboto', sans-serif"
 
 export default function Auth({ isOpen, onClose, theme }) {
   const { signIn, signUp, loading, error, clearError } = useAuth()

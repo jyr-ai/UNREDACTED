@@ -131,13 +131,13 @@ export default function AccountabilityIndex() {
             {/* Score Distribution + Hall */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
               <div>
-                <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, fontWeight: 700, color: t.hi, marginBottom: 16 }}>Score Distribution</div>
+                <div style={{ fontFamily: "'Roboto', sans-serif", fontSize: 15, fontWeight: 700, color: t.hi, marginBottom: 16 }}>Score Distribution</div>
                 <ResponsiveContainer width="100%" height={140}>
                   <BarChart data={distData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={t.grid} />
                     <XAxis dataKey="range" tick={{ fill: t.mid, fontSize: 10 }} />
                     <YAxis tick={{ fill: t.mid, fontSize: 10 }} />
-                    <Tooltip contentStyle={{ background: t.cardB, border: `1px solid ${t.border}`, fontFamily: "'IBM Plex Mono','Courier New',monospace", fontSize: 11 }} />
+                    <Tooltip contentStyle={{ background: t.cardB, border: `1px solid ${t.border}`, fontFamily: "'Roboto', sans-serif", fontSize: 11 }} />
                     <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                       {distData.map((d, i) => (
                         <Cell key={i} fill={
@@ -155,7 +155,7 @@ export default function AccountabilityIndex() {
                   {[['shame', 'Hall of Shame'], ['fame', 'Hall of Fame']].map(([k, l]) => (
                     <button key={k} onClick={() => setActiveHall(k)} style={{
                       background: 'none', border: 'none', cursor: 'pointer', padding: '6px 16px',
-                      fontFamily: "'IBM Plex Mono','Courier New',monospace", fontSize: 11, fontWeight: activeHall === k ? 700 : 400,
+                      fontFamily: "'Roboto', sans-serif", fontSize: 11, fontWeight: activeHall === k ? 700 : 400,
                       color: activeHall === k ? (k === 'shame' ? '#E63946' : '#2DC653') : t.mid,
                       borderBottom: activeHall === k ? `2px solid ${k === 'shame' ? '#E63946' : '#2DC653'}` : '2px solid transparent',
                       marginBottom: -1,
@@ -183,7 +183,7 @@ export default function AccountabilityIndex() {
                   background: filterChamber === v ? t.accent : t.inputBg,
                   border: `1px solid ${filterChamber === v ? t.accent : t.border}`,
                   borderRadius: 4, color: filterChamber === v ? '#000' : t.mid,
-                  fontFamily: "'IBM Plex Mono','Courier New',monospace", fontSize: 11, padding: '6px 14px', cursor: 'pointer',
+                  fontFamily: "'Roboto', sans-serif", fontSize: 11, padding: '6px 14px', cursor: 'pointer',
                 }}>{l}</button>
               ))}
               <div style={{ width: 1, background: t.border, margin: '0 4px' }} />
@@ -192,7 +192,7 @@ export default function AccountabilityIndex() {
                   background: filterParty === v ? t.accent : t.inputBg,
                   border: `1px solid ${filterParty === v ? t.accent : t.border}`,
                   borderRadius: 4, color: filterParty === v ? '#000' : t.mid,
-                  fontFamily: "'IBM Plex Mono','Courier New',monospace", fontSize: 11, padding: '6px 14px', cursor: 'pointer',
+                  fontFamily: "'Roboto', sans-serif", fontSize: 11, padding: '6px 14px', cursor: 'pointer',
                 }}>{l}</button>
               ))}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -201,7 +201,7 @@ export default function AccountabilityIndex() {
                     background: sortBy === v ? '#1A1A1A' : 'none',
                     border: `1px solid ${sortBy === v ? t.border : 'transparent'}`,
                     borderRadius: 4, color: sortBy === v ? t.hi : t.mid,
-                    fontFamily: "'IBM Plex Mono','Courier New',monospace", fontSize: 11, padding: '6px 14px', cursor: 'pointer',
+                    fontFamily: "'Roboto', sans-serif", fontSize: 11, padding: '6px 14px', cursor: 'pointer',
                   }}>{l}</button>
                 ))}
               </div>
@@ -213,7 +213,7 @@ export default function AccountabilityIndex() {
                 <thead>
                   <tr style={{ background: t.card }}>
                     {['Rank', 'Politician', 'Party/State', 'Total Raised', 'Score'].map(h => (
-                      <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: t.mid, fontFamily: "'IBM Plex Mono','Courier New',monospace", fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${t.border}` }}>{h}</th>
+                      <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: t.mid, fontFamily: "'Roboto', sans-serif", fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${t.border}` }}>{h}</th>
                     ))}
                   </tr>
                 </thead>

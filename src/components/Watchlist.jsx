@@ -8,8 +8,8 @@ import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase, subscribeToWatchlist } from '../lib/supabase.js'
 
 const ORANGE = '#FF8000'
-const MF     = "'IBM Plex Mono','Courier New',monospace"
-const SF     = "'Playfair Display',Georgia,serif"
+const MF     = "'Roboto', sans-serif"
+const SF     = "'Roboto', sans-serif"
 
 // Tier badge colors
 const TIER_COLORS = {

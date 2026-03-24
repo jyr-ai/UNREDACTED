@@ -1,2 +1,4 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0D0D0D; }
+body { background: #0D0D0D; font-family: 'Roboto', sans-serif; }
+input, button, textarea, select { font-family: 'Roboto', sans-serif; }
+svg text { font-family: 'Roboto', sans-serif; }

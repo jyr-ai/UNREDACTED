@@ -4,8 +4,8 @@ import { getRecentStockTrades, getStockActWatchlist } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
-const MF     = "'IBM Plex Mono','Courier New',monospace"
-const SF     = "'Playfair Display',Georgia,serif"
+const MF     = "'Roboto', sans-serif"
+const SF     = "'Roboto', sans-serif"
 
 export default function StockActMonitor() {
   const t = useTheme()

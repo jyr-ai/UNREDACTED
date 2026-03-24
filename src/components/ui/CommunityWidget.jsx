@@ -57,7 +57,7 @@ export default function CommunityWidget({ theme }) {
           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
           maxWidth: 320,
           overflow: 'hidden',
-          fontFamily: "'IBM Plex Mono','Courier New',monospace",
+          fontFamily: "'Roboto', sans-serif",
         }}
       >
         {/* Main pill */}
