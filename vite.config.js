@@ -25,13 +25,18 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-      manualChunks: {
-          // Split vendor libs into separate cacheable chunks
-          vendor: ['react', 'react-dom'],
+        manualChunks: {
+          // recharts (large — keep isolated for long-term caching)
           charts: ['recharts'],
-          // D3 + topojson are only needed on the Campaign Watch page
-          // Lazy-importing USPoliticalMap ensures this chunk is loaded on demand
+          // D3 + topojson (USPoliticalMap SVG fallback — only loaded on demand)
           d3geo: ['d3', 'topojson-client'],
+          // MapLibre GL basemap renderer (~1 MB minified — isolated chunk)
+          maplibre: ['maplibre-gl'],
+          // deck.gl WebGL layers — split for parallel loading + long-term caching
+          'deck-core':   ['@deck.gl/core'],
+          'deck-layers': ['@deck.gl/layers', '@deck.gl/mapbox'],
+          // PMTiles protocol handler (small, but isolated for cache efficiency)
+          pmtiles: ['pmtiles'],
         },
       },
     },

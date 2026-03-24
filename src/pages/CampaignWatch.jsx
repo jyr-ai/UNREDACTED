@@ -10,8 +10,12 @@ import { Card, Band, CardTitle } from '../components/ui/index.js';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { DATA_CENTERS } from '../data/geo';
 import { campaignWatch as cwApi } from '../api/client';
+import { primeHydrationCache } from '../services/bootstrap.js';
+import { loadMapData } from '../services/map-data.js';
 
-// Lazy-load heavy components so D3/recharts don't block initial paint
+// Lazy-load heavy components so D3/recharts/WebGL don't block initial paint
+// DeckGLMap (MapLibre + deck.gl) is the primary map; USPoliticalMap kept as SVG fallback
+const DeckGLMap       = lazy(() => import('../components/DeckGLMap'));
 const USPoliticalMap  = lazy(() => import('../components/USPoliticalMap'));
 const CorruptionDialog = lazy(() => import('../components/CorruptionDialog'));
 
@@ -66,6 +70,61 @@ const CampaignWatch = () => {
   // ── State delegation (fetched on map click) ────────────────────────────────
   const [stateReps,        setStateReps]        = useState(null);
   const [stateRepsLoading, setStateRepsLoading] = useState(false);
+
+  // ── Phase 2: Dynamic map data (fed via Redis bootstrap pipeline) ──────────
+  const [gasPriceByState,  setGasPriceByState]  = useState({});
+  const [newsLocations,    setNewsLocations]     = useState([]);
+  const [contributions,    setContributions]     = useState([]);
+  const [electionRaces,    setElectionRaces]     = useState([]);
+  const [darkMoneyFlows,   setDarkMoneyFlows]    = useState([]);
+  const [spendingFlows,    setSpendingFlows]     = useState([]);
+  const [stockActTrades,   setStockActTrades]    = useState([]);
+
+  // Prime the hydration cache on page mount, then load all map data.
+  // The bootstrap fetch (fast + slow tiers) runs in parallel with a 800ms timeout;
+  // if it misses the cache, loadMapData falls through to individual API calls.
+  useEffect(() => {
+    primeHydrationCache().then(() => {
+      loadMapData({
+        setCorruptionScores: (scores) => {
+          // Merge bootstrap corruption scores into corruptionIndex state shape
+          // so the existing choropleth + KPIs still work from the same source.
+          if (scores && typeof scores === 'object') {
+            setCorruptionIndex(prev => {
+              // Only replace if we got more data from bootstrap than from API
+              const bootstrapCount = Object.keys(scores).length;
+              if (bootstrapCount > prev.length) {
+                return Object.entries(scores).map(([stateCode, corruptionIndex]) => ({
+                  stateCode,
+                  corruptionIndex,
+                  totalRaised: 0, // bootstrap doesn't carry totalRaised — keep from API
+                }));
+              }
+              return prev;
+            });
+          }
+        },
+        setGasPriceByState,
+        setContributions,
+        setElectionRaces,
+        setDarkMoneyFlows,
+        setSpendingFlows,
+        setStockActTrades,
+        setNewsLocations,
+      });
+    }).catch(() => {
+      // Bootstrap failed entirely — loadMapData will use individual fallbacks
+      loadMapData({
+        setGasPriceByState,
+        setContributions,
+        setElectionRaces,
+        setDarkMoneyFlows,
+        setSpendingFlows,
+        setStockActTrades,
+        setNewsLocations,
+      });
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Address-based reps lookup ─────────────────────────────────────────────
   const [addressInput, setAddressInput] = useState('');
@@ -193,10 +252,31 @@ const CampaignWatch = () => {
               sub="Red = high corruption risk. Click any state to open its detailed profile."
             />
             <Suspense fallback={<MapFallback t={t} />}>
-              <USPoliticalMap
+              {/*
+               * DeckGLMap — MapLibre GL + deck.gl WebGL map (Phase 1)
+               * Falls through to USPoliticalMap (SVG) only if the ErrorBoundary catches
+               * a WebGL init failure at the component level.
+               *
+               * Props:
+               *   corruptionScores  — { stateCode: 0-100 } from FEC/corruption API
+               *   gasPriceByState   — { stateCode: USD/gal } from EIA API
+               *   onStateClick      — opens CorruptionDialog + fetches delegation
+               *   theme             — UNREDACTED theme tokens (passed for future use)
+               */}
+              <DeckGLMap
+                /* Phase 1 — static + choropleth */
+                corruptionScores={corruptionScores}
+                gasPriceByState={gasPriceByState}
                 onStateClick={handleStateClick}
                 theme={t}
-                corruptionScores={corruptionScores}
+                mapTheme="dark"
+                /* Phase 2 — dynamic pipeline data (populated after bootstrap) */
+                newsLocations={newsLocations}
+                contributions={contributions}
+                electionRaces={electionRaces}
+                darkMoneyFlows={darkMoneyFlows}
+                spendingFlows={spendingFlows}
+                stockActTrades={stockActTrades}
               />
             </Suspense>
           </Card>

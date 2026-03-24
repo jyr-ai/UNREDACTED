@@ -18,6 +18,12 @@ import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
 // Campaign Watch — lives in backend/ (shared between dev and prod)
 import campaignWatchRouter from '../backend/routes/campaignWatch.js'
+// Bootstrap (batch Redis read for map hydration)
+import bootstrapRouter from './routes/bootstrap.js'
+// Seed health dashboard
+import seedHealthRouter from './routes/seed-health.js'
+// Cron seed endpoints (triggered by Vercel Cron)
+import cronRouter from './routes/cron.js'
 
 const app = express()
 
@@ -99,6 +105,10 @@ app.use('/api/stockact',    generalLimiter, stockActRouter)
 app.use('/api/darkmoney',   generalLimiter, darkMoneyRouter)
 app.use('/api/conflict',       generalLimiter, conflictRouter)
 app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
+// Map data pipeline routes (no rate limit — CDN-cached)
+app.use('/api/bootstrap',  bootstrapRouter)
+app.use('/api/seed-health', generalLimiter, seedHealthRouter)
+app.use('/api/cron',        cronRouter)
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
