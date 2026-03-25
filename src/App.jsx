@@ -15,12 +15,10 @@ import {
 } from "recharts";
 import {
   queryAgent,
-  fetchContracts,
   fetchAgencySpending,
   version,
 } from "./api/client.js";
 import Ticker from "./components/layout/Ticker.jsx";
-import LiveFeedPanel from "./components/LiveFeedPanel.jsx";
 import { CommunityWidget } from "./components/ui/index.js";
 import WarStats from "./components/WarStats.jsx";
 import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
@@ -268,39 +266,6 @@ function Overview() {
   const t = useT();
   const isMobile = useMobile();
   const isTablet = useTablet();
-  const [liveContracts, setLiveContracts] = useState(null);
-
-  useEffect(() => {
-    fetchContracts({ limit: 50 })
-      .then(res => { if (res.success) setLiveContracts(res); })
-      .catch(() => {});
-  }, []);
-
-  const totalSpend = liveContracts
-    ? liveContracts.data.reduce((s, c) => s + parseFloat(c["Award Amount"] || 0), 0)
-    : null;
-  const flaggedCount = liveContracts
-    ? liveContracts.data.filter(c => parseFloat(c["Award Amount"] || 0) >= 5e8).length
-    : null;
-
-  function fmtK(n) {
-    if (n == null) return null;
-    if (n >= 1e12) return `$${(n/1e12).toFixed(1)}T`;
-    if (n >= 1e9)  return `$${(n/1e9).toFixed(1)}bn`;
-    if (n >= 1e6)  return `$${(n/1e6).toFixed(0)}m`;
-    return `$${n.toFixed(0)}`;
-  }
-
-  const kpis = [
-    { v: fmtK(totalSpend) || "$157bn",
-      d: totalSpend != null ? "Contract obligations loaded" : "Overspent vs. appropriations",
-      s: liveContracts?.fiscalYear ? `FY${liveContracts.fiscalYear} · live · USASpending.gov` : "FY2024 federal agencies" },
-    { v: flaggedCount != null ? String(flaggedCount) : "1,847",
-      d: flaggedCount != null ? "Contracts ≥ $500M flagged" : "Contracts flagged anomalous",
-      s: flaggedCount != null ? `From ${liveContracts?.count || liveContracts?.data?.length} loaded` : "Across 23 federal agencies" },
-    { v:"34",     d:"STOCK Act potential violations", s:"Current congressional session" },
-    { v:"$18bn",  d:"PAC donations to Congress",      s:"2023–24 election cycle"        },
-  ];
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
@@ -311,27 +276,6 @@ function Overview() {
         <p style={{ fontFamily:SF, fontSize: isMobile ? 13 : 14, fontStyle:"italic", color:t.mid, lineHeight:1.75, maxWidth:640 }}>
           American companies that donate most generously to congressional campaigns receive disproportionate federal contracts. A cross-source analysis of FEC, USASpending and procurement data reveals the pattern in stark relief.
         </p>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : isTablet ? "repeat(3,1fr)" : "repeat(4,1fr) minmax(180px,1fr)", borderTop:`1px solid ${t.border}`, borderBottom:`1px solid ${t.border}` }}>
-        {kpis.map((k,i) => (
-          <div key={i} style={{ padding: isMobile ? "12px 14px" : "18px 20px", borderRight:`1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : "none" }}>
-            <div style={{ fontFamily:SF, fontSize: isMobile ? 24 : 34, color:t.kpiNum, lineHeight:1, marginBottom:5 }}>{k.v}</div>
-            <div style={{ fontFamily:MF, fontSize:10.5, color:t.hi, marginBottom:3 }}>{k.d}</div>
-            <div style={{ fontFamily:MF, fontSize:9, color:t.low }}>{k.s}</div>
-          </div>
-        ))}
-        <a
-          key="war"
-          href="https://meta-trials.vercel.app/us-iran-conflict"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ textDecoration: 'none', display: 'block' }}
-        >
-          <WarThemeProvider theme={t}>
-            <WarStats />
-          </WarThemeProvider>
-        </a>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 14 : 20 }}>
@@ -402,8 +346,6 @@ function Overview() {
         ))}
       </div>
 
-      {/* ── LIVE INTELLIGENCE FEEDS ── */}
-      <LiveFeedPanel />
     </div>
   );
 }
@@ -1855,7 +1797,7 @@ function AppInner() {
                 cursor:"col-resize",
               }}
             />
-            <div style={{ maxWidth: analyst ? "none" : 1200, margin:"0 auto", padding: isMobile ? "14px 14px 48px" : "28px 28px 52px" }} key={tab}>
+            <div style={{ maxWidth: (analyst || tab === "campaignwatch") ? "none" : 1200, margin:"0 auto", padding: isMobile ? "14px 14px 48px" : tab === "campaignwatch" ? "28px 12px 52px" : "28px 28px 52px" }} key={tab}>
               {renderTab()}
               <div style={{ marginTop:32, borderTop:`1px solid ${theme.border}`, paddingTop:14, display:"flex", justifyContent:"space-between" }}>
                 <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>UN*REDACTED · Public record intelligence · All data from public federal sources</span>

@@ -8,8 +8,12 @@ import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useTheme } from '../theme/index.js';
 import { Card, Band, CardTitle } from '../components/ui/index.js';
 import ErrorBoundary from '../components/ErrorBoundary';
+import LiveNewsPanel from '../components/LiveNewsPanel.jsx';
+import LiveFeedPanel from '../components/LiveFeedPanel.jsx';
+import WarStats from '../components/WarStats.jsx';
+import { useMobile } from '../hooks/useMediaQuery.js';
 import { DATA_CENTERS } from '../data/geo';
-import { campaignWatch as cwApi } from '../api/client';
+import { campaignWatch as cwApi, fetchContracts } from '../api/client';
 import { primeHydrationCache } from '../services/bootstrap.js';
 import { loadMapData } from '../services/map-data.js';
 
@@ -55,8 +59,33 @@ const daysUntil = dateStr => {
   return Math.max(0, Math.ceil((d - now) / (1000 * 60 * 60 * 24)));
 };
 
+const fmtK = n => {
+  if (n == null) return null;
+  if (n >= 1e12) return `$${(n/1e12).toFixed(1)}T`;
+  if (n >= 1e9)  return `$${(n/1e9).toFixed(1)}bn`;
+  if (n >= 1e6)  return `$${(n/1e6).toFixed(0)}m`;
+  return `$${n.toFixed(0)}`;
+};
+
 const CampaignWatch = () => {
   const t = useTheme();
+  const isMobile = useMobile();
+
+  // ── Live contract data (from Overview KPIs) ───────────────────────────────
+  const [liveContracts, setLiveContracts] = useState(null);
+
+  useEffect(() => {
+    fetchContracts({ limit: 50 })
+      .then(res => { if (res.success) setLiveContracts(res); })
+      .catch(() => {});
+  }, []);
+
+  const totalSpend = liveContracts
+    ? liveContracts.data.reduce((s, c) => s + parseFloat(c['Award Amount'] || 0), 0)
+    : null;
+  const flaggedCount = liveContracts
+    ? liveContracts.data.filter(c => parseFloat(c['Award Amount'] || 0) >= 5e8).length
+    : null;
 
   const [selectedState,   setSelectedState]   = useState(null);
   const [dialogPosition,  setDialogPosition]  = useState({ x: 120, y: 120 });
@@ -221,66 +250,99 @@ const CampaignWatch = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-      {/* ── KPI row ───────────────────────────────────────────────────── */}
+      {/* ── KPI row (9 columns: 4 map KPIs + 4 overview KPIs + WarStats) ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(8, 1fr) minmax(160px, 1fr)',
         borderTop: `1px solid ${t.border}`,
         borderBottom: `1px solid ${t.border}`,
       }}>
         {[
-          { v: corruptionLoading ? '…' : fmtM(kpiStats.total),  d: '2026 total raised',    s: 'FEC · current cycle' },
-          { v: corruptionLoading ? '…' : kpiStats.count,         d: 'States tracked',       s: 'All 51 incl. DC' },
-          { v: corruptionLoading ? '…' : kpiStats.avg,           d: 'Avg corruption index', s: 'Lower = more corrupt' },
-          { v: kpiStats.centers,                                  d: 'Data centers mapped',  s: 'Infrastructure layer' },
+          { v: corruptionLoading ? '…' : fmtM(kpiStats.total),                                      d: '2026 total raised',           s: 'FEC · current cycle' },
+          { v: corruptionLoading ? '…' : kpiStats.count,                                             d: 'States tracked',              s: 'All 51 incl. DC' },
+          { v: corruptionLoading ? '…' : kpiStats.avg,                                               d: 'Avg corruption index',        s: 'Lower = more corrupt' },
+          { v: kpiStats.centers,                                                                      d: 'Data centers mapped',         s: 'Infrastructure layer' },
+          { v: fmtK(totalSpend) || '$157bn',                                                          d: totalSpend != null ? 'Contract obligations' : 'Overspent vs. appropriations', s: liveContracts?.fiscalYear ? `FY${liveContracts.fiscalYear} · live` : 'FY2024 federal agencies' },
+          { v: flaggedCount != null ? String(flaggedCount) : '1,847',                                d: flaggedCount != null ? 'Contracts ≥ $500M flagged' : 'Contracts flagged anomalous', s: flaggedCount != null ? `From ${liveContracts?.data?.length} loaded` : 'Across 23 federal agencies' },
+          { v: '34',                                                                                   d: 'STOCK Act potential violations', s: 'Current congressional session' },
+          { v: '$18bn',                                                                                d: 'PAC donations to Congress',   s: '2023–24 election cycle' },
         ].map((k, i) => (
-          <div key={i} style={{ padding: '18px 20px', borderRight: `1px solid ${t.border}` }}>
-            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 32, color: t.kpiNum, lineHeight: 1, marginBottom: 5 }}>{k.v}</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10.5, color: t.hi, marginBottom: 3 }}>{k.d}</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.low }}>{k.s}</div>
+          <div key={i} style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{k.v}</div>
+            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>{k.d}</div>
+            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{k.s}</div>
           </div>
         ))}
+        {/* WarStats as 9th column */}
+        <a
+          href="https://meta-trials.vercel.app/us-iran-conflict"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none', display: 'block' }}
+        >
+          <WarStats />
+        </a>
       </div>
 
-      {/* ── Map ───────────────────────────────────────────────────────── */}
-      <div>
-        <Band label="US Political Accountability Map — 2026 Election" right="CLICK ANY STATE FOR PROFILE" />
-        <ErrorBoundary label="Map" theme={t}>
-          <Card>
-            <CardTitle
-              h="Infrastructure, economics, and political accountability — all in one view."
-              sub="Red = high corruption risk. Click any state to open its detailed profile."
-            />
-            <Suspense fallback={<MapFallback t={t} />}>
-              {/*
-               * DeckGLMap — MapLibre GL + deck.gl WebGL map (Phase 1)
-               * Falls through to USPoliticalMap (SVG) only if the ErrorBoundary catches
-               * a WebGL init failure at the component level.
-               *
-               * Props:
-               *   corruptionScores  — { stateCode: 0-100 } from FEC/corruption API
-               *   gasPriceByState   — { stateCode: USD/gal } from EIA API
-               *   onStateClick      — opens CorruptionDialog + fetches delegation
-               *   theme             — UNREDACTED theme tokens (passed for future use)
-               */}
-              <DeckGLMap
-                /* Phase 1 — static + choropleth */
-                corruptionScores={corruptionScores}
-                gasPriceByState={gasPriceByState}
-                onStateClick={handleStateClick}
-                theme={t}
-                mapTheme="dark"
-                /* Phase 2 — dynamic pipeline data (populated after bootstrap) */
-                newsLocations={newsLocations}
-                contributions={contributions}
-                electionRaces={electionRaces}
-                darkMoneyFlows={darkMoneyFlows}
-                spendingFlows={spendingFlows}
-                stockActTrades={stockActTrades}
+      {/* ── Map + Live News (side-by-side on desktop, stacked on mobile) ── */}
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: 16,
+        alignItems: 'stretch',
+      }}>
+        {/* ── Left column: LIVE NEWS + LIVE INTELLIGENCE FEEDS ─────── */}
+        <div style={{
+          width: isMobile ? '100%' : 760,
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0,
+        }}>
+          <LiveNewsPanel />
+          <LiveFeedPanel />
+        </div>
+
+        {/* ── Map (fills remaining width, right side) ─────────────── */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Band label="US Political Accountability Map — 2026 Election" right="CLICK ANY STATE FOR PROFILE" />
+          <ErrorBoundary label="Map" theme={t}>
+            <Card>
+              <CardTitle
+                h="Infrastructure, economics, and political accountability — all in one view."
+                sub="Red = high corruption risk. Click any state to open its detailed profile."
               />
-            </Suspense>
-          </Card>
-        </ErrorBoundary>
+              <Suspense fallback={<MapFallback t={t} />}>
+                {/*
+                 * DeckGLMap — MapLibre GL + deck.gl WebGL map (Phase 1)
+                 * Falls through to USPoliticalMap (SVG) only if the ErrorBoundary catches
+                 * a WebGL init failure at the component level.
+                 *
+                 * Props:
+                 *   corruptionScores  — { stateCode: 0-100 } from FEC/corruption API
+                 *   gasPriceByState   — { stateCode: USD/gal } from EIA API
+                 *   onStateClick      — opens CorruptionDialog + fetches delegation
+                 *   theme             — UNREDACTED theme tokens (passed for future use)
+                 */}
+                <DeckGLMap
+                  /* Phase 1 — static + choropleth */
+                  corruptionScores={corruptionScores}
+                  gasPriceByState={gasPriceByState}
+                  onStateClick={handleStateClick}
+                  theme={t}
+                  mapTheme="dark"
+                  /* Phase 2 — dynamic pipeline data (populated after bootstrap) */
+                  newsLocations={newsLocations}
+                  contributions={contributions}
+                  electionRaces={electionRaces}
+                  darkMoneyFlows={darkMoneyFlows}
+                  spendingFlows={spendingFlows}
+                  stockActTrades={stockActTrades}
+                />
+              </Suspense>
+            </Card>
+          </ErrorBoundary>
+        </div>
       </div>
 
       {/* ── State Delegation Panel (appears after a state is clicked) ─── */}
