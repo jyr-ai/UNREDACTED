@@ -3,7 +3,9 @@
 // Swap the NodeCache instance for ioredis in multi-instance deployments.
 // Converted to ESM for the UNREDACTED backend (type: "module")
 
-import NodeCache from 'node-cache'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+const NodeCache = require('node-cache')
 
 // checkperiod: purge expired keys every 60 seconds
 const cache = new NodeCache({ checkperiod: 60 })
