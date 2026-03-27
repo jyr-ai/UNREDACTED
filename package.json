@@ -21,6 +21,7 @@
     "@supabase/supabase-js": "^2.99.1",
     "@upstash/redis": "^1.36.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "adm-zip": "^0.5.16",
     "axios": "^1.13.6",
     "cors": "^2.8.6",
