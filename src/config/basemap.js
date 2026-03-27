@@ -72,7 +72,7 @@ export const CARTO_LIGHT = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/st
 
 /**
  * Returns the best available MapLibre style string for the given theme.
- * Priority: PMTiles → OpenFreeMap → CARTO
+ * Priority: PMTiles → CARTO (reliable CDN) → OpenFreeMap (fallback on error)
  *
  * @param {'dark'|'light'} theme
  * @param {'auto'|'pmtiles'|'openfreemap'|'carto'} [provider]
@@ -84,10 +84,10 @@ export function getStyleForTheme(theme = 'dark', provider = 'auto') {
   if (provider === 'openfreemap') {
     return theme === 'light' ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE;
   }
-  // 'pmtiles' or 'auto'
+  // 'pmtiles' or 'auto': PMTiles → CARTO (reliable CDN) → OpenFreeMap
   const pmtiles = buildPMTilesStyle(theme);
   if (pmtiles) return pmtiles;
-  return theme === 'light' ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE;
+  return theme === 'light' ? CARTO_LIGHT : CARTO_DARK;
 }
 
 // ── Provider preference (persisted in localStorage) ───────────────────────────

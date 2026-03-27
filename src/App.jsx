@@ -6,6 +6,7 @@ import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import CorruptionWatch from "./pages/CorruptionWatch.jsx";
 import CampaignWatch from "./pages/CampaignWatch.jsx";
+import MapPage from "./pages/MapPage.jsx";
 import Auth from "./components/Auth.jsx";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import {
@@ -999,6 +1000,7 @@ function CorporateAndProfile({ theme }) {
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
   { id:"campaignwatch",   label:"News Map"          },
+  { id:"mapexplorer",     label:"Map Explorer"      },
   { id:"overview",        label:"Overview"          },
   { id:"donors",          label:"Donors Relations"  },
   { id:"policy",          label:"Policy Learning"   },
@@ -1510,6 +1512,7 @@ function AppInner() {
     if (tab==="corporate")      return <CorporateAndProfile theme={theme}/>;
     if (tab==="corruptionwatch") return <CorruptionWatch onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="campaignwatch")  return <CampaignWatch/>;
+    if (tab==="mapexplorer")    return <MapPage/>;
     if (tab==="settings")       return <Settings theme={theme}/>;
   };
 

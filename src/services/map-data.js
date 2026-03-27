@@ -67,12 +67,12 @@ async function fetchElections() {
 }
 
 async function fetchDarkMoney() {
-  const raw = await safeFetch('/api/darkmoney/flow-data')
+  const raw = await safeFetch('/api/darkmoney/flow')
   return raw?.data || null
 }
 
 async function fetchSpending() {
-  const raw = await safeFetch('/api/spending/agencies')
+  const raw = await safeFetch('/api/spending/agency')
   return raw?.data || null
 }
 

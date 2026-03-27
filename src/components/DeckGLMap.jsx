@@ -34,7 +34,8 @@ import {
   FALLBACK_LIGHT_STYLE,
 } from '../config/basemap.js';
 
-import { US_STATES_GEO, DATA_CENTERS } from '../data/geo.js';
+import { feature as topoFeature } from 'topojson-client';
+import { DATA_CENTERS, STATE_FIPS_TO_ABBR } from '../data/geo.js';
 import { OIL_PIPELINES } from '../data/pipelines.js';
 import { RAILWAYS } from '../data/railways.js';
 import { POWER_GRID } from '../data/powerGrid.js';
@@ -197,12 +198,14 @@ export default function DeckGLMap({
   theme,
   initialLayers,
   mapTheme          = 'dark',
+  height,           // optional override for .deckgl-map-root height (px number)
 }) {
   const rootRef    = useRef(null);
   const mapRef     = useRef(null);
   const overlayRef = useRef(null);
   const rebuildRef    = useRef(null);
   const rafRebuildRef = useRef(null);
+  const mapThemeInitRef = useRef(false); // skip setStyle on initial render
 
   const dataRef = useRef({
     corruptionScores: {},
@@ -215,12 +218,14 @@ export default function DeckGLMap({
     stockActTrades:   [],
     zoom:             3.5,
     choroplethMode:   'corruption',
+    statesGeo:        null,
   });
 
   const [activeLayers,  setActiveLayers]  = useState({ ...DEFAULT_LAYERS, ...(initialLayers || {}) });
   const [currentView,   setCurrentView]   = useState('national');
   const [collapsed,     setCollapsed]     = useState(false);
   const [mapThemeState, setMapThemeState] = useState(mapTheme);
+  const [statesGeo,     setStatesGeo]     = useState(null);
 
   const activeLayersRef  = useRef({ ...DEFAULT_LAYERS, ...(initialLayers || {}) });
   const pulseTimeRef     = useRef(Date.now());
@@ -239,6 +244,7 @@ export default function DeckGLMap({
 
   // ── Sync props → dataRef, trigger RAF rebuild ──────────────────────────────
 
+  useEffect(() => { dataRef.current.statesGeo = statesGeo; rafRebuildRef.current?.(); }, [statesGeo]);
   useEffect(() => { dataRef.current.corruptionScores = corruptionScores; rafRebuildRef.current?.(); }, [corruptionScores]);
   useEffect(() => { dataRef.current.gasPriceByState  = gasPriceByState;  rafRebuildRef.current?.(); }, [gasPriceByState]);
 
@@ -297,11 +303,11 @@ export default function DeckGLMap({
     const isVisible = (key) => { const th = LAYER_ZOOM_THRESHOLDS[key]; return !th || zoom >= th.minZoom; };
 
     // ── State choropleth ──────────────────────────────────────────────────
-    if (al.corruption || al.gasPrices) {
+    if ((al.corruption || al.gasPrices) && d.statesGeo) {
       const mode = d.choroplethMode;
       layers.push(new GeoJsonLayer({
         id: 'states-choropleth',
-        data: US_STATES_GEO,
+        data: d.statesGeo,
         filled: true, stroked: true,
         getFillColor: (f) => {
           const abbr = f.properties?.abbreviation;
@@ -311,7 +317,7 @@ export default function DeckGLMap({
         getLineColor: [50, 70, 110, 120],
         getLineWidth: 1, lineWidthUnits: 'pixels', lineWidthMinPixels: 0.5,
         pickable: true,
-        updateTriggers: { getFillColor: [d.choroplethMode, Object.keys(d.corruptionScores).length, Object.keys(d.gasPriceByState).length] },
+        updateTriggers: { getFillColor: [d.choroplethMode, Object.keys(d.corruptionScores).length, Object.keys(d.gasPriceByState).length, d.statesGeo?.features?.length] },
       }));
     }
 
@@ -614,11 +620,8 @@ export default function DeckGLMap({
     function initMap() {
       registerPMTilesProtocol();
 
-      // Fix 3: defensive try-catch so any residual timing error doesn't hit ErrorBoundary
       let map;
       try {
-        // Fix 2: maxBounds removed from constructor (causes _calcMatrices crash on resize
-        //        before the viewport has real dimensions). Applied inside 'load' instead.
         map = new maplibregl.Map({
           container: canvasEl,
           style:     getStyleForTheme(mapThemeState, 'auto'),
@@ -626,7 +629,6 @@ export default function DeckGLMap({
           zoom:      VIEW_PRESETS.national.zoom,
           attributionControl:  false,
           renderWorldCopies:   false,
-          // maxBounds applied post-load below
         });
       } catch (err) {
         console.warn('[DeckGLMap] Map constructor failed:', err.message);
@@ -642,7 +644,9 @@ export default function DeckGLMap({
     const applyFallback = () => {
       if (usedFallbackRef.current) return;
       usedFallbackRef.current = true;
+      // CARTO is primary; fall back to OpenFreeMap if it fails
       map.setStyle(mapThemeState === 'light' ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE);
+      map.once('style.load', () => { try { map.triggerRepaint(); } catch {} });
     };
     map.on('error', (e) => {
       const msg = e.error?.message || '';
@@ -658,12 +662,9 @@ export default function DeckGLMap({
     canvas.addEventListener('webglcontextrestored', () => map.triggerRepaint());
 
     let deckOverlay = null;
-    map.on('load', () => {
-      // Fix 2: apply maxBounds after load so constrainInternal has a valid viewport
-      try { map.setMaxBounds([[-180, -85], [180, 85]]); } catch {}
-
+    map.once('load', () => {
       deckOverlay = new MapboxOverlay({
-        interleaved: true, layers: [],
+        interleaved: false, layers: [],
         getTooltip: (info) => getTooltip(info),
         onClick:    (info) => handleClick(info),
         pickingRadius: 8,
@@ -672,6 +673,9 @@ export default function DeckGLMap({
       });
       overlayRef.current = deckOverlay;
       map.addControl(deckOverlay);
+      // Kick-start MapLibre's render loop — in interleaved:false mode deck.gl
+      // listens to map.on('render'); a forced repaint ensures the first frame fires.
+      map.triggerRepaint();
 
       const rebuild = debounce(() => {
         if (!overlayRef.current) return;
@@ -722,6 +726,7 @@ export default function DeckGLMap({
     map.on('zoomend', fireBounds);
 
       cleanup = () => {
+        mapThemeInitRef.current = false; // reset so remount (StrictMode) skips setStyle again
         clearTimeout(fallbackTimer);
         document.removeEventListener('visibilitychange', handleVisibility);
         rebuildRef.current?.cancel?.();
@@ -754,9 +759,32 @@ export default function DeckGLMap({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    // Skip the initial render — the map constructor already sets the correct style.
+    // Only call setStyle() when the user explicitly toggles the theme.
+    if (!mapThemeInitRef.current) { mapThemeInitRef.current = true; return; }
     if (!mapRef.current) return;
+    usedFallbackRef.current = false; // allow fallback logic to re-trigger on new style
     mapRef.current.setStyle(getStyleForTheme(mapThemeState, 'auto'));
+    // Re-push deck.gl layers after style finishes reloading
+    mapRef.current.once('style.load', () => { rebuildRef.current?.(); });
   }, [mapThemeState]);
+
+  // ── Load full US state boundaries from TopoJSON ────────────────────────────
+  useEffect(() => {
+    fetch('/data/us-states-10m.json')
+      .then(r => r.json())
+      .then(us => {
+        const raw = topoFeature(us, us.objects.states);
+        // Inject abbreviation from FIPS id so choropleth getFillColor can look up scores
+        raw.features.forEach(f => {
+          const fips = String(f.id ?? '').padStart(2, '0');
+          f.properties = { ...f.properties, abbreviation: STATE_FIPS_TO_ABBR[fips] || '' };
+        });
+        setStatesGeo(raw);
+        rafRebuildRef.current?.();
+      })
+      .catch(err => console.warn('[DeckGLMap] TopoJSON load failed:', err.message));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Map callbacks ──────────────────────────────────────────────────────────
 
@@ -799,7 +827,7 @@ export default function DeckGLMap({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="deckgl-map-root" ref={rootRef}>
+    <div className="deckgl-map-root" ref={rootRef} style={height ? { height } : undefined}>
       <div className="deckgl-map-canvas" />
 
       {/* Zoom + view controls */}

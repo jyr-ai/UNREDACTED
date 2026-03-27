@@ -18,6 +18,9 @@ import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
 // Campaign Watch — lives in backend/ (shared between dev and prod)
 import campaignWatchRouter from '../backend/routes/campaignWatch.js'
+// Gas price routes — EIA state prices + MyGasFeed station data
+import gasPricesRouter  from '../backend/routes/gasPrices.js'
+import gasStationsRouter from '../backend/routes/gasStations.js'
 // Bootstrap (batch Redis read for map hydration)
 import bootstrapRouter from './routes/bootstrap.js'
 // Seed health dashboard
@@ -105,6 +108,9 @@ app.use('/api/stockact',    generalLimiter, stockActRouter)
 app.use('/api/darkmoney',   generalLimiter, darkMoneyRouter)
 app.use('/api/conflict',       generalLimiter, conflictRouter)
 app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
+// Gas price routes — EIA state prices + MyGasFeed station data
+app.use('/api/gas/prices',   generalLimiter, gasPricesRouter)
+app.use('/api/gas/stations', generalLimiter, gasStationsRouter)
 // Map data pipeline routes (no rate limit — CDN-cached)
 app.use('/api/bootstrap',  bootstrapRouter)
 app.use('/api/seed-health', generalLimiter, seedHealthRouter)
