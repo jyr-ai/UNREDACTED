@@ -4,9 +4,11 @@ import { useMobile, useTablet } from "./hooks/useMediaQuery.js";
 import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
-import CorruptionWatch from "./pages/CorruptionWatch.jsx";
-import CampaignWatch from "./pages/CampaignWatch.jsx";
-import MapPage from "./pages/MapPage.jsx";
+import Monitor from "./pages/Monitor.jsx";
+import FollowTheMoney from "./pages/FollowTheMoney.jsx";
+import Accountability from "./pages/Accountability.jsx";
+import Policy from "./pages/Policy.jsx";
+import BudgetContracts from "./pages/BudgetContracts.jsx";
 import Auth from "./components/Auth.jsx";
 import { AuthProvider, useAuth } from "./contexts/AuthContext.jsx";
 import {
@@ -263,7 +265,15 @@ function hg(t) {
 
 
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
-function Overview() {
+const NAV_CARDS = [
+  { id:"monitor",        label:"Monitor",              sub:"Live map · news feed · alerts",                     color:"#4A7FFF" },
+  { id:"money",          label:"Follow the Money",     sub:"Donor networks · dark money · lobbyist bundlers",   color:ORANGE    },
+  { id:"accountability", label:"Accountability",       sub:"STOCK Act · vote-donor alignment · watchlist",      color:"#FF4455" },
+  { id:"policy",         label:"Policy & Regulation",  sub:"Bills · executive orders · regulatory watch",       color:"#A855F7" },
+  { id:"budget",         label:"Budget & Contracts",   sub:"Agency spending · contract awards · energy intel",  color:"#10B981" },
+];
+
+function Overview({ onNavigate }) {
   const t = useT();
   const isMobile = useMobile();
   const isTablet = useTablet();
@@ -346,6 +356,27 @@ function Overview() {
           </div>
         ))}
       </div>
+
+      {onNavigate && (
+        <div>
+          <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:12 }}>INTELLIGENCE MODULES</div>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(5,1fr)", gap:12 }}>
+            {NAV_CARDS.map(nc => (
+              <button key={nc.id} onClick={() => onNavigate(nc.id)} style={{
+                background:t.card, border:`1px solid ${t.border}`, borderTop:`3px solid ${nc.color}`,
+                padding:"14px 16px", cursor:"pointer", textAlign:"left", transition:"border-color .14s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.borderColor=nc.color}
+                onMouseLeave={e => e.currentTarget.style.borderColor=t.border}
+              >
+                <div style={{ fontFamily:MF, fontSize:11, color:nc.color, fontWeight:700, marginBottom:5 }}>{nc.label}</div>
+                <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:11, color:t.mid, lineHeight:1.5 }}>{nc.sub}</div>
+                <div style={{ fontFamily:MF, fontSize:9, color:nc.color, marginTop:10, letterSpacing:1 }}>OPEN →</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
     </div>
   );
@@ -999,14 +1030,11 @@ function CorporateAndProfile({ theme }) {
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
-  { id:"campaignwatch",   label:"News Map"          },
-  { id:"mapexplorer",     label:"Map Explorer"      },
-  { id:"overview",        label:"Overview"          },
-  { id:"donors",          label:"Donors Relations"  },
-  { id:"policy",          label:"Policy Learning"   },
-  { id:"spending",        label:"Spending Audit"    },
-  { id:"corporate",       label:"Company Profiles"  },
-  { id:"corruptionwatch", label:"Corruption Watch"  },
+  { id:"monitor",        label:"Monitor"            },
+  { id:"money",          label:"Follow the Money"   },
+  { id:"accountability", label:"Accountability"     },
+  { id:"policy",         label:"Policy & Regulation"},
+  { id:"budget",         label:"Budget & Contracts" },
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1422,7 +1450,7 @@ function AnalystPanel({ onClose, dark }) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function AppInner() {
-  const [tab, setTab]           = useState("campaignwatch");
+  const [tab, setTab]           = useState("monitor");
   const [dark, setDark]         = useState(true);
   const [analyst, setAnalyst]   = useState(false);
   const [appVersion, setAppVersion] = useState(null);
@@ -1505,14 +1533,11 @@ function AppInner() {
   const theme = dark ? DARK_THEME : LIGHT_THEME;
 
   const renderTab = () => {
-    if (tab==="overview")       return <Overview/>;
-    if (tab==="donors")         return <DonorsPage theme={theme}/>;
-    if (tab==="policy")         return <PolicyIntel/>;
-    if (tab==="spending")       return <SpendingAudit/>;
-    if (tab==="corporate")      return <CorporateAndProfile theme={theme}/>;
-    if (tab==="corruptionwatch") return <CorruptionWatch onSignInRequest={() => setShowAuth(true)}/>;
-    if (tab==="campaignwatch")  return <CampaignWatch/>;
-    if (tab==="mapexplorer")    return <MapPage/>;
+    if (tab==="monitor")        return <Monitor/>;
+    if (tab==="money")          return <FollowTheMoney DonorIntel={DonorIntel} DonorWeb={DonorWeb} theme={theme}/>;
+    if (tab==="accountability") return <Accountability onSignInRequest={() => setShowAuth(true)}/>;
+    if (tab==="policy")         return <Policy/>;
+    if (tab==="budget")         return <BudgetContracts theme={theme}/>;
     if (tab==="settings")       return <Settings theme={theme}/>;
   };
 
@@ -1663,7 +1688,7 @@ function AppInner() {
                     );
                   })}
                   {/* Settings row */}
-                  <button onClick={() => { setTab(t=>t==="settings"?"overview":"settings"); setMenuOpen(false); }} style={{
+                  <button onClick={() => { setTab(t=>t==="settings"?"monitor":"settings"); setMenuOpen(false); }} style={{
                     width:"100%", textAlign:"left", background: tab==="settings" ? ORANGE+"18" : "none",
                     border:"none", borderLeft:`3px solid ${tab==="settings"?ORANGE:"transparent"}`,
                     padding:"13px 16px", fontFamily:MF, fontSize:12, color: tab==="settings"?ORANGE:theme.mid,
@@ -1739,7 +1764,7 @@ function AppInner() {
               {isAuthenticated ? (
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <button
-                    onClick={() => { setTab("watchlist"); track("tab_view", { tab: "watchlist" }); }}
+                    onClick={() => { setTab("accountability"); track("tab_view", { tab: "accountability" }); }}
                     title={`Signed in as ${profile?.display_name || user?.email}`}
                     style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}
                   >
@@ -1800,7 +1825,7 @@ function AppInner() {
                 cursor:"col-resize",
               }}
             />
-            <div style={{ maxWidth: (analyst || tab === "campaignwatch") ? "none" : 1200, margin:"0 auto", padding: isMobile ? "14px 14px 48px" : tab === "campaignwatch" ? "28px 12px 52px" : "28px 28px 52px" }} key={tab}>
+            <div style={{ maxWidth: (analyst || tab === "monitor") ? "none" : 1200, margin:"0 auto", padding: isMobile ? "14px 14px 48px" : tab === "monitor" ? "28px 12px 52px" : "28px 28px 52px" }} key={tab}>
               {renderTab()}
               <div style={{ marginTop:32, borderTop:`1px solid ${theme.border}`, paddingTop:14, display:"flex", justifyContent:"space-between" }}>
                 <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>UN*REDACTED · Public record intelligence · All data from public federal sources</span>

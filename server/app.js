@@ -27,6 +27,10 @@ import bootstrapRouter from './routes/bootstrap.js'
 import seedHealthRouter from './routes/seed-health.js'
 // Cron seed endpoints (triggered by Vercel Cron)
 import cronRouter from './routes/cron.js'
+// CNN Fear & Greed proxy (avoids browser CORS)
+import fearGreedRouter from '../backend/routes/feargreed.js'
+// BLS economic indicators (unemployment + CPI) — cached proxy
+import economicRouter from '../backend/routes/economic.js'
 
 const app = express()
 
@@ -115,6 +119,8 @@ app.use('/api/gas/stations', generalLimiter, gasStationsRouter)
 app.use('/api/bootstrap',  bootstrapRouter)
 app.use('/api/seed-health', generalLimiter, seedHealthRouter)
 app.use('/api/cron',        cronRouter)
+app.use('/api/fear-greed',  generalLimiter, fearGreedRouter)
+app.use('/api/economic',    generalLimiter, economicRouter)
 
 // ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {

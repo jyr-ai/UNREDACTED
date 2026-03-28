@@ -48,3 +48,28 @@ export async function getRecentSignificantRules(limit = 20) {
   const res = await axios.get(url)
   return res.data.results || []
 }
+
+export async function getExecutiveOrders(limit = 30) {
+  const params = {
+    'conditions[presidential_document_type]': 'executive_order',
+    'conditions[publication_date][gte]': '2025-01-01',
+    per_page: limit,
+    order: 'newest',
+  }
+  const url = buildFRUrl('/documents.json', params, [...FIELDS, 'executive_order_number', 'presidential_document_type'])
+  const res = await axios.get(url)
+  return res.data.results || []
+}
+
+export async function getProposedRules(limit = 20, keyword) {
+  const params = {
+    'conditions[type]': 'PROPOSED_RULE',
+    'conditions[publication_date][gte]': getOneYearAgo(),
+    per_page: limit,
+    order: 'newest',
+  }
+  if (keyword) params['conditions[term]'] = keyword
+  const url = buildFRUrl('/documents.json', params, FIELDS)
+  const res = await axios.get(url)
+  return res.data.results || []
+}

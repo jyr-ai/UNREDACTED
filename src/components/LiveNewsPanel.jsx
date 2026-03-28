@@ -31,7 +31,7 @@ const CHANNELS = [
     id:        'abc',
     label:     'ABC',
     name:      'ABC News Live',
-    channelId: 'UCBi2mrWuNuyYy4gbM6fU18Q',  // ABC News — free 24/7 US news stream
+    videoId:   'unwn_H2pRgM',  // ABC News Live stream
   },
   {
     id:        'cbs',
@@ -43,20 +43,25 @@ const CHANNELS = [
     id:        'nbc',
     label:     'NBC',
     name:      'NBC News NOW',
-    channelId: 'UCeY0bbntWzzVIaj2z3QigXg',  // NBC News NOW 24/7 ✅ confirmed
+    videoId:   'VX7VRS2ZBPU',  // NBC News NOW live stream
   },
   {
     id:        'fox',
     label:     'FOX',
     name:      'Fox News',
-    videoId:   'x-K_xTqtFCw',              // User-provided direct live stream URL
-    // youtube.com/watch?v=x-K_xTqtFCw
+    videoId:   'Mz1NkvRm8O8',              // Fox News live stream
   },
   {
     id:      'bloomberg',
     label:   'BLOOMBERG',
     name:    'Bloomberg',
     videoId: 'iEpJwprxDdk',   // User-provided: youtube.com/watch?v=iEpJwprxDdk
+  },
+  {
+    id:      'yahoo_finance',
+    label:   'YAHOO FIN',
+    name:    'Yahoo Finance',
+    videoId: 'KQp-e_XQnDE',   // Yahoo Finance live stream
   },
 ];
 
@@ -112,7 +117,7 @@ export default function LiveNewsPanel() {
   if (collapsed) {
     return (
       <div style={{
-        width: 44,
+        width: 50,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -121,7 +126,7 @@ export default function LiveNewsPanel() {
         border: `1px solid ${t.border}`,
         borderTop: `3px solid ${ORANGE}`,
         cursor: 'pointer',
-        paddingTop: 10,
+        paddingTop: 1,
         gap: 8,
         userSelect: 'none',
       }}
@@ -157,12 +162,10 @@ export default function LiveNewsPanel() {
   return (
     <div style={{
       width: '100%',
-      flexShrink: 0,
+      height: '100%',
       display: 'flex',
       flexDirection: 'column',
       background: t.card,
-      border: `1px solid ${t.border}`,
-      borderTop: `3px solid ${ORANGE}`,
       overflow: 'hidden',
     }}>
 
@@ -301,9 +304,9 @@ export default function LiveNewsPanel() {
             display: 'flex', alignItems: 'center', gap: 5,
             background: muted ? 'none' : ORANGE + '22',
             border: `1px solid ${muted ? t.border : ORANGE}`,
-            padding: '4px 10px',
+            padding: '4px 12px',
             fontFamily: MF,
-            fontSize: 9,
+            fontSize: 12,
             letterSpacing: 1,
             color: muted ? t.mid : ORANGE,
             cursor: 'pointer',
@@ -315,7 +318,7 @@ export default function LiveNewsPanel() {
         </button>
 
         {/* Source attribution */}
-        <span style={{ fontFamily: MF, fontSize: 8, color: t.low, letterSpacing: 0.5 }}>
+        <span style={{ fontFamily: MF, fontSize: 12, color: t.low, letterSpacing: 0.5 }}>
           YOUTUBE · LIVE
         </span>
 
@@ -329,8 +332,8 @@ export default function LiveNewsPanel() {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            fontFamily: MF, fontSize: 8.5,
+            display: 'flex', alignItems: 'center', gap: 2,
+            fontFamily: MF, fontSize: 15.5,
             color: t.low,
             textDecoration: 'none',
             letterSpacing: 0.5,
@@ -350,7 +353,7 @@ export default function LiveNewsPanel() {
           background: t.sigBg || t.cardB,
           borderTop: `1px solid ${t.border}`,
           fontFamily: MF,
-          fontSize: 8,
+          fontSize: 10,
           color: t.low,
           lineHeight: 1.5,
         }}>

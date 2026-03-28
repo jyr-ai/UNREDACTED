@@ -60,8 +60,17 @@ export const donors = {
 
 // ── Policy / Federal Register ─────────────────────────────────────────────────
 export const policy = {
-  rules:       (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/policy/rules${qs ? `?${qs}` : ''}`) },
-  significant: (limit = 20) => request(`/api/policy/significant?limit=${limit}`),
+  rules:           (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/policy/rules${qs ? `?${qs}` : ''}`) },
+  significant:     (limit = 20) => request(`/api/policy/significant?limit=${limit}`),
+  executiveOrders: (limit = 30) => request(`/api/policy/executive-orders?limit=${limit}`),
+  rulemaking:      (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/policy/rulemaking${qs ? `?${qs}` : ''}`) },
+}
+
+// ── Congress ──────────────────────────────────────────────────────────────────
+export const congress = {
+  bills:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/bills${qs ? `?${qs}` : ''}`) },
+  votes:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/votes${qs ? `?${qs}` : ''}`) },
+  members: (state)       => request(`/api/congress/members?state=${state}`),
 }
 
 // ── News Feed ─────────────────────────────────────────────────────────────────
@@ -203,6 +212,6 @@ export const getRecentStockTrades         = (chamber, limit) => stockAct.recent(
 export const getStockActWatchlist         = ()       => stockAct.watchlist()
 
 export default {
-  spending, donors, policy, feed, agent, aiAgent, settings,
+  spending, donors, policy, congress, feed, agent, aiAgent, settings,
   corruption, companies, stockAct, darkMoney, campaignWatch, health,
 }

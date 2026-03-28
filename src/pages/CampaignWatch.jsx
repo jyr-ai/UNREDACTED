@@ -10,7 +10,8 @@ import { Card, Band, CardTitle } from '../components/ui/index.js';
 import ErrorBoundary from '../components/ErrorBoundary';
 import LiveNewsPanel from '../components/LiveNewsPanel.jsx';
 import LiveFeedPanel from '../components/LiveFeedPanel.jsx';
-import WarStats from '../components/WarStats.jsx';
+// WarStats inlined — conflict data fetched directly so the KPI cell shares
+// the exact same DOM structure, padding, border, and font tokens as every other column.
 import { useMobile } from '../hooks/useMediaQuery.js';
 import { DATA_CENTERS } from '../data/geo';
 import { campaignWatch as cwApi, fetchContracts } from '../api/client';
@@ -70,6 +71,67 @@ const fmtK = n => {
 const CampaignWatch = () => {
   const t = useTheme();
   const isMobile = useMobile();
+
+  // ── Economic KPIs ─────────────────────────────────────────────────────────
+  const [unemploymentData, setUnemploymentData] = useState(null);
+  const [inflationData,    setInflationData]    = useState(null);
+  const [fearGreedData,    setFearGreedData]    = useState(null);
+  const [conflictData,     setConflictData]     = useState(null);
+
+  useEffect(() => {
+    // BLS Unemployment + CPI — proxied through backend (cached, avoids BLS rate limits)
+    fetch('/api/economic')
+      .then(r => r.json())
+      .then(d => {
+        if (d?.unemployment) setUnemploymentData(d.unemployment);
+        if (d?.inflation) setInflationData(d.inflation);
+      })
+      .catch(() => {});
+
+    // CNN Fear & Greed — proxied through backend to avoid CORS
+    fetch('/api/fear-greed')
+      .then(r => r.json())
+      .then(d => { if (d?.score != null) setFearGreedData(d); })
+      .catch(() => {});
+
+    // Conflict / US-Iran War spending
+    fetch('/api/conflict')
+      .then(r => r.json())
+      .then(d => { if (d?.damage) setConflictData(d.damage); })
+      .catch(() => {});
+  }, []);
+
+  const fmtChange = (val) => {
+    if (val == null) return '—';
+    const isWorse = val > 0;
+    const color = val === 0 ? '#888' : isWorse ? '#ef4444' : '#22c55e';
+    const arrow = val > 0 ? '▲' : '▼';
+    return <span style={{ color }}>{arrow}{Math.abs(val)}% YoY</span>;
+  };
+
+  const fmtSpend = v => {
+    if (v == null) return '—';
+    if (v >= 1000) return `$${(v / 1000).toFixed(1)}bn`;
+    return `$${v}m`;
+  };
+
+  const fmtNum = n => (n == null ? '—' : n.toLocaleString());
+
+  const fearGreedColor = rating => {
+    if (!rating) return '#888';
+    const r = rating.toLowerCase();
+    if (r.includes('extreme fear')) return '#ef4444';
+    if (r.includes('fear'))         return '#f97316';
+    if (r.includes('neutral'))      return '#eab308';
+    if (r.includes('extreme greed')) return '#16a34a';
+    if (r.includes('greed'))        return '#22c55e';
+    return '#888';
+  };
+
+  const fearGreedLabel = rating => {
+    if (!rating) return '—';
+    return rating.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  };
 
   // ── Live contract data (from Overview KPIs) ───────────────────────────────
   const [liveContracts, setLiveContracts] = useState(null);
@@ -155,13 +217,6 @@ const CampaignWatch = () => {
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Address-based reps lookup ─────────────────────────────────────────────
-  const [addressInput, setAddressInput] = useState('');
-  const [repsLoading,  setRepsLoading]  = useState(false);
-  const [repsData,     setRepsData]     = useState(null);
-  const [repsNote,     setRepsNote]     = useState(null);
-  const [repsError,    setRepsError]    = useState(null);
-
   useEffect(() => {
     setCorruptionLoading(true);
     cwApi.corruptionIndex()
@@ -217,31 +272,6 @@ const CampaignWatch = () => {
   const handleCloseDialog = () => setDialogVisible(false);
   const stateName = selectedState ? (STATE_NAMES[selectedState] || selectedState) : '';
 
-  // ── Representatives lookup — accepts address, zip, or state abbr ──────────
-  const searchRepresentatives = async () => {
-    const addr = addressInput.trim();
-    if (addr.length < 2) return;
-    setRepsLoading(true);
-    setRepsError(null);
-    setRepsData(null);
-    setRepsNote(null);
-    try {
-      const res = await cwApi.repsByAddress(addr);
-      if (res?.data) {
-        setRepsData(res.data);
-        if (res.note) setRepsNote(res.note);
-      } else if (res?.note) {
-        setRepsError(res.note);
-      } else {
-        setRepsError('No representatives found. Try including a state abbreviation (e.g. "Union City NJ") or zip code.');
-      }
-    } catch (e) {
-      setRepsError(e.message || 'Failed to look up representatives.');
-    } finally {
-      setRepsLoading(false);
-    }
-  };
-
   const corruptionColor = score =>
     score < 30 ? t.warn :
     score < 50 ? t.accent :
@@ -250,18 +280,27 @@ const CampaignWatch = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 
-      {/* ── KPI row (9 columns: 4 map KPIs + 4 overview KPIs + WarStats) ── */}
+      {/* ── KPI row (10 columns: national debt + 4 map KPIs + 4 overview KPIs + WarStats) ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(8, 1fr) minmax(160px, 1fr)',
+        gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(10, 1fr)',
         borderTop: `1px solid ${t.border}`,
         borderBottom: `1px solid ${t.border}`,
       }}>
+        {/* National Debt — always first */}
+        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>$39.0T</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US national debt</div>
+          <a href="https://www.pgpf.org/national-debt-clock/" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none' }}>pgpf.org · live clock</a>
+        </div>
+        {/* US-Iran War spending */}
+        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{conflictData ? fmtSpend(conflictData.spending?.value) : '…'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>Strikes: {conflictData ? fmtNum(conflictData.strikes?.value) : '—'} · Deaths: {conflictData ? fmtNum(conflictData.deaths?.value) : '—'} · <a href="https://meta-trials.vercel.app/us-iran-conflict" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>tracker</a></div>
+        </div>
         {[
           { v: corruptionLoading ? '…' : fmtM(kpiStats.total),                                      d: '2026 total raised',           s: 'FEC · current cycle' },
-          { v: corruptionLoading ? '…' : kpiStats.count,                                             d: 'States tracked',              s: 'All 51 incl. DC' },
-          { v: corruptionLoading ? '…' : kpiStats.avg,                                               d: 'Avg corruption index',        s: 'Lower = more corrupt' },
-          { v: kpiStats.centers,                                                                      d: 'Data centers mapped',         s: 'Infrastructure layer' },
           { v: fmtK(totalSpend) || '$157bn',                                                          d: totalSpend != null ? 'Contract obligations' : 'Overspent vs. appropriations', s: liveContracts?.fiscalYear ? `FY${liveContracts.fiscalYear} · live` : 'FY2024 federal agencies' },
           { v: flaggedCount != null ? String(flaggedCount) : '1,847',                                d: flaggedCount != null ? 'Contracts ≥ $500M flagged' : 'Contracts flagged anomalous', s: flaggedCount != null ? `From ${liveContracts?.data?.length} loaded` : 'Across 23 federal agencies' },
           { v: '34',                                                                                   d: 'STOCK Act potential violations', s: 'Current congressional session' },
@@ -273,76 +312,82 @@ const CampaignWatch = () => {
             <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{k.s}</div>
           </div>
         ))}
-        {/* WarStats as 9th column */}
-        <a
-          href="https://meta-trials.vercel.app/us-iran-conflict"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ textDecoration: 'none', display: 'block' }}
-        >
-          <WarStats />
-        </a>
+        {/* Unemployment Rate */}
+        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{unemploymentData ? `${unemploymentData.rate}%` : '…'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>Unemployment · {unemploymentData?.period || '—'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{unemploymentData ? fmtChange(unemploymentData.change) : '—'} · <a href="https://www.bls.gov/cps/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>BLS</a></div>
+        </div>
+
+        {/* Inflation (CPI) */}
+        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{inflationData ? `${inflationData.rate}%` : '…'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>CPI inflation YoY · {inflationData?.period || '—'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{inflationData ? fmtChange(inflationData.change) : '—'} · <a href="https://www.bls.gov/cpi/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>BLS</a></div>
+        </div>
+
+        {/* CNN Fear & Greed */}
+        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{fearGreedData ? fearGreedData.score : '…'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, marginBottom: 2 }}>{fearGreedData ? `Out of 100 ${fearGreedLabel(fearGreedData.rating)}` : 'Market sentiment'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}><a href="https://www.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>CNN · Fear & Greed</a></div>
+        </div>
+
       </div>
 
-      {/* ── Map + Live News (side-by-side on desktop, stacked on mobile) ── */}
+      {/* ── Top row: Live News + Live Intelligence Feeds grouped ── */}
       <div style={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: 16,
-        alignItems: 'stretch',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        border: `1px solid ${t.border}`,
+        borderTop: `3px solid ${t.accent}`,
+        overflow: 'hidden',
       }}>
-        {/* ── Left column: LIVE NEWS + LIVE INTELLIGENCE FEEDS ─────── */}
-        <div style={{
-          width: isMobile ? '100%' : 760,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 0,
-        }}>
-          <LiveNewsPanel />
+        <LiveNewsPanel />
+        <div style={{ borderLeft: `1px solid ${t.border}` }}>
           <LiveFeedPanel />
         </div>
+      </div>
 
-        {/* ── Map (fills remaining width, right side) ─────────────── */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Band label="US Political Accountability Map — 2026 Election" right="CLICK ANY STATE FOR PROFILE" />
-          <ErrorBoundary label="Map" theme={t}>
-            <Card>
-              <CardTitle
-                h="Infrastructure, economics, and political accountability — all in one view."
-                sub="Red = high corruption risk. Click any state to open its detailed profile."
+      {/* ── Map (full width, below both panels) ─────────────────────── */}
+      <div>
+        <Band label="US Geoeconomic Map" right="CLICK ANY STATE FOR PROFILE" />
+        <ErrorBoundary label="Map" theme={t}>
+          <Card>
+            <CardTitle
+              h="Infrastructure, economics, and legislation — all in one view."
+              sub="Red = high corruption risk. Click any state to open its detailed profile."
+            />
+            <Suspense fallback={<MapFallback t={t} />}>
+              {/*
+               * DeckGLMap — MapLibre GL + deck.gl WebGL map (Phase 1)
+               * Falls through to USPoliticalMap (SVG) only if the ErrorBoundary catches
+               * a WebGL init failure at the component level.
+               *
+               * Props:
+               *   corruptionScores  — { stateCode: 0-100 } from FEC/corruption API
+               *   gasPriceByState   — { stateCode: USD/gal } from EIA API
+               *   onStateClick      — opens CorruptionDialog + fetches delegation
+               *   theme             — UNREDACTED theme tokens (passed for future use)
+               */}
+              <DeckGLMap
+                /* Phase 1 — static + choropleth */
+                corruptionScores={corruptionScores}
+                gasPriceByState={gasPriceByState}
+                onStateClick={handleStateClick}
+                theme={t}
+                mapTheme="dark"
+                /* Phase 2 — dynamic pipeline data (populated after bootstrap) */
+                newsLocations={newsLocations}
+                contributions={contributions}
+                electionRaces={electionRaces}
+                darkMoneyFlows={darkMoneyFlows}
+                spendingFlows={spendingFlows}
+                stockActTrades={stockActTrades}
               />
-              <Suspense fallback={<MapFallback t={t} />}>
-                {/*
-                 * DeckGLMap — MapLibre GL + deck.gl WebGL map (Phase 1)
-                 * Falls through to USPoliticalMap (SVG) only if the ErrorBoundary catches
-                 * a WebGL init failure at the component level.
-                 *
-                 * Props:
-                 *   corruptionScores  — { stateCode: 0-100 } from FEC/corruption API
-                 *   gasPriceByState   — { stateCode: USD/gal } from EIA API
-                 *   onStateClick      — opens CorruptionDialog + fetches delegation
-                 *   theme             — UNREDACTED theme tokens (passed for future use)
-                 */}
-                <DeckGLMap
-                  /* Phase 1 — static + choropleth */
-                  corruptionScores={corruptionScores}
-                  gasPriceByState={gasPriceByState}
-                  onStateClick={handleStateClick}
-                  theme={t}
-                  mapTheme="dark"
-                  /* Phase 2 — dynamic pipeline data (populated after bootstrap) */
-                  newsLocations={newsLocations}
-                  contributions={contributions}
-                  electionRaces={electionRaces}
-                  darkMoneyFlows={darkMoneyFlows}
-                  spendingFlows={spendingFlows}
-                  stockActTrades={stockActTrades}
-                />
-              </Suspense>
-            </Card>
-          </ErrorBoundary>
-        </div>
+            </Suspense>
+          </Card>
+        </ErrorBoundary>
       </div>
 
       {/* ── State Delegation Panel (appears after a state is clicked) ─── */}
@@ -420,150 +465,6 @@ const CampaignWatch = () => {
           </ErrorBoundary>
         </div>
       )}
-
-      {/* ── Representatives panel ─────────────────────────────────────── */}
-      <div>
-        <Band label="Find Your Representatives" right="CONGRESS.GOV + GOOGLE CIVIC" />
-        <Card>
-          <CardTitle
-            h="Look up your elected officials by address, zip code, or state."
-            sub="Enter a full address (e.g. 115 37th Ave Union City NJ), a zip code (07087), or just a state abbreviation (NJ)."
-          />
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-            <input
-              type="text"
-              value={addressInput}
-              onChange={e => setAddressInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && searchRepresentatives()}
-              placeholder="115 37th Ave Union City NJ  —  07087  —  NJ"
-              style={{
-                flex: 1, padding: '10px 14px',
-                background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4,
-                color: t.hi, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, outline: 'none',
-              }}
-            />
-            <button
-              onClick={searchRepresentatives}
-              disabled={repsLoading || addressInput.trim().length < 2}
-              style={{
-                padding: '10px 20px',
-                background: (repsLoading || addressInput.trim().length < 2) ? t.cardB : t.accent,
-                border: `1px solid ${t.border}`, borderRadius: 4,
-                color: (repsLoading || addressInput.trim().length < 2) ? t.mid : '#fff',
-                fontFamily: "'IBM Plex Mono',monospace", fontSize: 11,
-                cursor: repsLoading ? 'wait' : 'pointer', letterSpacing: '1px',
-              }}
-            >
-              {repsLoading ? 'SEARCHING…' : 'FIND REPS'}
-            </button>
-          </div>
-
-          {/* Fallback note (not an error — just informational) */}
-          {repsNote && (
-            <div style={{ padding: '8px 14px', background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.low, marginBottom: 14 }}>
-              ℹ {repsNote}
-            </div>
-          )}
-
-          {/* Error */}
-          {repsError && (
-            <div style={{ padding: '10px 14px', background: t.cardB, border: `1px solid ${t.warn}`, borderRadius: 4, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.warn, marginBottom: 16 }}>
-              ⚠ {repsError}
-            </div>
-          )}
-
-          {/* Results */}
-          {repsData && (
-            <div>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.low, marginBottom: 14, letterSpacing: '1px' }}>
-                {repsData.source === 'congress.gov'
-                  ? `FEDERAL REPRESENTATIVES — ${repsData.normalizedInput?.line1 || addressInput}`
-                  : `RESULTS FOR: ${repsData.normalizedInput?.line1 || ''}${repsData.normalizedInput?.city ? `, ${repsData.normalizedInput.city}` : ''}${repsData.normalizedInput?.state ? ` ${repsData.normalizedInput.state}` : ''}`
-                }
-              </div>
-
-              {(repsData.officials || []).length === 0 ? (
-                <div style={{ padding: '12px 14px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.mid }}>
-                  No officials found for this location.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-                  {(repsData.officials || []).map((rep, i) => {
-                    const party = rep.party || '';
-                    const partyLower = party.toLowerCase();
-                    const partyColor = partyLower.includes('republican') ? '#ef4444'
-                                     : partyLower.includes('democrat')   ? '#3b82f6'
-                                     : t.mid;
-                    return (
-                      <div key={i} style={{
-                        padding: 14,
-                        background: t.cardB, border: `1px solid ${t.border}`,
-                        borderTop: `3px solid ${partyColor}`, borderRadius: 4,
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                          {rep.photoUrl && (
-                            <img src={rep.photoUrl} alt={rep.name}
-                              style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${partyColor}` }}
-                              onError={e => { e.target.style.display='none'; }}
-                            />
-                          )}
-                          <div>
-                            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.hi, fontWeight: 700 }}>{rep.name}</div>
-                            {/* Use rep.office from normalized format */}
-                            {rep.office && <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.mid, marginTop: 2 }}>{rep.office}</div>}
-                          </div>
-                        </div>
-                        {party && (
-                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: partyColor, marginBottom: 6 }}>{party}</div>
-                        )}
-                        {rep.channels?.length > 0 && (
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
-                            {rep.channels.slice(0, 3).map((ch, j) => (
-                              <a key={j}
-                                href={`https://${ch.type.toLowerCase()}.com/${ch.id}`}
-                                target="_blank" rel="noopener noreferrer"
-                                style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '2px 6px', borderRadius: 3 }}>
-                                {ch.type}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                        {rep.phones?.length > 0 && (
-                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.mid, marginTop: 4 }}>
-                            📞 {rep.phones[0]}
-                          </div>
-                        )}
-                        {rep.urls?.length > 0 && (
-                          <a href={rep.urls[0]} target="_blank" rel="noopener noreferrer"
-                            style={{ display: 'block', marginTop: 4, fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none' }}>
-                            🌐 Official website
-                          </a>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Placeholder */}
-          {!repsData && !repsError && !repsLoading && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              {['Federal Senator', 'Federal Representative', 'Governor'].map(role => (
-                <div key={role} style={{
-                  padding: 16, background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minHeight: 80,
-                }}>
-                  <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.accent, letterSpacing: '1px' }}>{role.toUpperCase()}</div>
-                  <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 11, fontStyle: 'italic', color: t.low }}>Enter address, zip, or state</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
 
       {/* ── Floating corruption dialog ─────────────────────────────── */}
       {dialogVisible && selectedState && (

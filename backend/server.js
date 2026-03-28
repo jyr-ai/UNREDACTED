@@ -25,6 +25,12 @@ import gasStationsRouter from './routes/gasStations.js'
 import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
 import flagsRouter from './routes/flags.js'
+// Congress & legislative data
+import congressRouter from './routes/congress.js'
+// CNN Fear & Greed proxy (avoids browser CORS)
+import fearGreedRouter from './routes/feargreed.js'
+// BLS economic indicators (unemployment + CPI) — cached proxy
+import economicRouter from './routes/economic.js'
 
 const app = express()
 app.set('etag', false)
@@ -108,6 +114,9 @@ app.use('/api/gas/stations', generalLimiter, gasStationsRouter)
 app.use('/api/watchlist', generalLimiter, watchlistRouter)
 app.use('/api/alerts', generalLimiter, alertsRouter)
 app.use('/api/flags', generalLimiter, flagsRouter)
+app.use('/api/congress', generalLimiter, congressRouter)
+app.use('/api/fear-greed', generalLimiter, fearGreedRouter)
+app.use('/api/economic',   generalLimiter, economicRouter)
 
 // Global error handler
 app.use((err, req, res, next) => {

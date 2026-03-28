@@ -25,7 +25,7 @@ import {
   TextLayer,
   ArcLayer,
 } from '@deck.gl/layers';
-import { HeatmapLayer } from '@deck.gl/aggregation-layers';
+
 
 import {
   registerPMTilesProtocol,
@@ -45,7 +45,7 @@ import US_CITIES from '../data/usCities.js';
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const VIEW_PRESETS = {
-  national: { center: [-98,  38], zoom: 3.5 },
+  national: { center: [-98,  38], zoom: 3.5, pitch: 35 },
   east:     { center: [-77,  39], zoom: 5.0 },
   west:     { center: [-119, 37], zoom: 5.0 },
   midwest:  { center: [-90,  41], zoom: 5.0 },
@@ -63,8 +63,8 @@ const LAYER_ZOOM_THRESHOLDS = {
 };
 
 const DEFAULT_LAYERS = {
-  corruption:     true,
-  gasPrices:      false,
+  corruption:     false,
+  gasPrices:      true,
   pipelines:      true,
   railways:       false,
   powerGrid:      false,
@@ -72,7 +72,6 @@ const DEFAULT_LAYERS = {
   mountainRanges: false,
   cities:         false,
   newsLocations:  true,
-  contributions:  false,
   // Phase 2 — off by default (activate once seed data is populated)
   electionRaces:  false,
   darkMoneyFlows: false,
@@ -159,6 +158,34 @@ function buildClusters(items, zoom, getLon = r => r.lon, getLat = r => r.lat) {
   return { clusters, index: sc };
 }
 
+// ─── Static economic data ────────────────────────────────────────────────────
+
+// State debt per capita ($) — FY2023 (latest available)
+// Source: U.S. Census Bureau, State Government Finances Survey FY2023
+//         Urban Institute, State and Local Finance Initiative (state-local-finance-initiative.urban.org)
+const STATE_DEBT_PER_CAPITA = {
+  AL:1950, AK:7600, AZ:1200, AR:850,  CA:4800, CO:2300, CT:23500, DE:9000,
+  FL:1600, GA:1300, HI:10400,ID:1100, IL:11000,IN:1500, IA:1700,  KS:1300,
+  KY:4100, LA:3100, ME:4500, MD:6900, MA:18900,MI:3000, MN:3400,  MS:2100,
+  MO:1700, MT:2700, NE:1200, NV:2100, NH:5700, NJ:13200,NM:2400,  NY:15600,
+  NC:2800, ND:4600, OH:3600, OK:1500, OR:5100, PA:5500, RI:11200, SC:3000,
+  SD:2300, TN:1600, TX:1750, UT:1800, VT:9400, VA:3500, WA:5400,  WV:3800,
+  WI:3900, WY:650,  DC:19000,
+};
+
+// State GDP per capita ($) — 2024 (advance estimate)
+// Source: U.S. Bureau of Economic Analysis (BEA), GDP by State 2024 (bea.gov/data/gdp/gdp-state)
+//         U.S. Census Bureau population estimates 2024
+const STATE_GDP_PER_CAPITA = {
+  AL:55000, AK:84000, AZ:63000, AR:51000, CA:102000,CO:87000, CT:93000, DE:92000,
+  FL:66000, GA:72000, HI:80000, ID:63000, IL:82000, IN:67000, IA:76000, KS:73000,
+  KY:61000, LA:63000, ME:67000, MD:84000, MA:108000,MI:58000, MN:82000, MS:42000,
+  MO:65000, MT:69000, NE:88000, NV:73000, NH:80000, NJ:86000, NM:52000, NY:106000,
+  NC:71000, ND:102000,OH:70000, OK:59000, OR:77000, PA:75000, RI:71000, SC:59000,
+  SD:80000, TN:73000, TX:87000, UT:82000, VT:73000, VA:86000, WA:107000,WV:53000,
+  WI:67000, WY:87000, DC:248000,
+};
+
 // ─── Color helpers ──────────────────────────────────────────────────────────
 
 function corruptionFill(score) {
@@ -171,6 +198,26 @@ function gasPriceFill(price) {
   if (price == null) return [15, 20, 40, 50];
   const t = Math.min(1, Math.max(0, (price - 2.5) / 3.0));
   return [Math.round(40 + t * 200), Math.round(200 - t * 160), 50, 140];
+}
+
+// green (low debt) → yellow → red (high debt), range $500–$22,000/capita
+function stateDebtFill(debtPerCapita) {
+  if (debtPerCapita == null) return [15, 20, 40, 50];
+  const t = Math.min(1, Math.max(0, (debtPerCapita - 500) / 21500));
+  return [Math.round(40 + t * 215), Math.round(200 - t * 155), Math.round(50 - t * 30), 150];
+}
+
+// light teal (low GDP/capita) → deep blue (high GDP/capita), range $40k–$110k
+function stateGdpFill(gdpPerCapita) {
+  if (gdpPerCapita == null) return [15, 20, 40, 50];
+  const t = Math.min(1, Math.max(0, (gdpPerCapita - 40000) / 70000));
+  return [Math.round(20 + t * 30), Math.round(180 - t * 80), Math.round(160 + t * 80), 150];
+}
+
+function fedSpendingFill(amount, maxAmount) {
+  if (amount == null || !maxAmount) return [15, 20, 40, 50];
+  const t = Math.min(1, Math.max(0, amount / maxAmount));
+  return [Math.round(10 + t * 40), Math.round(60 + t * 180), Math.round(30 + t * 70), 150];
 }
 
 function fmtAmt(amt) {
@@ -187,7 +234,6 @@ export default function DeckGLMap({
   corruptionScores  = {},
   gasPriceByState   = {},
   newsLocations     = [],
-  contributions     = [],
   // Phase 2 — dynamic pipeline data
   electionRaces     = [],
   darkMoneyFlows    = [],
@@ -211,13 +257,12 @@ export default function DeckGLMap({
     corruptionScores: {},
     gasPriceByState:  {},
     newsLocations:    [],
-    contributions:    [],
     electionRaces:    [],
     darkMoneyFlows:   [],
     spendingFlows:    [],
     stockActTrades:   [],
     zoom:             3.5,
-    choroplethMode:   'corruption',
+    choroplethMode:   'gasPrices',
     statesGeo:        null,
   });
 
@@ -256,7 +301,6 @@ export default function DeckGLMap({
     rafRebuildRef.current?.();
   }, [newsLocations]);
 
-  useEffect(() => { dataRef.current.contributions  = contributions;  rafRebuildRef.current?.(); }, [contributions]);
   useEffect(() => { dataRef.current.electionRaces  = electionRaces;  rafRebuildRef.current?.(); }, [electionRaces]);
   useEffect(() => { dataRef.current.darkMoneyFlows = darkMoneyFlows; rafRebuildRef.current?.(); }, [darkMoneyFlows]);
   useEffect(() => { dataRef.current.spendingFlows  = spendingFlows;  rafRebuildRef.current?.(); }, [spendingFlows]);
@@ -302,8 +346,16 @@ export default function DeckGLMap({
 
     const isVisible = (key) => { const th = LAYER_ZOOM_THRESHOLDS[key]; return !th || zoom >= th.minZoom; };
 
+    // ── Aggregate per-state federal spending for choropleth ──────────────
+    const stateSpending = {};
+    let maxStateSpending = 0;
+    (d.spendingFlows || []).forEach(f => {
+      if (f.state) stateSpending[f.state] = (stateSpending[f.state] || 0) + (f.amount || 0);
+    });
+    if (Object.keys(stateSpending).length) maxStateSpending = Math.max(...Object.values(stateSpending), 1);
+
     // ── State choropleth ──────────────────────────────────────────────────
-    if ((al.corruption || al.gasPrices) && d.statesGeo) {
+    if ((al.corruption || al.gasPrices || al.spendingFlows) && d.statesGeo) {
       const mode = d.choroplethMode;
       layers.push(new GeoJsonLayer({
         id: 'states-choropleth',
@@ -312,12 +364,17 @@ export default function DeckGLMap({
         getFillColor: (f) => {
           const abbr = f.properties?.abbreviation;
           if (!abbr) return [15, 20, 40, 50];
-          return mode === 'gasPrices' ? gasPriceFill(d.gasPriceByState[abbr]) : corruptionFill(d.corruptionScores[abbr]);
+          if (mode === 'none')       return [15, 20, 40, 0];
+          if (mode === 'fedSpending') return fedSpendingFill(stateSpending[abbr], maxStateSpending);
+          if (mode === 'gasPrices')  return gasPriceFill(d.gasPriceByState[abbr]);
+          if (mode === 'stateDebt')  return stateDebtFill(STATE_DEBT_PER_CAPITA[abbr]);
+          if (mode === 'stateGdp')   return stateGdpFill(STATE_GDP_PER_CAPITA[abbr]);
+          return corruptionFill(d.corruptionScores[abbr]);
         },
         getLineColor: [50, 70, 110, 120],
         getLineWidth: 1, lineWidthUnits: 'pixels', lineWidthMinPixels: 0.5,
         pickable: true,
-        updateTriggers: { getFillColor: [d.choroplethMode, Object.keys(d.corruptionScores).length, Object.keys(d.gasPriceByState).length, d.statesGeo?.features?.length] },
+        updateTriggers: { getFillColor: [d.choroplethMode, Object.keys(d.corruptionScores).length, Object.keys(d.gasPriceByState).length, d.statesGeo?.features?.length, d.spendingFlows?.length] },
       }));
     }
 
@@ -419,38 +476,6 @@ export default function DeckGLMap({
       }
     }
 
-    // ── PAC contributions — HeatmapLayer at low zoom, ArcLayer when zoomed in ──
-    if (al.contributions && d.contributions.length > 0) {
-      if (zoom < 5) {
-        // Phase 4: HeatmapLayer — aggregate contribution density at national view
-        layers.push(new HeatmapLayer({
-          id: 'contribution-heat-layer', data: d.contributions,
-          getPosition: (c) => [c.toLon, c.toLat],
-          getWeight: (c) => Math.max(1, Math.log10(Math.max(1, c.amount || 1))),
-          radiusPixels: 60,
-          intensity: 1.2,
-          threshold: 0.03,
-          colorRange: [
-            [255,255,178,0],
-            [254,204, 92,120],
-            [253,141, 60,160],
-            [240, 59, 32,200],
-            [189,  0, 38,255],
-          ],
-          updateTriggers: { getWeight: [d.contributions.length] },
-        }));
-      } else {
-        // Zoomed in: show individual flow arcs
-        layers.push(new ArcLayer({
-          id: 'contribution-arcs-layer', data: d.contributions,
-          getSourcePosition: (c) => [c.fromLon, c.fromLat],
-          getTargetPosition: (c) => [c.toLon, c.toLat],
-          getSourceColor: [255,200,50,150], getTargetColor: [255,80,80,150],
-          getWidth: (c) => Math.max(1, Math.log2(Math.max(1, (c.amount || 1) / 10_000))),
-          widthMinPixels: 1, widthMaxPixels: 6, greatCircle: false, pickable: true,
-        }));
-      }
-    }
 
     // ── Phase 3: Election races (time-filtered + supercluster) ────────────
     if (al.electionRaces && d.electionRaces.length > 0) {
@@ -495,15 +520,30 @@ export default function DeckGLMap({
       }));
     }
 
-    // ── Phase 2: Federal spending flows (DC → states) ─────────────────────
+    // ── Phase 2: Federal spending flows (DC → states) — 3D arcs + arrowheads ─
     if (al.spendingFlows && d.spendingFlows.length > 0) {
       layers.push(new ArcLayer({
         id: 'spending-flows-layer', data: d.spendingFlows,
         getSourcePosition: (a) => [a.fromLon, a.fromLat],
         getTargetPosition: (a) => [a.toLon, a.toLat],
-        getSourceColor: [50,200,100,140], getTargetColor: [100,240,160,140],
-        getWidth: (a) => Math.max(1, Math.log2(Math.max(1, (a.amount || 1) / 100_000_000))),
-        widthMinPixels: 1, widthMaxPixels: 5, greatCircle: false, pickable: true,
+        getSourceColor: [50,200,100,200], getTargetColor: [100,240,160,80],
+        getWidth: (a) => Math.max(1.5, Math.log2(Math.max(1, (a.amount || 1) / 100_000_000))),
+        getHeight: 0.4,
+        widthMinPixels: 1, widthMaxPixels: 6, greatCircle: true, pickable: true,
+      }));
+      // Arrowhead dots at each target state capitol
+      const targetStates = {};
+      d.spendingFlows.forEach(f => {
+        if (f.state && !targetStates[f.state]) targetStates[f.state] = { lon: f.toLon, lat: f.toLat, total: 0 };
+        if (f.state) targetStates[f.state].total += (f.amount || 0);
+      });
+      layers.push(new ScatterplotLayer({
+        id: 'spending-arrowheads', data: Object.values(targetStates),
+        getPosition: (d) => [d.lon, d.lat],
+        getRadius: (d) => Math.max(8000, Math.sqrt(d.total / 1e8) * 15000),
+        getFillColor: [100,240,160,200], getLineColor: [50,200,100,255],
+        stroked: true, lineWidthMinPixels: 1,
+        radiusMinPixels: 3, radiusMaxPixels: 10, pickable: false,
       }));
     }
 
@@ -551,9 +591,15 @@ export default function DeckGLMap({
 
     if (lid === 'states-choropleth') {
       const abbr = obj.properties?.abbreviation, name = obj.properties?.name;
-      const score = d.corruptionScores[abbr], gas = d.gasPriceByState[abbr];
-      const mode  = d.choroplethMode;
-      return { html: `<div class="deckgl-tooltip"><strong>${esc(name)}</strong> (${esc(abbr)})${score!=null?`<br/>Accountability: <strong style="color:${score>60?'#22c55e':score>35?'#f59e0b':'#ef4444'}">${score}/100</strong>`:''}${gas!=null?`<br/>⛽ $${gas.toFixed(2)}/gal`:''}</div>` };
+      const gas  = d.gasPriceByState[abbr];
+      const debt = STATE_DEBT_PER_CAPITA[abbr];
+      const gdp  = STATE_GDP_PER_CAPITA[abbr];
+      const debtColor = debt > 10000 ? '#ef4444' : debt > 5000 ? '#f59e0b' : '#22c55e';
+      const gdpColor  = gdp  > 90000 ? '#22c55e' : gdp  > 65000 ? '#60a5fa' : '#94a3b8';
+      const gasLine  = gas  != null ? `<br/>⛽ Gas: <strong>$${gas.toFixed(2)}/gal</strong>` : '';
+      const debtLine = debt != null ? `<br/>🏦 Debt/capita: <strong style="color:${debtColor}">$${debt.toLocaleString()}</strong>` : '';
+      const gdpLine  = gdp  != null ? `<br/>📈 GDP/capita: <strong style="color:${gdpColor}">$${gdp.toLocaleString()}</strong>` : '';
+      return { html: `<div class="deckgl-tooltip"><strong>${esc(name)}</strong> (${esc(abbr)})${gasLine}${debtLine}${gdpLine}</div>` };
     }
     if (lid === 'pipelines-layer') {
       return { html: `<div class="deckgl-tooltip"><strong>${esc(obj.name)}</strong><br/>${obj.type === 'crude' ? '🛢 Crude' : obj.type === 'natural gas' ? '🔥 Gas' : '⛽ Refined'}<br/><span style="opacity:.7">${esc(obj.operator)}</span></div>` };
@@ -570,9 +616,6 @@ export default function DeckGLMap({
     if (lid === 'news-locations-layer') {
       const c = obj.threatLevel === 'critical' ? '#ef4444' : obj.threatLevel === 'high' ? '#f97316' : obj.threatLevel === 'medium' ? '#eab308' : '#3b82f6';
       return { html: `<div class="deckgl-tooltip"><strong style="color:${c}">📰 ${esc(obj.threatLevel || 'news')}</strong><br/>${esc((obj.title||'').slice(0,90))}</div>` };
-    }
-    if (lid === 'contribution-arcs-layer') {
-      return { html: `<div class="deckgl-tooltip">💰 <strong>${esc(obj.label || 'PAC Contribution')}</strong><br/>${fmtAmt(obj.amount)}</div>` };
     }
     if (lid === 'election-races-layer') {
       if (obj.cluster) return { html: `<div class="deckgl-tooltip">🗳 <strong style="color:#a855f7">${obj.count} races</strong><br/><span style="opacity:.7">Zoom in to expand</span></div>` };
@@ -627,6 +670,7 @@ export default function DeckGLMap({
           style:     getStyleForTheme(mapThemeState, 'auto'),
           center:    VIEW_PRESETS.national.center,
           zoom:      VIEW_PRESETS.national.zoom,
+          pitch:     VIEW_PRESETS.national.pitch || 0,
           attributionControl:  false,
           renderWorldCopies:   false,
         });
@@ -790,39 +834,43 @@ export default function DeckGLMap({
 
   const flyToPreset = useCallback((key) => {
     const p = VIEW_PRESETS[key]; if (!p || !mapRef.current) return;
-    setCurrentView(key); mapRef.current.flyTo({ center: p.center, zoom: p.zoom, duration: 800 });
+    setCurrentView(key); mapRef.current.flyTo({ center: p.center, zoom: p.zoom, pitch: p.pitch || 0, duration: 800 });
   }, []);
   const zoomIn  = useCallback(() => mapRef.current?.zoomIn(),  []);
   const zoomOut = useCallback(() => mapRef.current?.zoomOut(), []);
   const toggleLayer = useCallback((key) => {
-    setActiveLayers(prev => { const next = { ...prev, [key]: !prev[key] }; activeLayersRef.current = next; return next; });
+    setActiveLayers(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      activeLayersRef.current = next;
+      if (key === 'spendingFlows' && next.spendingFlows) {
+        dataRef.current.choroplethMode = 'fedSpending';
+      }
+      return next;
+    });
   }, []);
   const setChoroplethMode = useCallback((mode) => {
     dataRef.current.choroplethMode = mode; rafRebuildRef.current?.(); setActiveLayers(prev => ({ ...prev }));
   }, []);
   const toggleMapTheme = useCallback(() => setMapThemeState(t => t === 'dark' ? 'light' : 'dark'), []);
+  const togglePitch = useCallback(() => {
+    const map = mapRef.current; if (!map) return;
+    const is3D = map.getPitch() > 5;
+    map.easeTo({ pitch: is3D ? 0 : 35, duration: 400 });
+  }, []);
 
   // ── Layer defs for UI ──────────────────────────────────────────────────────
 
   const LAYER_DEFS = [
-    { key: 'corruption',     icon: '🔴', label: 'Accountability'  },
-    { key: 'gasPrices',      icon: '⛽', label: 'Gas Prices'      },
     { key: 'pipelines',      icon: '🛢', label: 'Pipelines'       },
     { key: 'railways',       icon: '🚂', label: 'Railways'        },
     { key: 'powerGrid',      icon: '⚡', label: 'Power Grid'      },
     { key: 'dataCenters',    icon: '🖥', label: 'Data Centers'    },
-    { key: 'mountainRanges', icon: '⛰', label: 'Mountains'       },
-    { key: 'cities',         icon: '🏙', label: 'Cities'          },
     { key: 'newsLocations',  icon: '📰', label: 'News Locations'  },
-    { key: 'contributions',  icon: '💰', label: 'PAC Flows'       },
-    { key: 'electionRaces',  icon: '🗳', label: 'Election Races'  },
-    { key: 'darkMoneyFlows', icon: '🕶', label: 'Dark Money'      },
     { key: 'spendingFlows',  icon: '🏛', label: 'Fed Spending'    },
-    { key: 'stockActTrades', icon: '📈', label: 'STOCK Act'       },
   ];
 
   const choroplethMode = dataRef.current.choroplethMode;
-  const showChoropleth = activeLayers.corruption || activeLayers.gasPrices;
+  const showChoropleth = activeLayers.corruption || activeLayers.gasPrices || activeLayers.spendingFlows;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -837,6 +885,9 @@ export default function DeckGLMap({
         <button className="deckgl-btn" onClick={() => flyToPreset('national')} title="National view">⌂</button>
         <button className="deckgl-btn" onClick={toggleMapTheme} title="Toggle basemap theme" style={{ fontSize: 13 }}>
           {mapThemeState === 'dark' ? '☀' : '🌙'}
+        </button>
+        <button className="deckgl-btn" onClick={togglePitch} title="Toggle 2D / 3D view" style={{ fontSize: 11, fontWeight: 700 }}>
+          2D/3D
         </button>
         <div className="deckgl-view-sep" />
         <select className="deckgl-view-select" value={currentView} onChange={e => flyToPreset(e.target.value)}>
@@ -867,26 +918,46 @@ export default function DeckGLMap({
         </div>
         {showChoropleth && !collapsed && (
           <div className="deckgl-choropleth-selector">
-            <button className={`deckgl-choropleth-btn${choroplethMode === 'corruption' ? ' active' : ''}`} onClick={() => setChoroplethMode('corruption')}>ACCOUNTABILITY</button>
-            <button className={`deckgl-choropleth-btn${choroplethMode === 'gasPrices'  ? ' active' : ''}`} onClick={() => setChoroplethMode('gasPrices')}>GAS PRICE</button>
+            <button className={`deckgl-choropleth-btn${choroplethMode === 'gasPrices'   ? ' active' : ''}`} onClick={() => setChoroplethMode('gasPrices')}>GAS PRICE</button>
+            <button className={`deckgl-choropleth-btn${choroplethMode === 'stateDebt'  ? ' active' : ''}`} onClick={() => setChoroplethMode('stateDebt')}>STATE DEBT</button>
+            <button className={`deckgl-choropleth-btn${choroplethMode === 'stateGdp'   ? ' active' : ''}`} onClick={() => setChoroplethMode('stateGdp')}>STATE GDP</button>
+            <button className={`deckgl-choropleth-btn${choroplethMode === 'fedSpending' ? ' active' : ''}`} onClick={() => setChoroplethMode('fedSpending')}>FED SPEND</button>
+            <button className={`deckgl-choropleth-btn${choroplethMode === 'none'        ? ' active' : ''}`} onClick={() => setChoroplethMode('none')}>NONE</button>
           </div>
         )}
       </div>
 
       {/* Legend */}
       <div className="deckgl-legend">
-        {showChoropleth && choroplethMode === 'corruption' && (
-          <div className="deckgl-legend-section">
-            <div className="deckgl-legend-title">ACCOUNTABILITY SCORE</div>
-            <div className="deckgl-legend-gradient" style={{ background: 'linear-gradient(to right, #dc3c3c, #e08840, #22c55e)' }} />
-            <div className="deckgl-legend-labels"><span>Corrupt (0)</span><span>Clean (100)</span></div>
-          </div>
-        )}
         {showChoropleth && choroplethMode === 'gasPrices' && (
           <div className="deckgl-legend-section">
             <div className="deckgl-legend-title">GAS PRICE ($/GAL)</div>
             <div className="deckgl-legend-gradient" style={{ background: 'linear-gradient(to right, #28c828, #c8c820, #f03232)' }} />
             <div className="deckgl-legend-labels"><span>$2.50</span><span>$5.50</span></div>
+          </div>
+        )}
+        {showChoropleth && choroplethMode === 'stateDebt' && (
+          <div className="deckgl-legend-section">
+            <div className="deckgl-legend-title">STATE DEBT / CAPITA</div>
+            <div className="deckgl-legend-gradient" style={{ background: 'linear-gradient(to right, #28c850, #c8c820, #f03232)' }} />
+            <div className="deckgl-legend-labels"><span>$650</span><span>$23,500</span></div>
+            <div className="deckgl-legend-source">U.S. Census Bureau · State Govt Finances FY2023</div>
+          </div>
+        )}
+        {showChoropleth && choroplethMode === 'stateGdp' && (
+          <div className="deckgl-legend-section">
+            <div className="deckgl-legend-title">STATE GDP / CAPITA</div>
+            <div className="deckgl-legend-gradient" style={{ background: 'linear-gradient(to right, #14c8c8, #1460c8, #0a28c8)' }} />
+            <div className="deckgl-legend-labels"><span>$42k</span><span>$248k</span></div>
+            <div className="deckgl-legend-source">BEA · GDP by State 2024 (advance est.) · Census pop. 2024</div>
+          </div>
+        )}
+        {showChoropleth && choroplethMode === 'fedSpending' && (
+          <div className="deckgl-legend-section">
+            <div className="deckgl-legend-title">FED SPENDING / STATE</div>
+            <div className="deckgl-legend-gradient" style={{ background: 'linear-gradient(to right, #0a3c1e, #32f064)' }} />
+            <div className="deckgl-legend-labels"><span>$0</span><span>Max</span></div>
+            <div className="deckgl-legend-source">USAspending.gov · Agency Spending</div>
           </div>
         )}
         <div className="deckgl-legend-items">
@@ -895,7 +966,6 @@ export default function DeckGLMap({
           {activeLayers.railways       && <span className="deckgl-legend-item"><span style={{ background: '#50a0ff' }} />Railways</span>}
           {activeLayers.dataCenters    && <span className="deckgl-legend-item"><span style={{ background: '#50c8ff' }} />Data Centers</span>}
           {activeLayers.newsLocations  && <span className="deckgl-legend-item"><span style={{ background: '#ef4444' }} />News Events</span>}
-          {activeLayers.contributions  && <span className="deckgl-legend-item"><span style={{ background: '#ffc832', borderRadius: 0, height: 3, width: 16, display: 'inline-block' }} />PAC Flows</span>}
           {activeLayers.electionRaces  && <span className="deckgl-legend-item"><span style={{ background: '#a855f7' }} />Elections</span>}
           {activeLayers.darkMoneyFlows && <span className="deckgl-legend-item"><span style={{ background: '#7c3aed', borderRadius: 0, height: 3, width: 16, display: 'inline-block' }} />Dark Money</span>}
           {activeLayers.spendingFlows  && <span className="deckgl-legend-item"><span style={{ background: '#22c55e', borderRadius: 0, height: 3, width: 16, display: 'inline-block' }} />Fed Spending</span>}

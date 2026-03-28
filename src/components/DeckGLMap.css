@@ -209,14 +209,14 @@
 /* Choropleth mode selector */
 .deckgl-choropleth-selector {
   display: flex;
+  flex-direction: column;
   gap: 4px;
   padding: 6px 12px;
   border-top: 1px solid rgba(100, 140, 200, 0.15);
 }
 
 .deckgl-choropleth-btn {
-  flex: 1;
-  padding: 4px 6px;
+  padding: 4px 8px;
   background: transparent;
   border: 1px solid rgba(100, 140, 200, 0.3);
   border-radius: 3px;
@@ -279,6 +279,14 @@
   justify-content: space-between;
   font-size: 8px;
   color: #5070a0;
+}
+
+.deckgl-legend-source {
+  font-size: 7px;
+  color: #3a4e70;
+  letter-spacing: 0.4px;
+  margin-top: 1px;
+  font-style: italic;
 }
 
 .deckgl-legend-items {

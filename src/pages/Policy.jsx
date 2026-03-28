@@ -5,6 +5,16 @@ import { ORANGE, WHITE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/token
 import { Band, Card, CardTitle, SourceFooter, Legend } from "../components/ui/index.js";
 import { POLICY_MONTHLY } from "../data/policy.js";
 import { queryAgent } from "../api/client.js";
+import BillsVotes from "../components/BillsVotes.jsx";
+import ExecutiveOrders from "../components/ExecutiveOrders.jsx";
+import RegulatoryWatch from "../components/RegulatoryWatch.jsx";
+
+const SUBTABS = [
+  { id: "ai",         label: "AI Query"                         },
+  { id: "bills",      label: "Bills & Votes",  badge: "NEW"     },
+  { id: "eo",         label: "Exec. Orders",   badge: "NEW"     },
+  { id: "rulemaking", label: "Reg. Watch",     badge: "NEW"     },
+];
 
 const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize:9.5, fill:t.mid } });
 
@@ -15,7 +25,7 @@ const STARTERS = [
   "Agencies over appropriation",
 ];
 
-export default function Policy() {
+function PolicyAIChat() {
   const t = useTheme();
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -129,6 +139,46 @@ export default function Policy() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Sub-tab bar ──────────────────────────────────────────────────────────────
+function SubTabBar({ tabs, active, onChange }) {
+  const t = useTheme();
+  return (
+    <div style={{ display: "flex", borderBottom: `1px solid ${t.border}`, flexWrap: "wrap" }}>
+      {tabs.map(st => (
+        <button key={st.id} onClick={() => onChange(st.id)} style={{
+          background: "none", border: "none", cursor: "pointer",
+          padding: "10px 18px", fontFamily: MF, fontSize: 10.5, letterSpacing: 0.5,
+          color: active === st.id ? ORANGE : t.mid,
+          borderBottom: `3px solid ${active === st.id ? ORANGE : "transparent"}`,
+          marginBottom: -1, transition: "all .14s", whiteSpace: "nowrap",
+          display: "flex", alignItems: "center", gap: 6,
+        }}>
+          {st.label}
+          {st.badge && (
+            <span style={{ background: "#00CC6622", border: "1px solid #00CC6644", color: "#00CC66", fontSize: 7, padding: "1px 4px", borderRadius: 2, fontWeight: 700 }}>
+              {st.badge}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+export default function Policy() {
+  const [sub, setSub] = useState("ai");
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+      <SubTabBar tabs={SUBTABS} active={sub} onChange={setSub} />
+      {sub === "ai"         && <PolicyAIChat />}
+      {sub === "bills"      && <BillsVotes />}
+      {sub === "eo"         && <ExecutiveOrders />}
+      {sub === "rulemaking" && <RegulatoryWatch />}
     </div>
   );
 }
