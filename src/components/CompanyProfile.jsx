@@ -5,8 +5,8 @@ import { getCompanyProfile, getCompanyPoliticalFootprint, getCompanyConflicts } 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
 const GREEN  = '#2DC653'
-const MF     = "'IBM Plex Mono','Courier New',monospace"
-const SF     = "'Playfair Display',Georgia,serif"
+const MF     = "'Roboto', sans-serif"
+const SF     = "'Roboto', sans-serif"
 
 function RiskMeter({ score, level, T }) {
   const color = level === 'CRITICAL' ? RED : level === 'HIGH' ? ORANGE : level === 'MEDIUM' ? '#FFB84D' : level === 'LOW' ? GREEN : T.mid

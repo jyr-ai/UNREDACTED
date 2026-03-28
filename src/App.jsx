@@ -98,8 +98,8 @@ const LIGHT_THEME = {
 const ThemeCtx = createContext(DARK_THEME);
 const useT = () => useContext(ThemeCtx);
 
-const MF = "'IBM Plex Mono','Courier New',monospace";
-const SF = "'Playfair Display',Georgia,serif";
+const MF = "'Roboto', sans-serif";
+const SF = "'Roboto', sans-serif";
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
 const SPEND = [

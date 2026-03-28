@@ -60,12 +60,12 @@ function FeedItem({ item, accentColor }) {
           {catDef.icon} {item.source}
         </span>
         <RiskBadge risk={item.risk} />
-        <span style={{ fontFamily: MF, fontSize: 8, color: t.low, marginLeft: 'auto', flexShrink: 0 }}>
+        <span style={{ fontFamily: MF, fontSize: 16, color: t.low, marginLeft: 'auto', flexShrink: 0 }}>
           {item.time}
         </span>
       </div>
       <div style={{
-        fontFamily: MF, fontSize: 11, color: t.hi,
+        fontFamily: MF, fontSize: 15, color: t.hi,
         lineHeight: 1.45, letterSpacing: 0.2,
       }}>
         {item.text}

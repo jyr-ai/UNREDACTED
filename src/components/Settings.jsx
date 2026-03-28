@@ -5,8 +5,8 @@ import { fetchSettings, saveSettings, testAIConnection } from '../api/client.js'
 const ORANGE = '#FF8000'
 const BLUE   = '#0028AA'
 const WHITE  = '#FFFFFF'
-const MF     = "'IBM Plex Mono','Courier New',monospace"
-const SF     = "'Playfair Display',Georgia,serif"
+const MF     = "'Roboto', sans-serif"
+const SF     = "'Roboto', sans-serif"
 
 // ─── Provider catalogue ───────────────────────────────────────────────────────
 const PROVIDERS = [
