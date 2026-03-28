@@ -1,0 +1,531 @@
+/* ─── DeckGLMap — MapLibre GL + deck.gl container styles ─────────────────── */
+
+.deckgl-map-root {
+  position: relative;
+  width: 100%;
+  height: 560px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #0a0f1a;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* MapLibre renders into this full-size child div */
+.deckgl-map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Zoom + View controls (top-right) ────────────────────────────────────── */
+
+.deckgl-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.deckgl-btn {
+  width: 30px;
+  height: 30px;
+  background: rgba(10, 15, 30, 0.88);
+  border: 1px solid rgba(100, 140, 200, 0.35);
+  border-radius: 3px;
+  color: #c0cce0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.deckgl-btn:hover {
+  background: rgba(40, 60, 100, 0.9);
+  border-color: rgba(100, 160, 255, 0.6);
+  color: #e8f0ff;
+}
+
+.deckgl-view-sep {
+  height: 4px;
+}
+
+.deckgl-view-select {
+  background: rgba(10, 15, 30, 0.88);
+  border: 1px solid rgba(100, 140, 200, 0.35);
+  border-radius: 3px;
+  color: #c0cce0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  padding: 4px 6px;
+  cursor: pointer;
+  outline: none;
+  letter-spacing: 0.3px;
+  max-width: 140px;
+}
+
+.deckgl-view-select:hover,
+.deckgl-view-select:focus {
+  border-color: rgba(100, 160, 255, 0.6);
+  color: #e8f0ff;
+}
+
+.deckgl-view-select option {
+  background: #0d1524;
+  color: #c0cce0;
+}
+
+/* ── Layer toggles (left side) ───────────────────────────────────────────── */
+
+.deckgl-layer-toggles {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  background: rgba(10, 15, 30, 0.88);
+  border: 1px solid rgba(100, 140, 200, 0.3);
+  border-radius: 4px;
+  min-width: 170px;
+  max-height: 420px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.deckgl-toggle-header {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #6080b0;
+  padding: 8px 12px 4px;
+  border-bottom: 1px solid rgba(100, 140, 200, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.deckgl-toggle-header:hover {
+  color: #90aacc;
+}
+
+.deckgl-toggle-list {
+  overflow-y: auto;
+  padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 140, 200, 0.3) transparent;
+}
+
+.deckgl-toggle-list::-webkit-scrollbar {
+  width: 4px;
+}
+.deckgl-toggle-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.deckgl-toggle-list::-webkit-scrollbar-thumb {
+  background: rgba(100, 140, 200, 0.3);
+  border-radius: 2px;
+}
+
+.deckgl-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.deckgl-toggle-item:hover {
+  background: rgba(50, 80, 140, 0.3);
+}
+
+.deckgl-toggle-item input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(100, 140, 200, 0.5);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.deckgl-toggle-item input[type="checkbox"]:checked {
+  background: #4480cc;
+  border-color: #5599ee;
+}
+
+.deckgl-toggle-item input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: 1.5px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+.deckgl-toggle-item.active .deckgl-toggle-label {
+  color: #a8c4e8;
+}
+
+.deckgl-toggle-icon {
+  font-size: 12px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.deckgl-toggle-label {
+  font-size: 10px;
+  color: #7090b8;
+  letter-spacing: 0.3px;
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+
+.deckgl-toggle-item:hover .deckgl-toggle-label {
+  color: #90aacc;
+}
+
+/* Choropleth mode selector */
+.deckgl-choropleth-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 12px;
+  border-top: 1px solid rgba(100, 140, 200, 0.15);
+}
+
+.deckgl-choropleth-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba(100, 140, 200, 0.3);
+  border-radius: 3px;
+  color: #6080b0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.deckgl-choropleth-btn.active,
+.deckgl-choropleth-btn:hover {
+  background: rgba(50, 80, 140, 0.5);
+  border-color: rgba(100, 160, 255, 0.5);
+  color: #a8c4e8;
+}
+
+/* ── Legend (bottom-right) ───────────────────────────────────────────────── */
+
+.deckgl-legend {
+  position: absolute;
+  bottom: 28px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(10, 15, 30, 0.88);
+  border: 1px solid rgba(100, 140, 200, 0.3);
+  border-radius: 4px;
+  padding: 8px 10px;
+  min-width: 130px;
+  max-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.deckgl-legend-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.deckgl-legend-title {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #5070a0;
+  margin-bottom: 2px;
+}
+
+.deckgl-legend-gradient {
+  height: 8px;
+  border-radius: 3px;
+  width: 100%;
+}
+
+.deckgl-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: #5070a0;
+}
+
+.deckgl-legend-source {
+  font-size: 7px;
+  color: #3a4e70;
+  letter-spacing: 0.4px;
+  margin-top: 1px;
+  font-style: italic;
+}
+
+.deckgl-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.deckgl-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: #7090b8;
+}
+
+.deckgl-legend-item span:first-child {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Attribution (bottom-left) ───────────────────────────────────────────── */
+
+.deckgl-attribution {
+  position: absolute;
+  bottom: 4px;
+  left: 8px;
+  z-index: 10;
+  font-size: 9px;
+  color: rgba(120, 150, 190, 0.7);
+  pointer-events: none;
+}
+
+.deckgl-attribution a {
+  color: rgba(120, 150, 190, 0.8);
+  text-decoration: none;
+  pointer-events: all;
+}
+
+.deckgl-attribution a:hover {
+  color: rgba(160, 190, 230, 1);
+}
+
+/* ── Tooltip (deck.gl renders inside .mapboxgl-map canvas) ───────────────── */
+
+.deck-tooltip {
+  background: rgba(8, 12, 28, 0.95) !important;
+  border: 1px solid rgba(100, 140, 200, 0.4) !important;
+  border-radius: 4px !important;
+  padding: 8px 12px !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-size: 11px !important;
+  color: #c0d0e8 !important;
+  pointer-events: none !important;
+  max-width: 260px !important;
+  line-height: 1.5 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+}
+
+.deckgl-tooltip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #c0d0e8;
+  line-height: 1.5;
+}
+
+.deckgl-tooltip strong {
+  color: #e8f0ff;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* ── Collapsed toggle list ────────────────────────────────────────────────── */
+
+.deckgl-toggle-list.collapsed {
+  display: none;
+}
+
+/* ── Responsive adjustments ──────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .deckgl-map-root {
+    height: 420px;
+  }
+
+  .deckgl-layer-toggles {
+    display: none; /* Hidden on mobile — use bottom sheet instead */
+  }
+
+  .deckgl-legend {
+    bottom: 24px;
+    right: 8px;
+    min-width: 110px;
+    font-size: 9px;
+  }
+
+  .deckgl-controls {
+    top: 8px;
+    right: 8px;
+  }
+}
+
+/* ── MapLibre overrides ───────────────────────────────────────────────────── */
+
+/* Hide default MapLibre attribution (we have our own) */
+.maplibregl-ctrl-attrib {
+  display: none !important;
+}
+
+/* Remove default logo */
+.maplibregl-ctrl-logo {
+  display: none !important;
+}
+
+/* ── Phase 3: Time-range filter toolbar (bottom-center) ─────────────────── */
+.deckgl-timerange {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  background: rgba(8, 12, 28, 0.88);
+  border: 1px solid rgba(80, 110, 180, 0.35);
+  border-radius: 5px;
+  padding: 3px;
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  pointer-events: all;
+}
+
+.deckgl-timerange-btn {
+  padding: 4px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: rgba(190, 205, 240, 0.65);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.deckgl-timerange-btn:hover {
+  background: rgba(80, 130, 255, 0.18);
+  color: rgba(190, 210, 255, 0.9);
+}
+.deckgl-timerange-btn.active {
+  background: rgba(80, 130, 255, 0.28);
+  color: #a5c8ff;
+  border: 1px solid rgba(80, 130, 255, 0.4);
+}
+
+/* ── Phase 3: Data freshness badge (bottom-left) ─────────────────────────── */
+.deckgl-freshness-badge {
+  position: absolute;
+  bottom: 28px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(8, 12, 28, 0.88);
+  border: 1px solid rgba(80, 110, 180, 0.35);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  z-index: 10;
+  pointer-events: all;
+  backdrop-filter: blur(6px);
+  user-select: none;
+}
+.deckgl-freshness-badge:hover {
+  border-color: rgba(80, 130, 255, 0.5);
+}
+
+.deckgl-freshness-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 4px currentColor;
+}
+
+.deckgl-freshness-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(190, 205, 240, 0.75);
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
+/* Expanded freshness panel (floats above badge) */
+.deckgl-freshness-panel {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  background: rgba(6, 9, 22, 0.96);
+  border: 1px solid rgba(80, 110, 180, 0.45);
+  border-radius: 5px;
+  padding: 10px 12px;
+  backdrop-filter: blur(10px);
+  z-index: 20;
+}
+
+.deckgl-freshness-panel-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(140, 165, 210, 0.8);
+  letter-spacing: 1.2px;
+  margin-bottom: 8px;
+}
+
+.deckgl-freshness-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 5px;
+  align-items: center;
+  padding: 2px 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+}
+
+.deckgl-freshness-key {
+  color: rgba(190, 205, 240, 0.8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deckgl-freshness-age {
+  font-size: 8px;
+  white-space: nowrap;
+  opacity: 0.85;
+}

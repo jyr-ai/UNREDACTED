@@ -82,7 +82,7 @@ export default function CommunityWidget({ theme }) {
             }}
           />
           <span style={{ fontSize: 11, color: t.hi, flex: 1 }}>
-            Join the conversation
+            Please Give Feedback!
           </span>
           <a
             href={DISCUSSION_URL}

@@ -160,7 +160,7 @@ export default function LiveFeedPanel() {
   }
 
   return (
-    <div style={{ border: `1px solid ${t.border}`, marginBottom: 22 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Header band ── */}
       <div style={{

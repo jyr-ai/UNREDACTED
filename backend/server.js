@@ -16,10 +16,21 @@ import companiesRouter from './routes/companies.js'
 import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
+// Campaign Watch route for 2026 election map
+import campaignWatchRouter from './routes/campaignWatch.js'
+// Gas price routes — EIA state prices + MyGasFeed station data
+import gasPricesRouter  from './routes/gasPrices.js'
+import gasStationsRouter from './routes/gasStations.js'
 // Phase 4: Supabase-backed user features
 import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
 import flagsRouter from './routes/flags.js'
+// Congress & legislative data
+import congressRouter from './routes/congress.js'
+// CNN Fear & Greed proxy (avoids browser CORS)
+import fearGreedRouter from './routes/feargreed.js'
+// BLS economic indicators (unemployment + CPI) — cached proxy
+import economicRouter from './routes/economic.js'
 
 const app = express()
 app.set('etag', false)
@@ -94,10 +105,18 @@ app.use('/api/companies', generalLimiter, companiesRouter)
 app.use('/api/stockact', generalLimiter, stockActRouter)
 app.use('/api/darkmoney', generalLimiter, darkMoneyRouter)
 app.use('/api/conflict', generalLimiter, conflictRouter)
+// Campaign Watch route for 2026 election map
+app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
+// Gas price routes — EIA state prices + MyGasFeed station data
+app.use('/api/gas/prices',   generalLimiter, gasPricesRouter)
+app.use('/api/gas/stations', generalLimiter, gasStationsRouter)
 // Phase 4: Supabase-backed user features
 app.use('/api/watchlist', generalLimiter, watchlistRouter)
 app.use('/api/alerts', generalLimiter, alertsRouter)
 app.use('/api/flags', generalLimiter, flagsRouter)
+app.use('/api/congress', generalLimiter, congressRouter)
+app.use('/api/fear-greed', generalLimiter, fearGreedRouter)
+app.use('/api/economic',   generalLimiter, economicRouter)
 
 // Global error handler
 app.use((err, req, res, next) => {

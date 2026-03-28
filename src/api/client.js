@@ -60,8 +60,17 @@ export const donors = {
 
 // ── Policy / Federal Register ─────────────────────────────────────────────────
 export const policy = {
-  rules:       (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/policy/rules${qs ? `?${qs}` : ''}`) },
-  significant: (limit = 20) => request(`/api/policy/significant?limit=${limit}`),
+  rules:           (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/policy/rules${qs ? `?${qs}` : ''}`) },
+  significant:     (limit = 20) => request(`/api/policy/significant?limit=${limit}`),
+  executiveOrders: (limit = 30) => request(`/api/policy/executive-orders?limit=${limit}`),
+  rulemaking:      (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/policy/rulemaking${qs ? `?${qs}` : ''}`) },
+}
+
+// ── Congress ──────────────────────────────────────────────────────────────────
+export const congress = {
+  bills:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/bills${qs ? `?${qs}` : ''}`) },
+  votes:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/votes${qs ? `?${qs}` : ''}`) },
+  members: (state)       => request(`/api/congress/members?state=${state}`),
 }
 
 // ── News Feed ─────────────────────────────────────────────────────────────────
@@ -144,6 +153,36 @@ export const darkMoney = {
   orgsIndex:  (limit = 50, level) => request(`/api/darkmoney/organizations/index?limit=${limit}${level ? `&level=${level}` : ''}`),
 }
 
+// ── Gas Prices ────────────────────────────────────────────────────────────────
+export const gasPrices = {
+  states:   () => request('/api/gas/prices/states'),
+  national: () => request('/api/gas/prices/national'),
+  state:    (code) => request(`/api/gas/prices/state/${code}`),
+  stations: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/api/gas/stations${qs ? `?${qs}` : ''}`)
+  },
+  search: (q, fuel = 'regular', sort = 'distance', radius = 10) =>
+    request(`/api/gas/stations/search?q=${encodeURIComponent(q)}&fuel=${fuel}&sort=${sort}&radius=${radius}`),
+}
+
+// ── Campaign Watch ────────────────────────────────────────────────────────────
+export const campaignWatch = {
+  states:          ()           => request('/api/campaign-watch/states'),
+  state:           (stateCode)  => request(`/api/campaign-watch/state/${stateCode}`),
+  moneyFlows:      (limit = 20) => request(`/api/campaign-watch/money-flows?limit=${limit}`),
+  corruptionIndex: ()           => request('/api/campaign-watch/corruption-index'),
+  // Phase 2D — new endpoints
+  corruptionProfile: (stateCode) => request(`/api/campaign-watch/state/${stateCode}/corruption`),
+  aiAnalysis:        (stateCode) => request(`/api/campaign-watch/state/${stateCode}/ai-analysis`),
+  representatives:   (stateCode) => request(`/api/campaign-watch/state/${stateCode}/representatives`),
+  repsByAddress:     (address)   => request(`/api/campaign-watch/representatives?address=${encodeURIComponent(address)}`),
+  legislation:       (stateCode, limit = 20) => request(`/api/campaign-watch/state/${stateCode}/legislation?limit=${limit}`),
+  elections:         ()          => request('/api/campaign-watch/elections'),
+  health:            ()          => request('/api/campaign-watch/health'),
+  clearCache:        (prefix)    => request(`/api/campaign-watch/cache${prefix ? `?prefix=${prefix}` : ''}`, { method: 'DELETE' }),
+}
+
 // ── Version ──────────────────────────────────────────────────────────────────
 export const version = {
   get: () => request('/api/version'),
@@ -173,6 +212,6 @@ export const getRecentStockTrades         = (chamber, limit) => stockAct.recent(
 export const getStockActWatchlist         = ()       => stockAct.watchlist()
 
 export default {
-  spending, donors, policy, feed, agent, aiAgent, settings,
-  corruption, companies, stockAct, darkMoney, health,
+  spending, donors, policy, congress, feed, agent, aiAgent, settings,
+  corruption, companies, stockAct, darkMoney, campaignWatch, health,
 }

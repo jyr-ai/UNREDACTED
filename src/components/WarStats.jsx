@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme/index.js";
-import { ORANGE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
+import { FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
+import { useMobile } from "../hooks/useMediaQuery.js";
 
 
 const API_URL = "/api/conflict";
@@ -24,6 +25,7 @@ function formatSpending(value) {
 
 export default function WarStats() {
   const t = useTheme();
+  const isMobile = useMobile();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,42 +58,41 @@ export default function WarStats() {
   }, []);
 
 
+  const pad = { padding: isMobile ? '12px 10px' : '18px 14px' };
+  const numSz = isMobile ? 22 : 28;
+
   if (loading && !data) {
     return (
-      <div style={{ padding: "18px 20px" }}>
-        <div style={{ fontFamily: SF, fontSize: 34, color: t.kpiNum, lineHeight: 1, marginBottom: 5 }}>—</div>
-        <div style={{ fontFamily: MF, fontSize: 10.5, color: t.hi, marginBottom: 3 }}>Loading war statistics</div>
-        <div style={{ fontFamily: MF, fontSize: 9, color: t.low }}>Fetching from conflict API</div>
+      <div style={pad}>
+        <div style={{ fontFamily: SF, fontSize: numSz, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>—</div>
+        <div style={{ fontFamily: MF, fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
+        <div style={{ fontFamily: MF, fontSize: 8, color: t.low }}>Loading…</div>
       </div>
     );
   }
-
 
   if (error && !data) {
     return (
-      <div style={{ padding: "18px 20px" }}>
-        <div style={{ fontFamily: SF, fontSize: 34, color: t.kpiNum, lineHeight: 1, marginBottom: 5 }}>—</div>
-        <div style={{ fontFamily: MF, fontSize: 10.5, color: t.hi, marginBottom: 3 }}>Error loading data</div>
-        <div style={{ fontFamily: MF, fontSize: 9, color: t.low }}>Check connection</div>
+      <div style={pad}>
+        <div style={{ fontFamily: SF, fontSize: numSz, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>—</div>
+        <div style={{ fontFamily: MF, fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
+        <div style={{ fontFamily: MF, fontSize: 8, color: t.low }}>Unavailable</div>
       </div>
     );
   }
 
-
   const { strikes, deaths, spending: spendingData } = data || {};
 
-
   return (
-    <div style={{ padding: "18px 20px" }}>
-      <div style={{ fontFamily: SF, fontSize: 34, color: t.kpiNum, lineHeight: 1, marginBottom: 5 }}>
+    <div style={pad}>
+      <div style={{ fontFamily: SF, fontSize: numSz, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>
         {formatSpending(spendingData?.value)}
       </div>
-      <div style={{ fontFamily: MF, fontSize: 10.5, color: t.hi, marginBottom: 3 }}>
-        Tax Spending on US‑Israel / Iran War
+      <div style={{ fontFamily: MF, fontSize: 9.5, color: t.hi, marginBottom: 2 }}>
+        US-Iran War spending
       </div>
-      <div style={{ fontFamily: MF, fontSize: 9, color: t.low, marginBottom: 8 }}>
-        <div>Strikes: {formatNumber(strikes?.value)}</div>
-        <div>Deaths: {formatNumber(deaths?.value)}</div>
+      <div style={{ fontFamily: MF, fontSize: 8, color: t.low }}>
+        Strikes: {formatNumber(strikes?.value)} · Deaths: {formatNumber(deaths?.value)}
       </div>
     </div>
   );

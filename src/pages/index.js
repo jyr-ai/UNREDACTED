@@ -23,6 +23,8 @@
  */
 
 export { default as CorruptionWatch } from "./CorruptionWatch.jsx";
+export { default as CampaignWatch } from "./CampaignWatch.jsx";
+export { default as MapPage } from "./MapPage.jsx";
 
 // Uncomment each line as the file is extracted from App.jsx:
 // export { default as Overview      } from "./Overview.jsx";

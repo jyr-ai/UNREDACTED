@@ -4,15 +4,28 @@
       "maxDuration": 30
     }
   },
+
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/[...path]" },
     { "source": "/((?!assets|vite\\.svg).*)", "destination": "/index.html" }
   ],
+
+  "crons": [
+    { "path": "/api/cron/seed-news-geo",   "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/seed-gas-prices", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/seed-stockact",   "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/seed-fec",        "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/seed-corruption", "schedule": "0 * * * *"   },
+    { "path": "/api/cron/seed-elections",  "schedule": "0 */2 * * *"  },
+    { "path": "/api/cron/seed-dark-money", "schedule": "0 */6 * * *"  },
+    { "path": "/api/cron/seed-spending",   "schedule": "0 */6 * * *"  }
+  ],
+
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Origin",  "value": "*" },
         { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
       ]
@@ -20,11 +33,11 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "X-Content-Type-Options",   "value": "nosniff" },
+        { "key": "X-Frame-Options",           "value": "SAMEORIGIN" },
         { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" }
+        { "key": "Referrer-Policy",           "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",        "value": "camera=(), microphone=(), geolocation=(), payment=()" }
       ]
     },
     {
@@ -34,9 +47,12 @@
       ]
     },
     {
-      "source": "/api/(.*)",
+      "source": "/api/bootstrap",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=600, stale-while-revalidate=300"
+        }
       ]
     }
   ]
