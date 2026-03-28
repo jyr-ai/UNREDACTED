@@ -11,14 +11,14 @@
   ],
 
   "crons": [
-    { "path": "/api/cron/seed-news-geo",   "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/seed-gas-prices", "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/seed-stockact",   "schedule": "*/30 * * * *" },
-    { "path": "/api/cron/seed-fec",        "schedule": "*/30 * * * *" },
-    { "path": "/api/cron/seed-corruption", "schedule": "0 * * * *"   },
-    { "path": "/api/cron/seed-elections",  "schedule": "0 */2 * * *"  },
-    { "path": "/api/cron/seed-dark-money", "schedule": "0 */6 * * *"  },
-    { "path": "/api/cron/seed-spending",   "schedule": "0 */6 * * *"  }
+    { "path": "/api/cron/seed-news-geo",   "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-gas-prices", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-stockact",   "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-fec",        "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-corruption", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-elections",  "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-dark-money", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/seed-spending",   "schedule": "0 7 * * *" }
   ],
 
   "headers": [

@@ -36,9 +36,9 @@ celery_app.conf.update(
             "task": "scheduler.tasks.run_usa_spending_etl",
             "schedule": 86400.0,  # Daily
         },
-        "federal_register_hourly": {
+        "federal_register_daily": {
             "task": "scheduler.tasks.run_federal_register_etl",
-            "schedule": 3600.0,  # Hourly
+            "schedule": 86400.0,  # Daily
         },
         # Phase 3 — STOCK Act monitoring
         "senate_disclosures_weekly": {
