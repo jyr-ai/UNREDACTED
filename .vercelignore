@@ -5,8 +5,7 @@ etl/
 # Docker/local infra config
 docker-compose.yml
 
-# Old split-repo directories (superseded by monorepo)
-backend/
+# Old split-repo frontend directory (superseded by monorepo root)
 frontend/
 
 # Local dev files
