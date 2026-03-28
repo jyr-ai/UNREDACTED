@@ -329,7 +329,7 @@ const CampaignWatch = () => {
         {/* CNN Fear & Greed */}
         <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
           <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{fearGreedData ? fearGreedData.score : '…'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, marginBottom: 2 }}>{fearGreedData ? `Out of 100 ${fearGreedLabel(fearGreedData.rating)}` : 'Market sentiment'}</div>
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, marginBottom: 2 }}>{fearGreedData ? `Out of 100 Stock Market ${fearGreedLabel(fearGreedData.rating)}` : 'Market sentiment'}</div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}><a href="https://www.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>CNN · Fear & Greed</a></div>
         </div>
 

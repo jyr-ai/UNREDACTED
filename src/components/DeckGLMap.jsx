@@ -35,7 +35,7 @@ import {
 } from '../config/basemap.js';
 
 import { feature as topoFeature } from 'topojson-client';
-import { DATA_CENTERS, STATE_FIPS_TO_ABBR } from '../data/geo.js';
+import { DATA_CENTERS, ICE_CENTERS, STATE_FIPS_TO_ABBR } from '../data/geo.js';
 import { OIL_PIPELINES } from '../data/pipelines.js';
 import { RAILWAYS } from '../data/railways.js';
 import { POWER_GRID } from '../data/powerGrid.js';
@@ -60,6 +60,7 @@ const LAYER_ZOOM_THRESHOLDS = {
   powerGrid:      { minZoom: 3.0 },
   railways:       { minZoom: 3.0 },
   dataCenters:    { minZoom: 2.5 },
+  iceCenters:     { minZoom: 2.5 },
 };
 
 const DEFAULT_LAYERS = {
@@ -72,6 +73,7 @@ const DEFAULT_LAYERS = {
   mountainRanges: false,
   cities:         false,
   newsLocations:  true,
+  iceCenters:     true,
   // Phase 2 — off by default (activate once seed data is populated)
   electionRaces:  false,
   darkMoneyFlows: false,
@@ -418,6 +420,19 @@ export default function DeckGLMap({
       }));
     }
 
+    // ── ICE detention centers ─────────────────────────────────────────────
+    if (al.iceCenters && isVisible('iceCenters')) {
+      layers.push(new ScatterplotLayer({
+        id: 'ice-centers-layer', data: ICE_CENTERS,
+        getPosition: (d) => [d.lon, d.lat],
+        getRadius: (d) => Math.max(8000, Math.sqrt(d.avg_daily_pop || 100) * 600),
+        getFillColor: [220, 40, 40, 200],
+        getLineColor: [255, 80, 80, 240],
+        stroked: true, lineWidthMinPixels: 1,
+        radiusMinPixels: 3, radiusMaxPixels: 18, pickable: true,
+      }));
+    }
+
     // ── Mountain ranges ───────────────────────────────────────────────────
     if (al.mountainRanges && isVisible('mountainRanges')) {
       const ranges = Array.isArray(MOUNTAIN_RANGES) ? MOUNTAIN_RANGES : [];
@@ -612,6 +627,11 @@ export default function DeckGLMap({
     }
     if (lid === 'datacenters-layer') {
       return { html: `<div class="deckgl-tooltip">🖥 <strong>${esc(obj.name)}</strong><br/>${esc(obj.type)} · ${esc(obj.state)}<br/><span style="opacity:.7">${esc(obj.capacity)}</span></div>` };
+    }
+    if (lid === 'ice-centers-layer') {
+      const pop = obj.avg_daily_pop ? obj.avg_daily_pop.toLocaleString() : '—';
+      const cap = obj.min_capacity  ? obj.min_capacity.toLocaleString()  : '—';
+      return { html: `<div class="deckgl-tooltip"><strong style="color:#f87171">🔒 ${esc(obj.name)}</strong><br/>${esc(obj.city)}<br/>${esc(obj.facility_type)}<br/>Avg daily pop: <strong>${pop}</strong> · Min cap: ${cap}<br/><span style="opacity:.7">${esc(obj.management || obj.authority)} · ${esc(obj.demographics)}</span></div>` };
     }
     if (lid === 'news-locations-layer') {
       const c = obj.threatLevel === 'critical' ? '#ef4444' : obj.threatLevel === 'high' ? '#f97316' : obj.threatLevel === 'medium' ? '#eab308' : '#3b82f6';
@@ -867,6 +887,7 @@ export default function DeckGLMap({
     { key: 'dataCenters',    icon: '🖥', label: 'Data Centers'    },
     { key: 'newsLocations',  icon: '📰', label: 'News Locations'  },
     { key: 'spendingFlows',  icon: '🏛', label: 'Fed Spending'    },
+    { key: 'iceCenters',     icon: '🔒', label: 'ICE Centers'     },
   ];
 
   const choroplethMode = dataRef.current.choroplethMode;
