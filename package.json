@@ -8,11 +8,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:server": "node --env-file=backend/.env --watch server/dev.js",
+    "dev:server": "nodemon --watch server --watch backend/routes --watch backend/services --watch backend/lib --watch backend/middleware --watch .env --ext js,mjs,json,env server/dev.js",
     "dev:all": "concurrently -n \"frontend,backend\" -c \"cyan,yellow\" \"npm:dev\" \"npm:dev:server\"",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node --env-file=backend/.env server/dev.js",
+    "start": "node server/dev.js",
     "lint": "eslint ."
   },
   "dependencies": {
