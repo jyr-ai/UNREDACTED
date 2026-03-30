@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { rateLimit } from 'express-rate-limit'
+import { buildOpenApiSpec, renderSwaggerUi } from './openapi.js'
 dotenv.config()
 
 import spendingRouter from './routes/spending.js'
@@ -33,6 +34,13 @@ import fearGreedRouter from '../backend/routes/feargreed.js'
 import economicRouter from '../backend/routes/economic.js'
 
 const app = express()
+const isVercelDeployment =
+  process.env.VERCEL === '1' ||
+  process.env.VERCEL === 'true' ||
+  ['preview', 'production'].includes(process.env.VERCEL_ENV || '')
+const apiDocsEnabled =
+  process.env.ENABLE_API_DOCS === 'true' ||
+  (!isVercelDeployment && process.env.ENABLE_API_DOCS !== 'false')
 
 // Disable ETags so API responses are never served as 304 from browser cache
 app.set('etag', false)
@@ -97,6 +105,18 @@ app.get('/api/version', async (_req, res) => {
     res.json({ version: 'v1.0.0', source: 'fallback' })
   }
 })
+
+if (apiDocsEnabled) {
+  app.get('/api/docs/openapi.json', (req, res) => {
+    res.json(buildOpenApiSpec({
+      serverUrl: `${req.protocol}://${req.get('host')}`,
+    }))
+  })
+
+  app.get('/api/docs', (_req, res) => {
+    res.type('html').send(renderSwaggerUi({ openApiUrl: '/api/docs/openapi.json' }))
+  })
+}
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/spending',    generalLimiter, spendingRouter)

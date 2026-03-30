@@ -14,4 +14,5 @@ const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
   console.log(`\n  🚨 UNREDACTED backend running on http://localhost:${PORT}`)
   console.log(`  📡 Frontend dev server expected on http://localhost:3000\n`)
+  console.log(`  📚 Swagger UI available at http://localhost:${PORT}/api/docs\n`)
 })
