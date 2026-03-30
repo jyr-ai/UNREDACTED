@@ -350,7 +350,7 @@ function Overview({ onNavigate }) {
           { c:t.warn, t2:"No STOCK Act prosecution", b:"Despite 34 flagged potential violations in the current session, no member of Congress has faced criminal prosecution since 2012." },
         ].map((f,i) => (
           <div key={i} style={{ background:t.card, border:`1px solid ${t.border}`, borderTop:`3px solid ${f.c}`, padding:"18px 18px 16px" }}>
-            <div style={{ fontFamily:MF, fontSize:8.5, color:f.c, letterSpacing:2, marginBottom:8 }}>▸ KEY FINDING</div>
+            <div style={{ fontFamily:MF, fontSize:10.5, color:f.c, letterSpacing:2, marginBottom:8 }}>▸ KEY FINDING</div>
             <div style={{ fontFamily:SF, fontSize:14, color:t.hi, lineHeight:1.3, fontWeight:700, marginBottom:8 }}>{f.t2}</div>
           <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:12, color:t.mid, lineHeight:1.65 }}>{f.b}</div>
           </div>
@@ -360,18 +360,18 @@ function Overview({ onNavigate }) {
       {onNavigate && (
         <div>
           <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:12 }}>INTELLIGENCE MODULES</div>
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(5,1fr)", gap:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr 1fr" : "repeat(5,1fr)", gap:18 }}>
             {NAV_CARDS.map(nc => (
               <button key={nc.id} onClick={() => onNavigate(nc.id)} style={{
                 background:t.card, border:`1px solid ${t.border}`, borderTop:`3px solid ${nc.color}`,
-                padding:"14px 16px", cursor:"pointer", textAlign:"left", transition:"border-color .14s",
+                padding:"10px 12px", cursor:"pointer", textAlign:"left", transition:"border-color .14s",
               }}
                 onMouseEnter={e => e.currentTarget.style.borderColor=nc.color}
                 onMouseLeave={e => e.currentTarget.style.borderColor=t.border}
               >
-                <div style={{ fontFamily:MF, fontSize:11, color:nc.color, fontWeight:700, marginBottom:5 }}>{nc.label}</div>
-                <div style={{ fontFamily:SF, fontStyle:"italic", fontSize:11, color:t.mid, lineHeight:1.5 }}>{nc.sub}</div>
-                <div style={{ fontFamily:MF, fontSize:9, color:nc.color, marginTop:10, letterSpacing:1 }}>OPEN →</div>
+                <div style={{ fontFamily:MF, fontSize:120, color:nc.color, fontWeight:0, marginBottom:0 }}>{nc.label}</div>
+                <div style={{ fontFamily:SF, fontStyle:"Roboto", fontSize:13, color:t.mid, lineHeight:1.5 }}>{nc.sub}</div>
+                <div style={{ fontFamily:MF, fontSize:20, color:nc.color, marginTop:0, letterSpacing:1 }}>OPEN →</div>
               </button>
             ))}
           </div>
@@ -1680,7 +1680,7 @@ function AppInner() {
                       <button key={tb.id} onClick={() => { setTab(tb.id); setMenuOpen(false); track("tab_view",{tab:tb.id}); }} style={{
                         width:"100%", textAlign:"left", background: on ? ORANGE+"18" : "none",
                         border:"none", borderLeft:`3px solid ${on?ORANGE:"transparent"}`,
-                        padding:"13px 16px", fontFamily:MF, fontSize:12, letterSpacing:0.5,
+                        padding:"13px 16px", fontFamily:MF, fontSize:24, letterSpacing:0.5,
                         color: on ? ORANGE : theme.mid,
                       }}>
                         {tb.label}
@@ -1691,7 +1691,7 @@ function AppInner() {
                   <button onClick={() => { setTab(t=>t==="settings"?"monitor":"settings"); setMenuOpen(false); }} style={{
                     width:"100%", textAlign:"left", background: tab==="settings" ? ORANGE+"18" : "none",
                     border:"none", borderLeft:`3px solid ${tab==="settings"?ORANGE:"transparent"}`,
-                    padding:"13px 16px", fontFamily:MF, fontSize:12, color: tab==="settings"?ORANGE:theme.mid,
+                    padding:"13px 16px", fontFamily:MF, fontSize:24, color: tab==="settings"?ORANGE:theme.mid,
                   }}>
                     ⚙ Settings
                   </button>
