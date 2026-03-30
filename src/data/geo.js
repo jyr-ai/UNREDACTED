@@ -69,7 +69,7 @@ export const DATA_CENTERS = [
   { name: "Miami", state: "FL", lat: 25.7617, lon: -80.1918, type: "colocation", capacity: "150+ MW" }
 ];
 
-// ICE detention centers (source: ICE detention facility list)
+// ICE detention centers (source: ICE detention facility list) source: https://en.wikipedia.org/wiki/List_of_immigrant_detention_sites_in_the_United_States
 export const ICE_CENTERS = [
   { name: "Adams County Correctional Center", state: "MS", lat: 31.5576334, lon: -91.2211771, city: "Natchez, MS", facility_type: "Jail", authority: "DIGSA", management: "CoreCivic", avg_daily_pop: 2162, min_capacity: 1436, demographics: "Male" },
   { name: "Adelanto ICE Processing Center", state: "CA", lat: 34.5599467, lon: -117.4421505, city: "Adelanto, CA", facility_type: "Private Migrant Detention Center", authority: "CDF", management: "GEO Group", avg_daily_pop: 1807, min_capacity: 640, demographics: "Male" },

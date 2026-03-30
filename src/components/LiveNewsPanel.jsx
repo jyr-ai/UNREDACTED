@@ -28,6 +28,12 @@ const ORANGE = '#FF8000';
 // If both are present, videoId takes priority.
 const CHANNELS = [
   {
+    id:      'bloomberg',
+    label:   'BLOOMBERG',
+    name:    'Bloomberg',
+    videoId: 'iEpJwprxDdk',   // User-provided: youtube.com/watch?v=iEpJwprxDdk
+  },
+  {
     id:        'abc',
     label:     'ABC',
     name:      'ABC News Live',
@@ -50,12 +56,6 @@ const CHANNELS = [
     label:     'FOX',
     name:      'Fox News',
     videoId:   'Mz1NkvRm8O8',              // Fox News live stream
-  },
-  {
-    id:      'bloomberg',
-    label:   'BLOOMBERG',
-    name:    'Bloomberg',
-    videoId: 'iEpJwprxDdk',   // User-provided: youtube.com/watch?v=iEpJwprxDdk
   },
   {
     id:      'yahoo_finance',
