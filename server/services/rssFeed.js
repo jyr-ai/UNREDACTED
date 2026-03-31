@@ -133,6 +133,50 @@ export const FEED_CATEGORIES = {
   },
 }
 
+// ── Relevance Filter (federal spending / budget / Trump policy) ────────────
+// Items from broad publication feeds (NYT, WSJ, Politico) are filtered to
+// only retain articles related to federal spending, budgeting, or Trump
+// administration policy on spending & government operations.
+const RELEVANCE_KEYWORDS = [
+  // Core spending / budget terms
+  'spending', 'budget', 'appropriation', 'deficit', 'debt ceiling',
+  'fiscal', 'treasury', 'funding', 'expenditure', 'outlay',
+  'sequester', 'sequestration', 'continuing resolution', 'omnibus',
+  'federal funds', 'government funding', 'government spending',
+  'taxpayer', 'tax cut', 'tax increase', 'tax reform', 'tariff',
+  'entitlement', 'medicare', 'medicaid', 'social security',
+  'discretionary spending', 'mandatory spending', 'debt limit',
+  'impoundment', 'rescission', 'shutdown', 'government shutdown',
+  'cost overrun', 'procurement', 'federal contract', 'grant',
+  // Trump admin / DOGE / policy
+  'trump', 'doge', 'musk', 'elon', 'vivek', 'ramaswamy',
+  'executive order', 'white house', 'oval office', 'administration',
+  'omb', 'office of management', 'cbo', 'congressional budget',
+  'gao', 'accountability office', 'inspector general',
+  'federal workforce', 'government efficiency', 'agency cut',
+  'deregulation', 'regulation', 'regulatory',
+  'cabinet', 'federal employee', 'civil servant', 'civil service',
+  'usaid', 'foreign aid', 'defense spending', 'pentagon budget',
+  'military spending', 'veterans affairs', 'va budget',
+  'infrastructure', 'stimulus', 'bailout', 'subsidy',
+  'federal reserve', 'interest rate', 'national debt',
+  'trade war', 'import duty', 'customs', 'commerce department',
+  'sanctions', 'economic policy', 'industrial policy',
+  // Corruption / waste in spending context
+  'waste', 'fraud', 'abuse', 'audit', 'oversight',
+  'no-bid', 'sole-source', 'earmark', 'pork barrel',
+]
+
+// Source IDs that are broad publication feeds (not query-scoped)
+const BROAD_FEED_SOURCE_IDS = new Set([
+  'NYT_POL', 'NYT_BIZ', 'WSJ_WORLD', 'WSJ_BIZ', 'POLITICO',
+])
+
+function isRelevantToSpendingPolicy(item) {
+  const haystack = `${item.text || ''} ${item.detail || ''}`.toLowerCase()
+  return RELEVANCE_KEYWORDS.some(kw => haystack.includes(kw))
+}
+
 // ── Risk Keyword Scoring ────────────────────────────────────────────────────
 const HIGH_RISK_KEYWORDS = [
   // Corruption / Crime
@@ -263,10 +307,16 @@ async function fetchCategory(categoryKey) {
     if (i + 3 < sources.length) await new Promise(r => setTimeout(r, 300))
   }
 
-  // Sort by pubDate descending (most recent first)
-  allItems.sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
+  // Filter broad publication feeds to only spending/budget/policy relevance
+  const filtered = allItems.filter(item => {
+    if (!BROAD_FEED_SOURCE_IDS.has(item.sourceId)) return true
+    return isRelevantToSpendingPolicy(item)
+  })
 
-  return allItems
+  // Sort by pubDate descending (most recent first)
+  filtered.sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
+
+  return filtered
 }
 
 // ── Public API: get one category ────────────────────────────────────────────
