@@ -145,6 +145,13 @@ export default function LiveFeedPanel() {
     }, 1000)
   }, [fetchData])
 
+  // Validate activeTab exists in CATEGORIES, reset to ALL if not
+  useEffect(() => {
+    if (!CATEGORIES.find(c => c.key === activeTab)) {
+      setActiveTab('ALL')
+    }
+  }, [])
+
   // Initial load + tab switches
   useEffect(() => {
     fetchData(activeTab)
@@ -273,7 +280,7 @@ export default function LiveFeedPanel() {
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <span style={{ fontFamily: MF, fontSize: 8, color: t.low }}>
-          {items.length} items · GAO · SEC · DOJ · FBI · ProPublica · CREW · FEC · OpenSecrets · Google News
+          {items.length} items · GAO · SEC · DOJ · FBI · ProPublica · CREW · FEC · OpenSecrets · Reuters · AP · NYT · WSJ · Politico · Google News
         </span>
         <span style={{ fontFamily: MF, fontSize: 8, color: t.low }}>
           5-min live refresh · UNREDACTED intelligence

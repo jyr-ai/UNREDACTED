@@ -1,7 +1,7 @@
 import Parser from 'rss-parser'
 
 const parser = new Parser({
-  timeout: 12000,
+  timeout: 20000,
   headers: {
     'User-Agent': 'UNREDACTED-Intelligence-Platform/1.0 (Government Accountability Research)',
     'Accept': 'application/rss+xml, application/xml, text/xml, */*',
@@ -111,6 +111,70 @@ export const FEED_CATEGORIES = {
       { id: 'SHADOW_PAC',label: 'Shadow Money',  url: gn('shadow money political nonprofit undisclosed donor election'), type: 'DARK_MONEY' },
     ],
   },
+
+  TRUMP_ADMIN: {
+    label: 'Trump / DOGE',
+    color: '#FF3B3B',
+    icon: '🏛',
+    sources: [
+      { id: 'REUTERS_TOP',     label: 'Reuters',        url: gn('site:reuters.com politics government spending budget'),                                      type: 'NEWS'   },
+      { id: 'REUTERS_BIZ',     label: 'Reuters Biz',    url: gn('site:reuters.com business economy federal budget'),                                          type: 'NEWS'   },
+      { id: 'AP_TOP',          label: 'AP News',        url: gn('site:apnews.com politics government spending Trump'),                                        type: 'NEWS'   },
+      { id: 'AP_POL',          label: 'AP Politics',    url: gn('site:apnews.com politics budget federal spending'),                                          type: 'POLICY' },
+      { id: 'NYT_POL',         label: 'NYT Politics',   url: 'https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml',                                    type: 'POLICY' },
+      { id: 'NYT_BIZ',         label: 'NYT Business',   url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml',                                    type: 'BUDGET' },
+      { id: 'WSJ_WORLD',       label: 'WSJ',            url: 'https://feeds.a.dj.com/rss/RSSWorldNews.xml',                                                  type: 'NEWS'   },
+      { id: 'WSJ_BIZ',         label: 'WSJ Business',   url: 'https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml',                                              type: 'BUDGET' },
+      { id: 'POLITICO',        label: 'Politico',       url: 'https://rss.politico.com/politics-news.xml',                                                   type: 'POLICY' },
+      { id: 'GN_TRUMP_BUDGET', label: 'Trump Budget',   url: gn('Trump budget spending government federal'),                                                  type: 'BUDGET' },
+      { id: 'GN_DOGE',         label: 'DOGE Cuts',      url: gn('DOGE government spending cuts efficiency Musk'),                                             type: 'BUDGET' },
+      { id: 'GN_TRUMP_ADMIN',  label: 'Trump Admin',    url: gn('Trump administration federal spending budget plan'),                                         type: 'POLICY' },
+    ],
+  },
+}
+
+// ── Relevance Filter (federal spending / budget / Trump policy) ────────────
+// Items from broad publication feeds (NYT, WSJ, Politico) are filtered to
+// only retain articles related to federal spending, budgeting, or Trump
+// administration policy on spending & government operations.
+const RELEVANCE_KEYWORDS = [
+  // Core spending / budget terms
+  'spending', 'budget', 'appropriation', 'deficit', 'debt ceiling',
+  'fiscal', 'treasury', 'funding', 'expenditure', 'outlay',
+  'sequester', 'sequestration', 'continuing resolution', 'omnibus',
+  'federal funds', 'government funding', 'government spending',
+  'taxpayer', 'tax cut', 'tax increase', 'tax reform', 'tariff',
+  'entitlement', 'medicare', 'medicaid', 'social security',
+  'discretionary spending', 'mandatory spending', 'debt limit',
+  'impoundment', 'rescission', 'shutdown', 'government shutdown',
+  'cost overrun', 'procurement', 'federal contract', 'grant',
+  // Trump admin / DOGE / policy
+  'trump', 'doge', 'musk', 'elon', 'vivek', 'ramaswamy',
+  'executive order', 'white house', 'oval office', 'administration',
+  'omb', 'office of management', 'cbo', 'congressional budget',
+  'gao', 'accountability office', 'inspector general',
+  'federal workforce', 'government efficiency', 'agency cut',
+  'deregulation', 'regulation', 'regulatory',
+  'cabinet', 'federal employee', 'civil servant', 'civil service',
+  'usaid', 'foreign aid', 'defense spending', 'pentagon budget',
+  'military spending', 'veterans affairs', 'va budget',
+  'infrastructure', 'stimulus', 'bailout', 'subsidy',
+  'federal reserve', 'interest rate', 'national debt',
+  'trade war', 'import duty', 'customs', 'commerce department',
+  'sanctions', 'economic policy', 'industrial policy',
+  // Corruption / waste in spending context
+  'waste', 'fraud', 'abuse', 'audit', 'oversight',
+  'no-bid', 'sole-source', 'earmark', 'pork barrel',
+]
+
+// Source IDs that are broad publication feeds (not query-scoped)
+const BROAD_FEED_SOURCE_IDS = new Set([
+  'NYT_POL', 'NYT_BIZ', 'WSJ_WORLD', 'WSJ_BIZ', 'POLITICO',
+])
+
+function isRelevantToSpendingPolicy(item) {
+  const haystack = `${item.text || ''} ${item.detail || ''}`.toLowerCase()
+  return RELEVANCE_KEYWORDS.some(kw => haystack.includes(kw))
 }
 
 // ── Risk Keyword Scoring ────────────────────────────────────────────────────
@@ -131,6 +195,8 @@ const HIGH_RISK_KEYWORDS = [
   'campaign finance violation', 'FEC fine', 'FEC penalty',
   // Scale
   'billion',
+  // Budget / shutdown
+  'government shutdown', 'debt ceiling', 'impoundment', 'rescission', 'sequester',
 ]
 
 const MED_RISK_KEYWORDS = [
@@ -142,6 +208,9 @@ const MED_RISK_KEYWORDS = [
   'subpoena', 'grand jury', 'settlement', 'civil penalty',
   'stock trade', 'disclosure', 'PAC', 'lobbying', 'earmark',
   'revolving door', 'conflict', '501c4', 'dark money', 'undisclosed',
+  // Trump admin / DOGE
+  'Trump', 'DOGE', 'Musk', 'budget cut', 'federal spending',
+  'continuing resolution', 'federal contract',
 ]
 
 function scoreRisk(text) {
@@ -227,20 +296,27 @@ async function fetchCategory(categoryKey) {
   // Inject category key into each source
   const sources = categoryDef.sources.map(s => ({ ...s, category: categoryKey }))
 
-  const results = await Promise.allSettled(sources.map(fetchSource))
-  const allItems = results
-    .filter(r => r.status === 'fulfilled')
-    .flatMap(r => r.value)
+  // Fetch in batches of 3 with delay to avoid rate limiting / timeouts
+  const allItems = []
+  for (let i = 0; i < sources.length; i += 3) {
+    const batch = sources.slice(i, i + 3)
+    const results = await Promise.allSettled(batch.map(fetchSource))
+    for (const r of results) {
+      if (r.status === 'fulfilled') allItems.push(...r.value)
+    }
+    if (i + 3 < sources.length) await new Promise(r => setTimeout(r, 300))
+  }
 
-  // Sort: HIGH risk first, then by pubDate descending
-  const high = allItems.filter(i => i.risk === 'HIGH')
-    .sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
-  const med = allItems.filter(i => i.risk === 'MED')
-    .sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
-  const low = allItems.filter(i => i.risk === 'LOW')
-    .sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
+  // Filter broad publication feeds to only spending/budget/policy relevance
+  const filtered = allItems.filter(item => {
+    if (!BROAD_FEED_SOURCE_IDS.has(item.sourceId)) return true
+    return isRelevantToSpendingPolicy(item)
+  })
 
-  return [...high, ...med, ...low]
+  // Sort by pubDate descending (most recent first)
+  filtered.sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
+
+  return filtered
 }
 
 // ── Public API: get one category ────────────────────────────────────────────
@@ -298,15 +374,8 @@ export async function getAllFeeds({ limit = 30, category = null } = {}) {
     return cached ? cached.items : []
   })
 
-  // Sort globally: HIGH first, then by date
-  const high = allItems.filter(i => i.risk === 'HIGH')
-    .sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
-  const med = allItems.filter(i => i.risk === 'MED')
-    .sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
-  const low = allItems.filter(i => i.risk === 'LOW')
-    .sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
-
-  const sorted = [...high, ...med, ...low]
+  // Sort globally by pubDate descending (most recent first)
+  const sorted = allItems.sort((a, b) => (new Date(b.pubDate || 0)) - (new Date(a.pubDate || 0)))
 
   return {
     items: sorted.slice(0, limit),

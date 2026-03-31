@@ -887,7 +887,7 @@ export default function DeckGLMap({
     { key: 'dataCenters',    icon: '🖥', label: 'Data Centers'    },
     { key: 'newsLocations',  icon: '📰', label: 'News Locations'  },
     { key: 'spendingFlows',  icon: '🏛', label: 'Fed Spending'    },
-    { key: 'iceCenters',     icon: '🔒', label: 'ICE Centers'     },
+    { key: 'iceCenters',     icon: '🔒', label: 'Detention Centers'},
   ];
 
   const choroplethMode = dataRef.current.choroplethMode;

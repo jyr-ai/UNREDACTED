@@ -87,6 +87,18 @@ router.get('/dark-money', async (req, res) => {
   }
 })
 
+// ── GET /api/feed/trump-admin?limit=15 ───────────────────────────────────────
+router.get('/trump-admin', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 15, 40)
+    const result = await getCategoryFeed('TRUMP_ADMIN', { limit })
+    res.json({ success: true, ...result })
+  } catch (e) {
+    console.error('feed/trump-admin error:', e.message)
+    res.status(500).json({ success: false, error: 'Failed to fetch Trump admin feed' })
+  }
+})
+
 // ── GET /api/feed/all?limit=30&category=CORRUPTION  (aggregated) ─────────────
 router.get('/all', async (req, res) => {
   try {
