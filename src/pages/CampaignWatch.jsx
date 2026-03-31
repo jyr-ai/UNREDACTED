@@ -185,10 +185,13 @@ const CampaignWatch = () => {
               // Only replace if we got more data from bootstrap than from API
               const bootstrapCount = Object.keys(scores).length;
               if (bootstrapCount > prev.length) {
+                // Preserve totalRaised from API data already in prev — bootstrap doesn't carry it
+                const prevRaised = {};
+                prev.forEach(s => { if (s.stateCode) prevRaised[s.stateCode] = s.totalRaised || 0; });
                 return Object.entries(scores).map(([stateCode, corruptionIndex]) => ({
                   stateCode,
                   corruptionIndex,
-                  totalRaised: 0, // bootstrap doesn't carry totalRaised — keep from API
+                  totalRaised: prevRaised[stateCode] || 0,
                 }));
               }
               return prev;
@@ -328,7 +331,7 @@ const CampaignWatch = () => {
 
         {/* CNN Fear & Greed */}
         <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{fearGreedData ? fearGreedData.score : '…'}</div>
+          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{fearGreedData ? `${fearGreedData.score}%` : '…'}</div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, marginBottom: 2 }}>{fearGreedData ? `Out of 100 Stock Market ${fearGreedLabel(fearGreedData.rating)}` : 'Market sentiment'}</div>
           <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}><a href="https://www.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>CNN · Fear & Greed</a></div>
         </div>
@@ -356,7 +359,7 @@ const CampaignWatch = () => {
           <Card>
             <CardTitle
               h="Infrastructure, economics, and legislation — all in one view."
-              sub="Red = high corruption risk. Click any state to open its detailed profile."
+              sub="Click any state to open its detailed profile and recent legislation."
             />
             <Suspense fallback={<MapFallback t={t} />}>
               {/*
