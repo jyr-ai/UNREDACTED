@@ -435,7 +435,7 @@ export default function Settings({ theme }) {
           <div style={{ background: t.card, border: `1px solid ${t.border}`, borderLeft: `3px solid ${ORANGE}`, padding: '12px 14px' }}>
             <div style={{ fontFamily: MF, fontSize: 8.5, color: ORANGE, letterSpacing: 1.5, marginBottom: 8 }}>⚠ SECURITY NOTE</div>
             <div style={{ fontFamily: MF, fontSize: 8.5, color: t.low, lineHeight: 1.65 }}>
-              API keys are stored in server memory only. They are cleared when the server restarts. For persistent configuration, set keys in <code style={{ color: ORANGE }}>backend/.env</code>.
+              API keys are stored in server memory only. They are cleared when the server restarts. For persistent configuration, set keys in <code style={{ color: ORANGE }}>.env</code>.
             </div>
           </div>
 

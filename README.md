@@ -74,7 +74,7 @@ UNREDACTED is powered by a multi-agent AI system that decomposes complex queries
 
 ### The Four Core Agents
 
-#### 1. PolicyAgent (`backend/agents/policyAgent.js`)
+#### 1. PolicyAgent (`server/agents/policyAgent.js`)
 **Purpose:** Track policy movements and regulatory changes
 
 **Capabilities:**
@@ -87,7 +87,7 @@ UNREDACTED is powered by a multi-agent AI system that decomposes complex queries
 
 ---
 
-#### 2. SpendingAgent (`backend/agents/spendingAgent.js`)
+#### 2. SpendingAgent (`server/agents/spendingAgent.js`)
 **Purpose:** Investigate government spending patterns
 
 **Capabilities:**
@@ -100,7 +100,7 @@ UNREDACTED is powered by a multi-agent AI system that decomposes complex queries
 
 ---
 
-#### 3. DonorAgent (`backend/agents/donorAgent.js`)
+#### 3. DonorAgent (`server/agents/donorAgent.js`)
 **Purpose:** Map campaign finance and donor networks
 
 **Capabilities:**
@@ -113,7 +113,7 @@ UNREDACTED is powered by a multi-agent AI system that decomposes complex queries
 
 ---
 
-#### 4. CorruptionAgent (`backend/agents/corruptionAgent.js`)
+#### 4. CorruptionAgent (`server/agents/corruptionAgent.js`)
 **Purpose:** Synthesize intelligence and identify corruption patterns
 
 **Capabilities:**
@@ -127,7 +127,7 @@ UNREDACTED is powered by a multi-agent AI system that decomposes complex queries
 
 ---
 
-### Orchestrator (`backend/agents/orchestrator.js`)
+### Orchestrator (`server/agents/orchestrator.js`)
 
 The Orchestrator is the central intelligence coordinator that:
 1. **Decomposes** user queries using AI (DeepSeek/Groq)
@@ -279,11 +279,10 @@ cd UNREDACTED
 docker-compose up -d neo4j postgres redis
 
 # Set up environment variables
-cp backend/.env.example backend/.env
-# Edit backend/.env with your API keys
+cp .env.example .env
+# Edit .env with your API keys
 
 # Install dependencies and start
-cd backend
 npm install
 npm run dev:all
 
@@ -311,7 +310,7 @@ The application will be available at `http://localhost:5173`
 | **xAI Grok** | `XAI_API_KEY` | Grok by xAI |
 | **Ollama** | `OLLAMA_BASE_URL` | Local models — no key required |
 
-Set `AI_PROVIDER=deepseek|openai|anthropic|groq|qwen|xai|ollama` in `backend/.env` to select your provider.
+Set `AI_PROVIDER=deepseek|openai|anthropic|groq|qwen|xai|ollama` in `.env` to select your provider.
 
 > **Tip:** You can also configure providers from the app UI — click **⚙ Settings** in the navigation bar to enter API keys without touching the `.env` file.
 

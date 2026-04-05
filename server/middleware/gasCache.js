@@ -1,4 +1,4 @@
-// backend/middleware/gasCache.js
+// server/middleware/gasCache.js
 // Lightweight in-memory cache for gas price API responses using node-cache.
 // Swap the NodeCache instance for ioredis in multi-instance deployments.
 // Converted to ESM for the UNREDACTED backend (type: "module")

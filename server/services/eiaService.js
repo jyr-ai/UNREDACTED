@@ -1,4 +1,4 @@
-// backend/services/eiaService.js
+// server/services/eiaService.js
 // Fetches weekly retail gasoline prices from the U.S. Energy Information Administration.
 // EIA Open Data API v2 documentation: https://www.eia.gov/opendata/documentation.php
 // Dataset: Petroleum & Other Liquids — Gasoline and Diesel Retail Prices
@@ -267,7 +267,7 @@ function buildMockResponse() {
   return {
     prices:     MOCK_FALLBACK,
     updatedAt:  new Date().toISOString().slice(0, 10),
-    source:     'mock — add EIA_API_KEY to backend/.env for live data',
+    source:     'mock — add EIA_API_KEY to .env for live data',
     sourceUrl:  'https://www.eia.gov/opendata/register.php',
   }
 }

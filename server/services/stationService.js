@@ -1,4 +1,4 @@
-// backend/services/stationService.js
+// server/services/stationService.js
 // Fetches nearby gas station prices from MyGasFeed API.
 // Docs: http://www.mygasfeed.com/keys/app/request
 // Converted to ESM for the UNREDACTED backend (type: "module")
@@ -111,6 +111,6 @@ function buildMockStations(lat, lng, zip) {
     ],
     count:  6,
     query:  { lat, lng, zip },
-    source: 'mock — add MYGASFEED_API_KEY to backend/.env for live data',
+    source: 'mock — add MYGASFEED_API_KEY to .env for live data',
   }
 }

@@ -1,5 +1,5 @@
 const path = require('path');
-const fec = require('./backend/services/fec.js');
+const fec = require('./server/services/fec.js');
 
 async function testFEC() {
   console.log('Testing FEC API for 2026 candidates...');

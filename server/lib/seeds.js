@@ -8,13 +8,13 @@
  */
 
 import { redisSet, NEG_SENTINEL } from './redis.js'
-import { getCorruptionIndex, getMoneyFlows } from '../../backend/services/campaignWatch.js'
-import { getStatePrices }                     from '../../backend/services/eiaService.js'
-import { getDarkMoneyFlowData }               from '../../backend/services/darkMoney.js'
-import { getAgencySpending }                  from '../../backend/services/usaSpending.js'
-import { getRecentStockTrades }               from '../../backend/services/stockAct.js'
-import { getAllFeeds }                         from '../../backend/services/rssFeed.js'
-import { searchCandidates }                   from '../../backend/services/fec.js'
+import { getCorruptionIndex, getMoneyFlows } from '../services/campaignWatch.js'
+import { getStatePrices }                     from '../services/eiaService.js'
+import { getDarkMoneyFlowData }               from '../services/darkMoney.js'
+import { getAgencySpending }                  from '../services/usaSpending.js'
+import { getRecentStockTrades }               from '../services/stockAct.js'
+import { getAllFeeds }                         from '../services/rssFeed.js'
+import { searchCandidates }                   from '../services/fec.js'
 import { STATE_CENTROIDS, DC_CENTROID }        from '../../src/data/stateCentroids.js'
 
 const SEED_META_TTL = 7 * 24 * 60 * 60 // 7 days — meta keys persist for audit trail
@@ -54,8 +54,8 @@ function centroid(code) {
 export async function seedCorruptionIndex() {
   try {
     // Import lightweight services directly (no 51-state FEC loop)
-    const { getDarkMoneyOrgs }       = await import('../../backend/services/darkMoney.js')
-    const { getViolationWatchlist }  = await import('../../backend/services/stockAct.js')
+    const { getDarkMoneyOrgs }       = await import('../services/darkMoney.js')
+    const { getViolationWatchlist }  = await import('../services/stockAct.js')
 
     const STATE_CODES = [
       'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
