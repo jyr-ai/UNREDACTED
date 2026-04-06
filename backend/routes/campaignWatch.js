@@ -312,7 +312,7 @@ function parseStateFromInput(input) {
   // 2-letter state abbreviation on its own
   if (/^[A-Za-z]{2}$/.test(s)) return s.toUpperCase()
 
-  // State abbreviation at end after comma/space: "Union City, NJ" or "Union City NJ"
+  // State abbreviation at end after comma/space: "
   const abbrMatch = s.match(/[,\s]+([A-Z]{2})\s*(?:\d{5})?$/i)
   if (abbrMatch) {
     const candidate = abbrMatch[1].toUpperCase()
