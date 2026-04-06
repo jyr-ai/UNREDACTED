@@ -9,7 +9,7 @@
 
 UNREDACTED is an open source intelligence platform that monitors and exposes the nexus between government spending, campaign finance, and policy decisions. We are reclaiming transparency in an era of hidden influence and dark money.
 
-Access web demo here: [https://unredacted.us/](https://unredacted.us/)
+Access web demo here: [unredacted.vercel.app](https://unredacted.vercel.app/)
 ---
 
 ## Our Mission: Monitor wasteful federal government spending and corruption inference with AI

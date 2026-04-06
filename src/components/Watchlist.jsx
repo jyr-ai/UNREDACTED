@@ -61,7 +61,7 @@ function EmptyState({ filter, theme }) {
       <div style={{ fontSize: 12, marginBottom: 6, color: T.hi }}>
         No {filter !== 'all' ? filter : ''} items in watchlist
       </div>
-      <div style={{ fontSize: 10, color: T.mid, maxWidth: 300, margin: '0 auto', lineHeight: 1.6 }}>
+      <div style={{ fontSize: 10, color: T.low, maxWidth: 300, margin: '0 auto', lineHeight: 1.6 }}>
         Add politicians and companies from the Accountability Index, Company Profile, or Donor Intelligence tabs.
       </div>
     </div>
