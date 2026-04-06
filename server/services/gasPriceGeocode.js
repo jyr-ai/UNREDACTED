@@ -1,4 +1,4 @@
-// backend/services/gasPriceGeocode.js
+// server/services/gasPriceGeocode.js
 // Converts a city name or ZIP code into lat/lng coordinates.
 // Uses Google Geocoding API when key is available; falls back to a static city/ZIP table.
 // Converted to ESM for the UNREDACTED backend (type: "module")

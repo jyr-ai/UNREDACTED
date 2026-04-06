@@ -1,4 +1,4 @@
-// backend/routes/gasPrices.js
+// server/routes/gasPrices.js
 // GET /api/gas/prices/states    → all 50-state regular gas prices
 // GET /api/gas/prices/national  → US national average
 // GET /api/gas/prices/state/:code → single state price

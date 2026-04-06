@@ -1,4 +1,4 @@
-// backend/routes/gasStations.js
+// server/routes/gasStations.js
 // GET /api/gas/stations                  → nearby stations by lat/lng or ZIP
 // GET /api/gas/stations/search?q=Austin  → geocode + find stations
 // ESM — matches backend "type": "module"

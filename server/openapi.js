@@ -19,9 +19,9 @@ const ROUTE_SOURCES = [
   { mountPath: '/api/stockact', fileUrl: new URL('./routes/stockact.js', import.meta.url), tag: 'STOCK Act' },
   { mountPath: '/api/darkmoney', fileUrl: new URL('./routes/darkmoney.js', import.meta.url), tag: 'Dark Money' },
   { mountPath: '/api/conflict', fileUrl: new URL('./routes/conflict.js', import.meta.url), tag: 'Conflict' },
-  { mountPath: '/api/campaign-watch', fileUrl: new URL('../backend/routes/campaignWatch.js', import.meta.url), tag: 'Campaign Watch' },
-  { mountPath: '/api/gas/prices', fileUrl: new URL('../backend/routes/gasPrices.js', import.meta.url), tag: 'Gas Prices' },
-  { mountPath: '/api/gas/stations', fileUrl: new URL('../backend/routes/gasStations.js', import.meta.url), tag: 'Gas Stations' },
+  { mountPath: '/api/campaign-watch', fileUrl: new URL('./routes/campaignWatch.js', import.meta.url), tag: 'Campaign Watch' },
+  { mountPath: '/api/gas/prices', fileUrl: new URL('./routes/gasPrices.js', import.meta.url), tag: 'Gas Prices' },
+  { mountPath: '/api/gas/stations', fileUrl: new URL('./routes/gasStations.js', import.meta.url), tag: 'Gas Stations' },
   { mountPath: '/api/bootstrap', fileUrl: new URL('./routes/bootstrap.js', import.meta.url), tag: 'Bootstrap' },
   { mountPath: '/api/seed-health', fileUrl: new URL('./routes/seed-health.js', import.meta.url), tag: 'Seed Health' },
   {
@@ -39,8 +39,12 @@ const ROUTE_SOURCES = [
       { method: 'get', routePath: '/seed-stockact' },
     ],
   },
-  { mountPath: '/api/fear-greed', fileUrl: new URL('../backend/routes/feargreed.js', import.meta.url), tag: 'Fear & Greed' },
-  { mountPath: '/api/economic', fileUrl: new URL('../backend/routes/economic.js', import.meta.url), tag: 'Economic' },
+  { mountPath: '/api/fear-greed', fileUrl: new URL('./routes/feargreed.js', import.meta.url), tag: 'Fear & Greed' },
+  { mountPath: '/api/economic', fileUrl: new URL('./routes/economic.js', import.meta.url), tag: 'Economic' },
+  { mountPath: '/api/congress', fileUrl: new URL('./routes/congress.js', import.meta.url), tag: 'Congress' },
+  { mountPath: '/api/watchlist', fileUrl: new URL('./routes/watchlist.js', import.meta.url), tag: 'Watchlist' },
+  { mountPath: '/api/alerts', fileUrl: new URL('./routes/alerts.js', import.meta.url), tag: 'Alerts' },
+  { mountPath: '/api/flags', fileUrl: new URL('./routes/flags.js', import.meta.url), tag: 'Flags' },
 ]
 
 const ROUTE_DECLARATION_RE = /router\.(get|post|put|patch|delete)\(\s*(['"`])([^'"`]+)\2/g

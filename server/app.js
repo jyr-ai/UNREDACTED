@@ -17,21 +17,18 @@ import companiesRouter from './routes/companies.js'
 import stockActRouter from './routes/stockact.js'
 import darkMoneyRouter from './routes/darkmoney.js'
 import conflictRouter from './routes/conflict.js'
-// Campaign Watch — lives in backend/ (shared between dev and prod)
-import campaignWatchRouter from '../backend/routes/campaignWatch.js'
-// Gas price routes — EIA state prices + MyGasFeed station data
-import gasPricesRouter  from '../backend/routes/gasPrices.js'
-import gasStationsRouter from '../backend/routes/gasStations.js'
-// Bootstrap (batch Redis read for map hydration)
+import campaignWatchRouter from './routes/campaignWatch.js'
+import gasPricesRouter  from './routes/gasPrices.js'
+import gasStationsRouter from './routes/gasStations.js'
 import bootstrapRouter from './routes/bootstrap.js'
-// Seed health dashboard
 import seedHealthRouter from './routes/seed-health.js'
-// Cron seed endpoints (triggered by Vercel Cron)
 import cronRouter from './routes/cron.js'
-// CNN Fear & Greed proxy (avoids browser CORS)
-import fearGreedRouter from '../backend/routes/feargreed.js'
-// BLS economic indicators (unemployment + CPI) — cached proxy
-import economicRouter from '../backend/routes/economic.js'
+import fearGreedRouter from './routes/feargreed.js'
+import economicRouter from './routes/economic.js'
+import congressRouter from './routes/congress.js'
+import watchlistRouter from './routes/watchlist.js'
+import alertsRouter from './routes/alerts.js'
+import flagsRouter from './routes/flags.js'
 
 const app = express()
 const isVercelDeployment =
@@ -42,34 +39,31 @@ const apiDocsEnabled =
   process.env.ENABLE_API_DOCS === 'true' ||
   (!isVercelDeployment && process.env.ENABLE_API_DOCS !== 'false')
 
-// Disable ETags so API responses are never served as 304 from browser cache
 app.set('etag', false)
 
-// CORS — permissive for API (same-origin on Vercel, cross-origin in local dev)
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
   /\.vercel\.app$/,
-  /^https:\/\/unredacted\./,  // custom domain prefix
+  /^https:\/\/unredacted\./,
 ]
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Same-origin requests (Vercel prod) have no Origin header — always allow
     if (!origin) return cb(null, true)
     const ok = ALLOWED_ORIGINS.some(o =>
       typeof o === 'string' ? o === origin : o.test(origin)
     )
     cb(ok ? null : new Error('CORS'), ok)
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'DELETE', 'PATCH', 'PUT', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Service-Token'],
   credentials: true,
 }))
 
 app.use(express.json({ limit: '10kb' }))
 
-// ── Rate limiters ────────────────────────────────────────────────────────────
 const agentLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 10,
@@ -85,13 +79,11 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 })
 
-// ── Request logging ──────────────────────────────────────────────────────────
 app.use((req, _res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`)
   next()
 })
 
-// ── Health check & version ────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date() }))
 
 app.get('/api/version', async (_req, res) => {
@@ -118,31 +110,31 @@ if (apiDocsEnabled) {
   })
 }
 
-// ── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/spending',    generalLimiter, spendingRouter)
-app.use('/api/policy',      generalLimiter, policyRouter)
-app.use('/api/donors',      generalLimiter, donorsRouter)
-app.use('/api/agent',       agentLimiter,   agentRouter)
-app.use('/api/ai-agent',    agentLimiter,   aiAgentRouter)
-app.use('/api/feed',        generalLimiter, feedRouter)
-app.use('/api/settings',    generalLimiter, settingsRouter)
-app.use('/api/corruption',  generalLimiter, corruptionRouter)
-app.use('/api/companies',   generalLimiter, companiesRouter)
-app.use('/api/stockact',    generalLimiter, stockActRouter)
-app.use('/api/darkmoney',   generalLimiter, darkMoneyRouter)
+app.use('/api/spending',       generalLimiter, spendingRouter)
+app.use('/api/policy',         generalLimiter, policyRouter)
+app.use('/api/donors',         generalLimiter, donorsRouter)
+app.use('/api/agent',          agentLimiter,   agentRouter)
+app.use('/api/ai-agent',       agentLimiter,   aiAgentRouter)
+app.use('/api/feed',           generalLimiter, feedRouter)
+app.use('/api/settings',       generalLimiter, settingsRouter)
+app.use('/api/corruption',     generalLimiter, corruptionRouter)
+app.use('/api/companies',      generalLimiter, companiesRouter)
+app.use('/api/stockact',       generalLimiter, stockActRouter)
+app.use('/api/darkmoney',      generalLimiter, darkMoneyRouter)
 app.use('/api/conflict',       generalLimiter, conflictRouter)
 app.use('/api/campaign-watch', generalLimiter, campaignWatchRouter)
-// Gas price routes — EIA state prices + MyGasFeed station data
-app.use('/api/gas/prices',   generalLimiter, gasPricesRouter)
-app.use('/api/gas/stations', generalLimiter, gasStationsRouter)
-// Map data pipeline routes (no rate limit — CDN-cached)
-app.use('/api/bootstrap',  bootstrapRouter)
-app.use('/api/seed-health', generalLimiter, seedHealthRouter)
-app.use('/api/cron',        cronRouter)
-app.use('/api/fear-greed',  generalLimiter, fearGreedRouter)
-app.use('/api/economic',    generalLimiter, economicRouter)
+app.use('/api/gas/prices',     generalLimiter, gasPricesRouter)
+app.use('/api/gas/stations',   generalLimiter, gasStationsRouter)
+app.use('/api/bootstrap',      bootstrapRouter)
+app.use('/api/seed-health',    generalLimiter, seedHealthRouter)
+app.use('/api/cron',           cronRouter)
+app.use('/api/fear-greed',     generalLimiter, fearGreedRouter)
+app.use('/api/economic',       generalLimiter, economicRouter)
+app.use('/api/congress',       generalLimiter, congressRouter)
+app.use('/api/watchlist',      generalLimiter, watchlistRouter)
+app.use('/api/alerts',         generalLimiter, alertsRouter)
+app.use('/api/flags',          generalLimiter, flagsRouter)
 
-// ── Global error handler ─────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
   console.error(err.stack)
   res.status(500).json({ success: false, error: 'Internal server error' })
