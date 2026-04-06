@@ -50,7 +50,7 @@ export default function FindYourRep() {
             value={addressInput}
             onChange={e => setAddressInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && searchRepresentatives()}
-            placeholder="115 37th Ave Union City NJ  —  07087  —  NJ"
+            placeholder="10017"
             style={{
               flex: 1, padding: '10px 14px',
               background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4,
