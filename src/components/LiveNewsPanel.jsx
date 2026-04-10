@@ -167,6 +167,7 @@ export default function LiveNewsPanel() {
       flexDirection: 'column',
       background: t.card,
       overflow: 'hidden',
+      minHeight: 0,
     }}>
 
       {/* ── Header bar ────────────────────────────────────────────────── */}
@@ -264,11 +265,11 @@ export default function LiveNewsPanel() {
 
       {/* ── YouTube iframe embed ──────────────────────────────────────── */}
       <div style={{
+        flex: 1,
+        minHeight: 0,
         position: 'relative',
         width: '100%',
-        paddingTop: '56.25%', // 16:9 aspect ratio
         background: '#000',
-        flexShrink: 0,
       }}>
         <iframe
           key={`yt-${channel.id}-${iframeKey}`}

@@ -342,12 +342,17 @@ const CampaignWatch = () => {
       <div style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gridTemplateRows: '1fr',
+        alignItems: 'stretch',
+        height: isMobile ? 'auto' : 620,
         border: `1px solid ${t.border}`,
         borderTop: `3px solid ${t.accent}`,
         overflow: 'hidden',
       }}>
-        <LiveNewsPanel />
-        <div style={{ borderLeft: `1px solid ${t.border}` }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+          <LiveNewsPanel />
+        </div>
+        <div style={{ borderLeft: `1px solid ${t.border}`, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
           <LiveFeedPanel />
         </div>
       </div>
