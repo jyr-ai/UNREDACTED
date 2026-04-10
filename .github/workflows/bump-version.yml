@@ -1,0 +1,44 @@
+name: Bump Version on Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    # Skip if this commit was itself a version bump (prevents infinite loop)
+    if: "!contains(github.event.head_commit.message, 'chore: bump version')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version
+        run: npm version patch --no-git-tag-version
+
+      - name: Read new version
+        id: pkg
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Commit and push bumped version
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to v.${{ steps.pkg.outputs.version }} [skip ci]"
+          git push origin main

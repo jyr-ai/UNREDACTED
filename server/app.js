@@ -91,10 +91,10 @@ app.get('/api/version', async (_req, res) => {
     const fs = await import('fs')
     const path = await import('path')
     const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'))
-    res.json({ version: `v${pkg.version}`, source: 'package' })
+    res.json({ version: `v.${pkg.version}`, source: 'package' })
   } catch (e) {
     console.error('version error:', e.message)
-    res.json({ version: 'v1.0.0', source: 'fallback' })
+    res.json({ version: 'v.1.0.0', source: 'fallback' })
   }
 })
 

@@ -167,7 +167,7 @@ export default function LiveFeedPanel() {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
 
       {/* ── Header band ── */}
       <div style={{
@@ -245,7 +245,7 @@ export default function LiveFeedPanel() {
       </div>
 
       {/* ── Feed items ── */}
-      <div style={{ maxHeight: 420, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'thin' }}>
         {loading && <Skeleton />}
         {!loading && error && (
           <div style={{
