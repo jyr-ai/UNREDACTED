@@ -36,7 +36,7 @@ The UN*REDACTED MONITOR exists to give the American people the intelligence tool
 - We need contributors in adding more data sources
 - We need work done on dark money tracing methods
 - we need contributors to test he validity of the results
-- Add more live featuers to the monitor
+- Add more live features to the monitor
 - More beautiful graphs!
 
 ---
