@@ -401,18 +401,219 @@ r2://unredacted-bulk/
 
 ---
 
-## 8. Proposed implementation order
+## 7a. Full FEC bulk data catalog — confirmation & mapping
 
-1. Add new tables + indexes in a Supabase migration (§3).
-2. Build `etl/bulk/shared/*` + `etl/bulk/fec/parse-candidates.js` + `parse-committees.js` first — smallest files, proves pipeline end-to-end.
-3. Backfill 2024 cycle candidates/committees → verify "Follow the Money" shows thousands, not 10.
-4. Add `parse-contribs.js` with streaming + filter `amount >= 200` for v1.
-5. USASpending contracts + grants monthly archive.
-6. Switch 2–3 read routes to Supabase (donors → candidates; spending → contracts).
-7. GH Actions cron.
-8. Backfill 2022 cycle; add disbursements/transfers; switch remaining routes.
+Confirmed against https://www.fec.gov/data/browse-data/?tab=bulk-data. **All of the following are in scope** for ingest (2024+2026 cycles). Note: the openFEC GitHub repo (fecgov/openfec) is REST-API only and does not document bulk files — schemas come from fec.gov/campaign-finance-data/.
 
-Estimated effort: 3–5 days of focused work for steps 1–6; cron + remaining surface another 1–2 days.
+### Raising
+| File | Prefix | What it is | Supabase hot | R2 Parquet cold | Why journalists care |
+|---|---|---|---|---|---|
+| All candidates summary | `weball` | candidate $ raised/spent totals | ✅ `candidate_totals` | ✅ | leaderboards, "who's outraising whom" |
+| Individual contributions | `indiv` | every $ from a person to a committee | partial (≥$2000) | ✅ full | donor lookup, bundler networks, industry money |
+| Committee→candidate contribs + IEs | `pas2` | PAC/party money to candidates | ✅ `contributions` | ✅ | core "Follow the Money" flow, IE attack spending |
+| Lobbyist bundled contributions | `lobbyist_bundle` | PACs run by registered lobbyists, bundled $ amounts | ✅ new `lobbyist_bundles` | ✅ | **bundler stories, lobbyist→lawmaker pipelines** |
+
+### Spending
+| File | Prefix | What it is | Supabase hot | R2 Parquet cold | Journalist value |
+|---|---|---|---|---|---|
+| Operating expenditures | `oppexp` | every disbursement from a committee | aggregate only | ✅ full | **self-dealing, family payroll, consultant rings, suspicious vendor $** |
+| Independent expenditures | (IE 24h/48h) | attack/support ads by SuperPACs | ✅ new `independent_expenditures` | ✅ | attack ad coordination, dark money IEs |
+| Electioneering communications | — | issue ads near elections | ✅ new `electioneering_comms` | ✅ | disguised-issue-ad exposure |
+| Communication costs | — | corp/labor org direct comms | ✅ new `communication_costs` | ✅ | corporate advocacy tracking |
+
+### Candidates & Committees
+| File | Prefix | Supabase hot | Notes |
+|---|---|---|---|
+| Candidate master | `cn` | ✅ `politicians` | every registered candidate |
+| Candidate summary | — | merged into `candidate_totals` | |
+| Form 2 (Statements of Candidacy) | — | ✅ new `candidate_statements` | declaration of candidacy |
+| Committee master | `cm` | ✅ `pac_committees` | every registered committee |
+| Committee summary | — | merged into `pac_committees` totals | |
+| PAC/party summary | `webk` | merged into `pac_committees` | |
+| Leadership PACs | — | ✅ flag on `pac_committees.is_leadership_pac` | **members-of-Congress funneling $ to each other** |
+| Lobbyist/registrant committees | — | ✅ flag on `pac_committees.is_lobbyist_pac` | |
+| Form 1 Filers | — | ✅ new `committee_statements` | committee formation metadata |
+
+### Filings & Reports
+| File | Prefix | Storage | Journalist value |
+|---|---|---|---|
+| Candidate-committee linkages | `ccl` | ✅ `candidate_committee_links` | required to join candidates to their money |
+| House/Senate current campaigns | `webl` | ✅ `candidate_totals` | active race financials |
+| Committee-to-committee transactions | `oth` | ✅ `committee_transfers` + Parquet | **dark money flow between committees** |
+| Electronic `.fec` filings (daily) | — | Parquet only + metadata table | loans, debts, amendments live here |
+| Paper `.fec` filings (daily) | — | Parquet only + metadata | same, paper-filed |
+
+### Loans & Debts — special handling
+**No dedicated bulk CSV exists.** Loans (Schedule C) and debts (Schedule D) live inside the per-filing `.fec` files published daily at `https://docquery.fec.gov/`. Plan:
+- Download daily filing archive for current cycle, parse `.fec` files with an open-source parser (`fech` or port the schema ourselves)
+- Extract Schedule C + D rows → new tables `loans` and `debts` in hot tier (sparse, small — fits easily)
+- Parquet copy for ML
+
+This adds an extra worker: `etl/bulk/fec/parse-filings.js`.
+
+**Yes — every category on the FEC bulk page is in the plan**, stored in a shape that supports both UI lookups and ML feature engineering.
+
+---
+
+## 7b. What Unredacted actually needs to expose — brainstorm
+
+Journalists & researchers aren't looking for a "data browser." They want **leads**. Every screen should answer "what's suspicious here?" Ideas below are grouped by story type, each tied to the bulk datasets that feed it.
+
+### A. Self-dealing & insider enrichment
+*"Is this candidate paying themselves?"*
+- Payments from campaign to **vendors owned by the candidate or family** (e.g. Trump→Trump properties pattern)
+- Spouse/child payroll on campaign
+- Leadership PAC expenditures going to candidate-owned LLCs
+- **Data:** `oppexp` (payee name, address, tax ID) joined against candidate addresses + business filings (OpenCorporates / state registries, phase 2)
+- **Screen:** per-candidate "disbursements to affiliated entities" card with flagged rows
+
+### B. Pay-to-play / contractor donations
+*"Did this contractor donate to the committee that approved their contract?"*
+- Join USASpending `contracts.recipient_name` → FEC `indiv.contributor_employer`
+- Timeline overlap: donation in month N, contract awarded in month N+k
+- **Data:** FEC `indiv` + `pas2` × USASpending contracts — the **unique cross-dataset value of Unredacted**
+- **Screen:** "contractor-donor index" leaderboard
+
+### C. Dark money flow
+*"Who's really funding this SuperPAC?"*
+- 501(c)(4) → SuperPAC → candidate chains via `oth` committee-to-committee transfers
+- 501(c)(4) identification via absence from IRS 990 public disclosure (phase 2)
+- **Data:** `oth` + `cm` committee types (O=SuperPAC, U=independent-only, V/W=hybrid)
+- **Screen:** the Humans-First-style Sankey (§6a)
+
+### D. Bundler networks & industry capture
+*"Which industries own this politician?"*
+- `indiv.contributor_employer` clustering — normalize employer strings, rank industries per candidate
+- `lobbyist_bundle` file directly exposes lobbyist bundling
+- Same-address / same-employer donor clusters → straw-donor flags (multiple max-out donations from one household)
+- **Data:** `indiv` + `lobbyist_bundle`
+- **Screen:** "top employers behind candidate X" + lobbyist bundler table
+
+### E. Self-funding & wealthy-candidate bias
+*"Is this candidate buying their own seat?"*
+- Candidate personal loans (Schedule C) vs public donations
+- Phantom loans never repaid = de facto illegal contribution
+- **Data:** `.fec` filing Schedule C (loans) + Schedule D (debts)
+- **Screen:** per-candidate self-funding ratio + unpaid-loan flag
+
+### F. Attack-ad coordination
+*"Are these 'independent' PACs really independent?"*
+- Same media-buy vendors, same timing, same targets across multiple SuperPACs
+- **Data:** Independent expenditures file + `oppexp` vendors
+- **Screen:** IE coordination network
+
+### G. Amendment-filing anomalies
+*"Who's hiding numbers by amending reports repeatedly?"*
+- Count `amendment_indicator='A'` filings per committee
+- Late-filing fines via FEC enforcement (MUR) — phase 2
+- **Data:** filing metadata from daily `.fec` archives
+- **Screen:** "most-amended filers" watchlist
+
+### H. Vote-donor alignment (already scaffolded)
+*"Did this vote follow the money?"*
+- Congress.gov votes × FEC industry donations, time-correlated
+- **Data:** existing `congressGov.js` + FEC `indiv` employer aggregates
+- **Screen:** already present at `VoteDonorAlignment.jsx` — needs real data
+
+### I. Revolving door
+*"Did this lobbyist used to work for this member?"*
+- LDA lobbyist registrations × former staff/member lists
+- Phase 2 — needs LDA ingestion
+
+### J. Cash flood anomalies
+*"This candidate raised $5M in one week — where from?"*
+- Time-series z-score on `indiv` receipts per committee
+- Spikes near primary dates / scandals
+- **Data:** `indiv` with date index
+- **Screen:** alert feed
+
+---
+
+## 7c. Prioritized ingest order (visualization-first)
+
+**Principle:** get the most journalist-impactful screens working on smallest data first. Heavy files last.
+
+### Phase 1 — Core lookup + Sankey (Week 1)
+Files: `cn`, `cm`, `ccl`, `weball`, `webl`, `webk`, `pas2`, `oth`
+- **Size:** <500 MB total across 2024+2026. All fit in Supabase Free hot tier.
+- **Unlocks:** Follow the Money Sankey (§6a), candidate lookup pages, committee pages, top-donor-committee leaderboard, leadership-PAC network, dark-money flow between committees.
+- **This alone removes the "only 10 candidates" bug and delivers 80% of journalist lookups.**
+
+### Phase 2 — Spending & self-dealing (Week 2)
+Files: `oppexp`
+- **Size:** ~2 GB Postgres, ~300 MB Parquet per cycle. Aggregates in hot tier, raw rows in R2.
+- **Unlocks:** story types A, F (self-dealing, consultant rings). "Disbursements to affiliated entities" screen.
+
+### Phase 3 — Individual contributions (Week 2–3)
+Files: `indiv`
+- **Size:** largest. Hot tier gets ≥$2000 filter (~1M rows); R2 gets all (~6 GB Parquet).
+- **Unlocks:** story types B, D, J (contractor donations, bundler networks, cash-flood anomalies). Industry-capture heatmap. Vote-donor alignment real data.
+
+### Phase 4 — IEs, electioneering, comm costs (Week 3)
+Files: independent expenditures, electioneering, communication costs, `lobbyist_bundle`
+- **Size:** each <500 MB. All hot + Parquet.
+- **Unlocks:** story type F (attack-ad coordination), D (bundlers explicit).
+
+### Phase 5 — USASpending cross-link (Week 3–4)
+Files: USASpending contracts + assistance FY2024→
+- **Unlocks:** story type B (pay-to-play) — the **biggest unique differentiator** for Unredacted.
+
+### Phase 6 — `.fec` filings parser (Week 4+)
+Files: daily `.fec` archives (Schedule C loans, Schedule D debts, amendment metadata)
+- **Unlocks:** story type E (self-funding/phantom loans), G (amendment anomalies).
+
+---
+
+## 7d. Local ML corruption-detection dataset
+
+These files are downloadable for local model training once the pipeline writes them to Parquet on R2 (or just `aws s3 cp` from R2 to your laptop):
+
+### Features (X)
+- `indiv` — donor name/employer/occupation/amount/date (strongest signal)
+- `pas2` — PAC→candidate flows
+- `oppexp` — self-dealing features (recipient address overlap with candidate, family-surname matches)
+- `oth` — dark money intermediation depth
+- `.fec` Schedule C — personal loans, unpaid-loan flag
+- `.fec` amendment counts — filing anomaly feature
+- Candidate demographics from `cn`
+- USASpending `contracts` — contractor-donation-timing features
+
+### Labels (Y)
+Hardest part. Sources:
+- **FEC MUR enforcement cases** (Matters Under Review) — publicly listed at fec.gov/legal-resources/enforcement/audits/; parse to identify committees with findings
+- **DOJ press releases** tagged "public corruption" (ojp.gov / justice.gov/opa) — manual + regex
+- **House Ethics Committee findings** — scraped from ethics.house.gov
+- **OpenSecrets "Congressional investigations"** list
+- **Wikipedia: "List of American federal politicians convicted of crimes"** (noisy but useful negative class seed)
+
+With ~500 labeled corrupt vs ~5000 clean members as a starting training set, a gradient-boosted classifier (XGBoost) on ~30 engineered features will likely yield usable precision for flagging "investigate further" — not courtroom proof, but **journalist lead generation**.
+
+**Workflow for ML:**
+1. Pipeline writes Parquet to R2 (every ingest)
+2. Analyst downloads: `rclone sync r2:unredacted-bulk ~/data/unredacted/`
+3. Load with polars/pandas directly from `~/data/unredacted/*.parquet`
+4. Train in Jupyter, export feature importances
+5. Push model scores back to `corruption_scores` table in Supabase for display
+
+---
+
+## 8. Proposed implementation order (aligned with §7c phases)
+
+1. **Supabase migration** — new tables (`lobbyist_bundles`, `independent_expenditures`, `electioneering_comms`, `communication_costs`, `candidate_statements`, `committee_statements`, `loans`, `debts`, `committee_transfers`, `candidate_committee_links`, `bulk_ingest_runs`) + indexes + `money_flow_edges` MV (§3).
+2. **R2 bucket + credentials** wired into env + GH Actions secrets.
+3. **`etl/bulk/shared/`** — downloader with checksum cache, Parquet writer via DuckDB `COPY TO`, Supabase upsert helper, run-tracker.
+4. **Phase 1 parsers** (`cn`, `cm`, `ccl`, `weball`, `webl`, `webk`, `pas2`, `oth`) — smallest, highest-leverage. Backfill 2024+2026 in both hot (Supabase) and cold (R2 Parquet) tiers.
+5. **Read-path swap #1** — `server/routes/donors.js` candidates/committees queries move to Supabase. Frontend `limit` defaults raised. "Follow the Money" Sankey renders from `money_flow_edges`. Bug fixed: >10 candidates show.
+6. **Phase 2** — `oppexp` parser + self-dealing affiliated-entity screen.
+7. **Phase 3** — `indiv` parser (streaming, ≥$2000 to hot, full to R2). Industry-capture + bundler views.
+8. **Phase 4** — IEs, electioneering, communication costs, `lobbyist_bundle`.
+9. **Phase 5** — USASpending contracts + assistance + cross-link to FEC donors (pay-to-play screen).
+10. **Phase 6** — daily `.fec` filings parser for loans/debts/amendments.
+11. **GH Actions cron** — weekly FEC bulk refresh, daily `.fec` filings, monthly USASpending archive.
+12. **Read-path swap #2** — remaining donors/spending/darkmoney routes move to Supabase+DuckDB.
+13. **ML baseline** — download Parquet locally, build label set (MUR + DOJ + House Ethics), train XGBoost, write `corruption_scores`.
+
+Estimated effort: phases 1–5 = ~5–7 focused days; full through phase 6 + ML baseline = ~3 weeks.
 
 ---
 
