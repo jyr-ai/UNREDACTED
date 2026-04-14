@@ -308,75 +308,85 @@ Neo4j is strong when traversals are unbounded or topology is truly graph-shaped 
 - Plan: **Free** (500 MB cap)
 - Status: **INACTIVE** (paused — live size query timed out; free tier auto-pauses)
 
-### Estimated corpus for cycles 2016–2024 (5 cycles), no $ filter
+### Scope (final, 2026-04-13 revision)
 
-| Table | Rows | Avg row | Size | + indexes |
-|---|---|---|---|---|
-| contributions (itcont) | ~75M | 500 B | 37 GB | ~60 GB |
-| contracts (USASpending) | ~10M | 1 KB | 10 GB | ~14 GB |
-| grants | ~3M | 1 KB | 3 GB | ~4 GB |
-| pac_committees, politicians, totals, transfers, disbursements | ~5M | ~1 KB | ~5 GB | ~7 GB |
-| **Total** | **~93M** | | **~55 GB** | **~85 GB** |
+**Primary user:** journalists & researchers doing lookups for the **2026 midterm election**. Relevance > historical depth.
 
-**Free tier is ~170× too small. Google Sheets is ~150× too small (10M-cell hard cap) — ruled out.**
+- **FEC:** cycles **2024 + 2026** only
+- **USASpending:** **FY2024 → present** (contracts + assistance)
+- Older cycles (2022 and back) deferred — added later as Parquet partitions with no schema change when the ML corruption model work begins
 
-### Decision: hybrid **Parquet-on-Storage + Supabase Pro hot tier**
+### Estimated corpus
 
-Two-tier architecture:
+| Table | Rows | Postgres (w/ idx) | Parquet (zstd) |
+|---|---|---|---|
+| FEC contributions 2024+2026 | ~90M | ~45 GB | **~6 GB** |
+| FEC committees/candidates/totals/links | ~50k | ~0.2 GB | ~0.05 GB |
+| USASpending contracts FY2024→ | ~15M | ~22 GB | **~3 GB** |
+| USASpending assistance FY2024→ | ~20M | ~20 GB | **~2 GB** |
+| **Total** | **~125M** | **~87 GB** | **~11 GB** |
 
-**Hot tier — Supabase Pro (~$25/mo, 8 GB included)**
-Everything the live UI reads: `politicians`, `pac_committees`, `candidate_totals`, `money_flow_edges` materialized view, current-cycle top-amount `contributions` (e.g. amount ≥ $2,000 for 2024). Stays under ~6 GB.
+**Google Sheets ruled out** — 2024 contribs alone = ~70M rows × 15 cols = 1B cells vs 10M-cell workbook cap (100× over). Even aggressive filtering to ≥$200 stays 37× over, and Sheets has no joins/indexes.
 
-**Cold / analytical tier — Parquet files in Supabase Storage or S3**
-Full historical 2016–2024 contributions, contracts, grants. Partitioned by `cycle` + `source`:
+### Decision: free-tier hybrid — Supabase Free (hot) + Cloudflare R2 (cold)
+
+**Hot tier — Supabase Free (500 MB DB, 1 GB Storage)**
+Summary tables only — `politicians`, `pac_committees`, `candidate_totals`, `candidate_committee_links`, `committee_transfers`, `money_flow_edges` MV (top-N edges for Sankey), plus filtered current-cycle `contributions` at `amount >= $2000` (~1M rows). Estimated footprint: **~300–400 MB**. Fits inside the 500 MB free cap with headroom.
+
+**Cold / analytical tier — Cloudflare R2 free tier (10 GB storage, 1M Class-A ops/mo, ZERO egress fees)**
+Full Parquet corpus (~11 GB — slight overflow handled by slightly smaller first partitions; R2 overage is $0.015/GB/mo so ~$0.02 at worst). S3-compatible API, DuckDB `httpfs` reads it natively with a single connection string.
+
+Partition layout:
 ```
-bulk/
-  contributions/cycle=2016/part-0001.parquet
-  contributions/cycle=2018/part-0001.parquet
+r2://unredacted-bulk/
+  fec/contributions/cycle=2024/part-*.parquet
+  fec/contributions/cycle=2026/part-*.parquet
+  fec/committees/cycle=2024/part-*.parquet
   ...
-  contracts/fy=2016/part-0001.parquet
+  usaspending/contracts/fy=2024/month=01/part-*.parquet
+  usaspending/assistance/fy=2024/month=01/part-*.parquet
   ...
 ```
-- Parquet + zstd/snappy compresses 5–10× vs Postgres → full corpus ≈ **6–10 GB on storage**.
-- Storage cost at Supabase: $0.021/GB-mo → **~$0.20/mo**.
-- Queried server-side via **DuckDB** (zero-ops, embeddable, reads Parquet directly, does joins/aggregates, supports SQL over S3-compatible URLs).
+
+**Cost: $0/mo** (or ~$0.02/mo if R2 drifts slightly past 10 GB). Upgrade path to Supabase Pro only triggered when hot tier outgrows 500 MB or when older cycles are added for ML.
 
 ### Read paths
 
 - **Frontend (hot)** — hits Supabase REST for current-cycle aggregates, Sankey edges, politician cards. Millisecond latency, RLS-gated. Unchanged auth flow.
-- **Heavy analytical (`/api/analytics/*`)** — new Node route spawns DuckDB (`duckdb` npm package), runs SQL over Parquet URLs, returns aggregated JSON. E.g. "top donors to candidate X across all cycles 2016–2024" → DuckDB query → JSON.
+- **Heavy analytical (`/api/analytics/*`)** — new Node route spawns DuckDB (`duckdb` npm package), runs SQL over R2 Parquet URLs via `httpfs`, returns aggregated JSON. E.g. "all $ from industry X to candidates running in 2026" → DuckDB query on R2 → JSON in <1 s.
 - **Future ML (regression/classification for corruption)** — pandas/polars read the same Parquet files directly. No data duplication. Train notebooks locally or in Colab/Kaggle from a signed URL.
 
 ### Ingest pipeline adjustment
 
-`etl/bulk/run.js` now does **two writes per source**:
-1. Stream-parse FEC/USASpending bulk CSV → write Parquet to Storage (cold, always, for every row).
-2. For current cycle or filtered rows only → also upsert into Supabase Pro tables (hot, UI path).
+`etl/bulk/run.js` does **two writes per source**:
+1. Stream-parse FEC/USASpending bulk CSV → write partitioned Parquet to **Cloudflare R2** (cold, all rows).
+2. Derive summary aggregates + filtered hot rows → upsert into **Supabase Free** tables (hot, UI path).
 
-`etl/bulk/shared/parquet-writer.js` uses `parquetjs-lite` or (better) `arrow`/`duckdb` to write partitioned Parquet directly from the CSV stream. Checkpoints per cycle in `bulk_ingest_runs`.
+`etl/bulk/shared/parquet-writer.js` uses `duckdb` Node bindings (simplest — `COPY ... TO 's3://bucket/path/part.parquet'` with R2 credentials). Checkpoints per cycle in `bulk_ingest_runs`.
 
 ### Why this wins
 
-| Criterion | All-Postgres Pro | Hybrid Parquet + Pro |
+| Criterion | All-Postgres Pro | Hybrid Free + R2 |
 |---|---|---|
-| Monthly cost | $25 base + ~$10 overage = **~$35** | **~$25.20** |
-| ML training workflow | dump to CSV manually | read Parquet directly in pandas/polars/DuckDB |
-| Adds 2026 cycle | DB grows | just one more Parquet partition |
-| Query 10-year historical aggregation | full table scan on big Postgres | DuckDB columnar scan on Parquet — faster |
+| Monthly cost | $25 base + ~$10 overage = **~$35** | **$0** (≤~$0.02 R2 overage at worst) |
+| Fits 2024+2026 journalist scope | yes, overpaying | yes, free |
+| ML training workflow (future) | dump to CSV manually | pandas/polars read Parquet directly |
+| Adds older cycle later | DB grows | one more Parquet partition |
 | Cold-storage backup | separate process | Parquet *is* the archive |
 
 ### Impact on plan
 
 - Section §3 schema unchanged for hot tier.
-- Section §4 ingest gains Parquet write step. New dep: `duckdb` or `apache-arrow` + `parquetjs-lite`.
+- Section §4 ingest gains Parquet write step. New dep: `duckdb` Node package + `@aws-sdk/client-s3` (for R2 signed URLs).
 - Section §5 GitHub Actions cron unchanged.
-- New section: `etl/bulk/cold/` for Parquet writers, `server/routes/analytics.js` for DuckDB-backed heavy queries.
+- New: `etl/bulk/cold/` for Parquet writers, `server/routes/analytics.js` for DuckDB-backed queries over R2.
 
 ### Required actions from user
 
 1. **Unpause Supabase project** (login to dashboard, or run any live query).
-2. **Upgrade to Pro** ($25/mo) before first full-cycle ingest.
-3. Grant write access to Supabase Storage bucket `bulk` (I'll add the bucket in the migration).
+2. **Create Cloudflare account + R2 bucket** (`unredacted-bulk`). Provision R2 API token with read+write. Free tier covers 10 GB storage, 1M Class-A ops, zero egress.
+3. Add `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` to `.env` and GitHub Actions secrets.
+4. (Optional) Upgrade to Supabase Pro only if/when hot tier outgrows 500 MB.
 
 ---
 
@@ -412,6 +422,6 @@ Nothing manual. No website downloads. Approve this plan, provide:
 
 - ~~Confirmation on **Supabase plan / storage budget**~~ — **decided 2026-04-13**: hybrid Parquet cold tier + Supabase Pro hot tier (see §6b). User must unpause project + upgrade to Pro before first ingest.
 - ~~Decision on **Neo4j**~~ — **decided 2026-04-13: drop**. Replaced by `money_flow_edges` materialized view + D3 Sankey / React Flow rendering (§6a).
-- ~~Decision on **cycle retention**~~ — **decided 2026-04-13**: full 2016–2024 (5 cycles) to support future corruption regression/classification model. Extended history lives in Parquet (§6b).
+- ~~Decision on **cycle retention**~~ — **decided 2026-04-13, revised same day**: scope is **FEC cycles 2024 + 2026** and **USASpending FY2024 → present** only. Primary user = journalists/researchers doing lookups for the 2026 midterms — relevance > historical depth. Older cycles (2022/2020/…) can be added later as Parquet partitions when the ML model work begins.
 
 Then implementation proceeds in the order above.
