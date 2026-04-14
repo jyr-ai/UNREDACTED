@@ -209,6 +209,98 @@ Also bump `src/api/client.js` defaults: `limit = 10` → `limit = 50` (or remove
 
 ---
 
+## 6a. Drop Neo4j — render "Follow the Money" as a layered flow graph
+
+**Decision:** remove Neo4j. The money-flow is an inherently **layered DAG** (5 fixed tiers), not an arbitrary graph — Postgres joins + a client-side viz library handle it better, cheaper, and with fewer moving parts.
+
+### Reference design
+Visual target: Humans First "AI Spending / Leading the Future Network" section (https://www.humansfirst.com/ai-spending). The page is JS-rendered so exact DOM could not be scraped in this plan — during implementation, first load the page in a headless browser and capture the actual layout, node styling, edge curvature, and color mapping before building. Treat the description below as the *structural* target; final styling should match the reference visually.
+
+### Tier structure (money flows left → right)
+
+```
+[ Companies / Industries ]     tier 1  — source of money (contributors grouped by employer or NAICS)
+           │
+           ▼
+[ SuperPACs / Hybrid PACs ]    tier 2  — independent-expenditure committees
+           │
+           ▼
+[ 501(c)(4) Dark Money Orgs ]  tier 3  — non-disclosing intermediaries
+           │
+           ▼
+[ Political Party / Committee ] tier 4  — DNC/RNC/party cmtes + leadership PACs
+           │
+           ▼
+[ Politician (campaign status) ] tier 5  — candidate + in_office / election status
+```
+
+Each node shows: name, total $ in, total $ out, cycle, (for politicians) campaign status badge (Incumbent / Challenger / Won / Lost / Active).
+
+### Data model in Supabase (no graph DB)
+
+Money flows are already edges in the relational model. Add one materialized view keyed by `(source_id, source_tier, target_id, target_tier, cycle)`:
+
+```sql
+CREATE MATERIALIZED VIEW money_flow_edges AS
+-- tier 1 → 2: employer/industry → PAC (via individual contribs aggregated by employer)
+SELECT
+  contributor_employer AS source_id, 1 AS source_tier,
+  committee_id         AS target_id, 2 AS target_tier,
+  SUM(amount) AS amount, cycle
+FROM contributions
+WHERE contributor_employer IS NOT NULL AND amount >= 200
+GROUP BY contributor_employer, committee_id, cycle
+UNION ALL
+-- tier 2 → 3 and 2 → 4: committee-to-committee transfers (oth bulk file)
+SELECT from_committee_id, 2, to_committee_id, 3_or_4, transfer_amount, cycle
+FROM committee_transfers
+-- tier 4 → 5: PAC → candidate (itpas2 bulk file)
+UNION ALL
+SELECT committee_id, 4, candidate_id, 5, SUM(amount), cycle
+FROM contributions
+WHERE candidate_id IS NOT NULL
+GROUP BY committee_id, candidate_id, cycle;
+
+CREATE INDEX ON money_flow_edges (target_tier, target_id);
+CREATE INDEX ON money_flow_edges (source_tier, source_id);
+```
+
+Refreshed after each bulk ingest (`REFRESH MATERIALIZED VIEW CONCURRENTLY`).
+
+Classifying committees into tier 2/3/4 uses `pac_committees.committee_type` + `designation` (FEC codes: `O`=SuperPAC, `U`=Independent-only, `V/W`=Hybrid; 501(c)(4)s appear as donor orgs without an FEC committee — pulled from Schedule A memo/employer fields + IRS 990 cross-ref in a later phase).
+
+### Rendering — two complementary views
+
+1. **Sankey diagram** (primary "Follow the Money" view) — D3 `d3-sankey` or `@nivo/sankey`. Fixed 5 columns, widths proportional to $. Great for showing volume flow. Interactive: click a node → drill into its edges, filter by industry/PAC/politician, toggle cycle.
+2. **Layered node-edge graph** (secondary, Humans-First-style) — `reactflow` with custom tier-column layout + curved bezier edges. Better for "which entities connect to which" when the Sankey gets dense. Same data, different renderer.
+
+Both read from `money_flow_edges` via a single Supabase RPC: `get_flow_for_entity(entity_id, entity_tier, depth, cycle)` returns ≤N hops upstream + downstream.
+
+### Why this beats Neo4j here
+
+| Concern | Neo4j | Postgres + D3 |
+|---|---|---|
+| Fixed 5-tier flow | overkill | natural fit |
+| Infra to run/sync | separate DB, dual-write | none |
+| Query perf on bounded depth (≤4 hops) | good | equally good with proper indexes |
+| Client rendering | still needs D3/sankey | D3/sankey, unchanged |
+| Cost | another service to host | $0 extra |
+| Dev-team cognitive load | Cypher + driver | just SQL |
+
+Neo4j is strong when traversals are unbounded or topology is truly graph-shaped (social networks, fraud rings). Money flow here is a short-bounded hierarchical DAG — the wrong problem for it.
+
+**Action:** remove `neo4j-driver` dep, `server/services/graphService.js`, `server/services/graphQueries.js`, and the `_sync_to_neo4j` code paths in `etl/sources/*.py` (those paths are being replaced by `etl/bulk/*` anyway).
+
+### Donor Intelligence renovation
+
+`src/pages/FollowTheMoney.jsx` gets a "Donor Intelligence" tab with:
+- search/pick an entity at any tier (company, PAC, party, politician)
+- Sankey centered on that entity showing full 5-tier path upstream + downstream
+- per-node cards listing top inflows/outflows, cycle toggle (2024/2022), $ totals
+- politician end-nodes show campaign status from `candidate_totals` + `politicians.in_office`
+
+---
+
 ## 7. Risks & open questions
 
 1. **Supabase storage + row-count cost.** `itcont` is 20M+ rows/cycle. Confirm current Supabase plan can hold it, or filter to `amount >= 200` at ingest time (still keeps ~80% of $-volume, cuts rows 5–10×).
@@ -240,7 +332,7 @@ Estimated effort: 3–5 days of focused work for steps 1–6; cron + remaining s
 Nothing manual. No website downloads. Approve this plan, provide:
 
 - Confirmation on **Supabase plan / storage budget** (drives the `amount >= 200` filter decision).
-- Decision on **Neo4j** (keep-and-sync, or drop).
+- ~~Decision on **Neo4j**~~ — **decided 2026-04-13: drop**. Replaced by `money_flow_edges` materialized view + D3 Sankey / React Flow rendering (§6a).
 - Decision on **cycle retention** (just 2024+2022, or deeper history).
 
 Then implementation proceeds in the order above.
