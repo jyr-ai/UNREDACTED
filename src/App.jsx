@@ -3,6 +3,8 @@ import { track } from "@vercel/analytics";
 import { useMobile, useTablet } from "./hooks/useMediaQuery.js";
 import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
+import CandidatesBrowser from "./components/CandidatesBrowser.jsx";
+import MoneyFlowSankey from "./components/MoneyFlowSankey.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import Monitor from "./pages/Monitor.jsx";
 import FollowTheMoney from "./pages/FollowTheMoney.jsx";
@@ -485,36 +487,8 @@ function DonorIntel() {
         </div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.3fr 1fr", gap: isMobile ? 14 : 20 }}>
-        <div>
-          <Band label="Industry PAC spending — stacked share" right="2016–2024"/>
-          <Card>
-            <CT h="Finance and defence dominate PAC giving; pharma has grown fastest since 2020." sub="Stacked share of annual PAC contributions by sector"/>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={TREND} margin={{ left:0, right:8, top:10, bottom:0 }} stackOffset="expand">
-                <defs>
-                  {[[t.mid,"g1"],[ORANGE,"g2"],[t.blue,"g3"],[t.warn,"g4"]].map(([c,id]) => (
-                    <linearGradient key={id} id={id} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%"   stopColor={c} stopOpacity={0.85}/>
-                      <stop offset="100%" stopColor={c} stopOpacity={0.55}/>
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid {...hg(t)}/>
-                <XAxis dataKey="y" {...ap(t)}/>
-                <YAxis {...ap(t)} tickFormatter={v=>`${(v*100).toFixed(0)}%`}/>
-                <Tooltip content={<ETip fmt={v=>`$${v}m`}/>}/>
-                <Area type="monotone" dataKey="d"  name="Defence" stackId="1" stroke="none" fill="url(#g1)"/>
-                <Area type="monotone" dataKey="ph" name="Pharma"  stackId="1" stroke="none" fill="url(#g2)"/>
-                <Area type="monotone" dataKey="f"  name="Finance" stackId="1" stroke="none" fill="url(#g3)"/>
-                <Area type="monotone" dataKey="e"  name="Energy"  stackId="1" stroke="none" fill="url(#g4)"/>
-              </AreaChart>
-            </ResponsiveContainer>
-            <Leg items={[["Defence",t.mid],["Pharma",ORANGE],["Finance",t.blue],["Energy",t.warn]]}/>
-            <Src s="FEC schedule B; OpenSecrets"/>
-          </Card>
-        </div>
-      </div>
+      <CandidatesBrowser />
+      <MoneyFlowSankey />
     </div>
   );
 }

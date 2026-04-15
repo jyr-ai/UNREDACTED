@@ -599,19 +599,38 @@ With ~500 labeled corrupt vs ~5000 clean members as a starting training set, a g
 
 ## 8. Proposed implementation order (aligned with §7c phases)
 
-1. **Supabase migration** — new tables (`lobbyist_bundles`, `independent_expenditures`, `electioneering_comms`, `communication_costs`, `candidate_statements`, `committee_statements`, `loans`, `debts`, `committee_transfers`, `candidate_committee_links`, `bulk_ingest_runs`) + indexes + `money_flow_edges` MV (§3).
-2. **R2 bucket + credentials** wired into env + GH Actions secrets.
-3. **`etl/bulk/shared/`** — downloader with checksum cache, Parquet writer via DuckDB `COPY TO`, Supabase upsert helper, run-tracker.
-4. **Phase 1 parsers** (`cn`, `cm`, `ccl`, `weball`, `webl`, `webk`, `pas2`, `oth`) — smallest, highest-leverage. Backfill 2024+2026 in both hot (Supabase) and cold (R2 Parquet) tiers.
-5. **Read-path swap #1** — `server/routes/donors.js` candidates/committees queries move to Supabase. Frontend `limit` defaults raised. "Follow the Money" Sankey renders from `money_flow_edges`. Bug fixed: >10 candidates show.
-6. **Phase 2** — `oppexp` parser + self-dealing affiliated-entity screen.
-7. **Phase 3** — `indiv` parser (streaming, ≥$2000 to hot, full to R2). Industry-capture + bundler views.
-8. **Phase 4** — IEs, electioneering, communication costs, `lobbyist_bundle`.
-9. **Phase 5** — USASpending contracts + assistance + cross-link to FEC donors (pay-to-play screen).
-10. **Phase 6** — daily `.fec` filings parser for loans/debts/amendments.
-11. **GH Actions cron** — weekly FEC bulk refresh, daily `.fec` filings, monthly USASpending archive.
-12. **Read-path swap #2** — remaining donors/spending/darkmoney routes move to Supabase+DuckDB.
-13. **ML baseline** — download Parquet locally, build label set (MUR + DOJ + House Ethics), train XGBoost, write `corruption_scores`.
+**Progress (as of 2026-04-14):** steps 1–4 complete; step 5 backend landed behind a feature flag (`DONOR_SOURCE` env / `?source=supabase` per-request). Awaiting Phase 1 backfill execution before flipping default + building UI.
+
+### Step 5 status — what's done vs. remaining
+
+**Done (backend, behind flag):**
+- Bug fixes in `etl/bulk/fec/ingest-totals.js`: column name `fec_candidate_id` → `candidate_id` to match `supabase/schema.sql`; dropped fields not present in `candidate_totals` (self_contrib, party_contrib, debts_owed_by); `onConflict` updated to `candidate_id,cycle`. Without this, Phase 1 backfill of `weball`/`webl` would have 500'd on the first batch.
+- New `server/services/supabaseDonors.js` — Supabase-backed `searchCandidates` (two-step politicians → candidate_totals hydration, one row per candidate-cycle, paginated w/ exact count), `searchCommittees`, `getCandidateRaisedTotals`, `getCandidateContributions`, `getCommitteeContributions`, `getTopDonorsByEmployer`, `getMoneyFlow` (reads `money_flow_edges` MV).
+- `server/routes/donors.js` — feature flag + per-request `?source=supabase|fec` switch on `/candidates`, `/committees`, `/candidates/:id/totals`, `/candidates/:id/contributions`, `/committees/:id/contributions`. Responses now include `source` field. Default = `fec` so nothing regresses pre-backfill.
+- New endpoint `GET /api/donors/money-flow` (Supabase-only) feeding the Sankey from `money_flow_edges`.
+- `src/api/client.js` — `donors.candidates/committees/contributions/...` switched to options-object signatures (no existing callers); default `limit` raised 10 → 100; added `offset`, `cycle`, `party`, `source` query params; added `donors.moneyFlow({...})`.
+
+**Blocked on user / external action:**
+- Run Phase 1 backfill against prod Supabase: `node etl/bulk/run.js --all --cycle 2024 --cycle 2026`.
+- Set `DONOR_SOURCE=supabase` in backend env (Render / Vercel) once backfill is verified.
+
+**Still TODO in step 5 (frontend):**
+- Paginated candidates table UI (~15k candidate-cycle rows) with state/office/party/cycle filters, `limit`/`offset` controls, count display.
+- D3 / `@nivo/sankey` "Follow the Money" component consuming `donors.moneyFlow()` — 5-tier layered flow per §6a.
+
+1. ✅ **Supabase migration** — new tables (`lobbyist_bundles`, `independent_expenditures`, `electioneering_comms`, `communication_costs`, `candidate_statements`, `committee_statements`, `loans`, `debts`, `committee_transfers`, `candidate_committee_links`, `bulk_ingest_runs`) + indexes + `money_flow_edges` MV (§3). — `supabase/migrations/20260414000000_bulk_ingest.sql`
+2. ✅ **R2 bucket + credentials** wired into env + GH Actions secrets. — `etl/bulk/shared/env.js`, `duck.js` (S3-compatible `parquetS3Path`).
+3. ✅ **`etl/bulk/shared/`** — downloader with checksum cache, Parquet writer via DuckDB `COPY TO`, Supabase upsert helper, run-tracker. — `downloader.js`, `duck.js`, `supabase.js`, `run-tracker.js`, `fec-schemas.js`.
+4. ✅ **Phase 1 parsers** (`cn`, `cm`, `ccl`, `weball`, `webl`, `webk`, `pas2`, `oth`) — all 8 sources wired in `etl/bulk/run.js` via `ingest-candidates/committees/links/totals/pas2/oth.js`. Backfill to 2024+2026 still needs to be executed.
+5. ⏭ **Read-path swap #1** — `server/routes/donors.js` candidates/committees queries move to Supabase. Frontend `limit` defaults raised. "Follow the Money" Sankey renders from `money_flow_edges`. Bug fixed: >10 candidates show.
+6. ⏭ **Phase 2** — `oppexp` parser + self-dealing affiliated-entity screen.
+7. ⏭ **Phase 3** — `indiv` parser (streaming, ≥$2000 to hot, full to R2). Industry-capture + bundler views.
+8. ⏭ **Phase 4** — IEs, electioneering, communication costs, `lobbyist_bundle`.
+9. ⏭ **Phase 5** — USASpending contracts + assistance + cross-link to FEC donors (pay-to-play screen).
+10. ⏭ **Phase 6** — daily `.fec` filings parser for loans/debts/amendments.
+11. ⏭ **GH Actions cron** — weekly FEC bulk refresh, daily `.fec` filings, monthly USASpending archive. (Only `bump-version.yml` exists today.)
+12. ⏭ **Read-path swap #2** — remaining donors/spending/darkmoney routes move to Supabase+DuckDB.
+13. ⏭ **ML baseline** — download Parquet locally, build label set (MUR + DOJ + House Ethics), train XGBoost, write `corruption_scores`.
 
 Estimated effort: phases 1–5 = ~5–7 focused days; full through phase 6 + ML baseline = ~3 weeks.
 

@@ -38,16 +38,34 @@ export const spending = {
 
 // ── Donors / FEC ──────────────────────────────────────────────────────────────
 export const donors = {
-  committees:    (keyword, limit = 10) => request(`/api/donors/committees?keyword=${encodeURIComponent(keyword)}&limit=${limit}`),
-  candidates:    (name, office, state, limit = 10) => {
-    const qs = new URLSearchParams({ ...(name && { name }), ...(office && { office }), ...(state && { state }), limit }).toString()
+  committees:    ({ keyword, limit = 100, offset = 0, cycle, source } = {}) => {
+    const qs = new URLSearchParams({
+      ...(keyword && { keyword }),
+      limit, offset,
+      ...(cycle && { cycle }),
+      ...(source && { source }),
+    }).toString()
+    return request(`/api/donors/committees?${qs}`)
+  },
+  candidates:    ({ name, office, state, party, cycle, limit = 100, offset = 0, source } = {}) => {
+    const qs = new URLSearchParams({
+      ...(name && { name }), ...(office && { office }), ...(state && { state }),
+      ...(party && { party }), ...(cycle && { cycle }),
+      limit, offset,
+      ...(source && { source }),
+    }).toString()
     return request(`/api/donors/candidates?${qs}`)
   },
-  totals:        (id)  => request(`/api/donors/candidates/${id}/totals`),
-  contributions: (id, limit = 50, minAmount = 1000) =>
-    request(`/api/donors/candidates/${id}/contributions?limit=${limit}&minAmount=${minAmount}`),
-  committeeContributions: (id, limit = 50) =>
-    request(`/api/donors/committees/${id}/contributions?limit=${limit}`),
+  totals:        (id, { source } = {}) =>
+    request(`/api/donors/candidates/${id}/totals${source ? `?source=${source}` : ''}`),
+  contributions: (id, { limit = 100, offset = 0, minAmount = 1000, source } = {}) => {
+    const qs = new URLSearchParams({ limit, offset, minAmount, ...(source && { source }) }).toString()
+    return request(`/api/donors/candidates/${id}/contributions?${qs}`)
+  },
+  committeeContributions: (id, { limit = 100, offset = 0, minAmount = 1000, source } = {}) => {
+    const qs = new URLSearchParams({ limit, offset, minAmount, ...(source && { source }) }).toString()
+    return request(`/api/donors/committees/${id}/contributions?${qs}`)
+  },
   byEmployer:    (employer, limit = 20) =>
     request(`/api/donors/donors/by-employer?employer=${encodeURIComponent(employer)}&limit=${limit}`),
   network:       (name, limit = 30) =>
@@ -56,6 +74,18 @@ export const donors = {
     request(`/api/donors/contributions/by-industry?keywords=${encodeURIComponent(keywords.join(','))}&limit=${limit}`),
   compare:       (ids) => request(`/api/donors/candidates/compare?ids=${ids.join(',')}`),
   pacSpending:   (id, limit = 20) => request(`/api/donors/committees/${id}/spending?limit=${limit}`),
+  moneyFlow:     ({ cycle, sourceTier, targetTier, nodeId, nodeType, minAmount, limit = 500 } = {}) => {
+    const qs = new URLSearchParams({
+      ...(cycle && { cycle }),
+      ...(sourceTier && { sourceTier }),
+      ...(targetTier && { targetTier }),
+      ...(nodeId && { nodeId }),
+      ...(nodeType && { nodeType }),
+      ...(minAmount && { minAmount }),
+      limit,
+    }).toString()
+    return request(`/api/donors/money-flow?${qs}`)
+  },
 }
 
 // ── Policy / Federal Register ─────────────────────────────────────────────────
