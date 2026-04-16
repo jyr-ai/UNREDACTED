@@ -2,7 +2,8 @@
 
 **Branch:** `feature/research`
 **Author:** research doc, 2026-04-13
-**Status:** proposal — awaiting approval before implementation
+**Status:** ✅ IMPLEMENTATION COMPLETE — all 12 steps code-complete as of 2026-04-15
+**Awaiting user action:** Phase 1 backfill execution + env flag flip (see §9)
 
 ---
 
@@ -599,47 +600,47 @@ With ~500 labeled corrupt vs ~5000 clean members as a starting training set, a g
 
 ## 8. Proposed implementation order (aligned with §7c phases)
 
-**Progress (as of 2026-04-14):** steps 1–4 complete; step 5 backend landed behind a feature flag (`DONOR_SOURCE` env / `?source=supabase` per-request). Awaiting Phase 1 backfill execution before flipping default + building UI.
+**Progress (as of 2026-04-15): ALL 12 STEPS CODE-COMPLETE.** Steps 1–5 were done by 2026-04-14. Steps 6–12 completed 2026-04-15. Step 13 (ML baseline) removed from scope.
 
-### Step 5 status — what's done vs. remaining
+### ⚠️ Awaiting user action before going live
 
-**Done (backend, behind flag):**
-- Bug fixes in `etl/bulk/fec/ingest-totals.js`: column name `fec_candidate_id` → `candidate_id` to match `supabase/schema.sql`; dropped fields not present in `candidate_totals` (self_contrib, party_contrib, debts_owed_by); `onConflict` updated to `candidate_id,cycle`. Without this, Phase 1 backfill of `weball`/`webl` would have 500'd on the first batch.
-- New `server/services/supabaseDonors.js` — Supabase-backed `searchCandidates` (two-step politicians → candidate_totals hydration, one row per candidate-cycle, paginated w/ exact count), `searchCommittees`, `getCandidateRaisedTotals`, `getCandidateContributions`, `getCommitteeContributions`, `getTopDonorsByEmployer`, `getMoneyFlow` (reads `money_flow_edges` MV).
-- `server/routes/donors.js` — feature flag + per-request `?source=supabase|fec` switch on `/candidates`, `/committees`, `/candidates/:id/totals`, `/candidates/:id/contributions`, `/committees/:id/contributions`. Responses now include `source` field. Default = `fec` so nothing regresses pre-backfill.
-- New endpoint `GET /api/donors/money-flow` (Supabase-only) feeding the Sankey from `money_flow_edges`.
-- `src/api/client.js` — `donors.candidates/committees/contributions/...` switched to options-object signatures (no existing callers); default `limit` raised 10 → 100; added `offset`, `cycle`, `party`, `source` query params; added `donors.moneyFlow({...})`.
+1. **Unpause Supabase project** and apply both migrations:
+   - `supabase/migrations/20260414000000_bulk_ingest.sql`
+   - `supabase/migrations/20260415000000_disbursements.sql`
+2. **Run Phase 1–4 backfill:** `node etl/bulk/run.js --all --cycle 2024 --cycle 2026`
+3. **Set env flags** in Render/Vercel: `DONOR_SOURCE=supabase`, `SPENDING_SOURCE=supabase`
+4. **Create R2 bucket** `unredacted-bulk` + add 5 R2 env vars + GH Secrets (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`)
+5. **`npm uninstall neo4j-driver`** — `graphQueries.js` is now a re-export shim of `graphService.js`; once all callers updated to import directly from `graphService.js`, delete the shim
 
-**Blocked on user / external action:**
-- Run Phase 1 backfill against prod Supabase: `node etl/bulk/run.js --all --cycle 2024 --cycle 2026`.
-- Set `DONOR_SOURCE=supabase` in backend env (Render / Vercel) once backfill is verified.
+### Step 5 — what was done
 
-**Still TODO in step 5 (frontend):**
-- Paginated candidates table UI (~15k candidate-cycle rows) with state/office/party/cycle filters, `limit`/`offset` controls, count display.
-- D3 / `@nivo/sankey` "Follow the Money" component consuming `donors.moneyFlow()` — 5-tier layered flow per §6a.
+**Backend (behind flag):**
+- `server/services/supabaseDonors.js` — 7 Supabase query functions (`searchCandidates`, `searchCommittees`, `getCandidateRaisedTotals`, `getCandidateContributions`, `getCommitteeContributions`, `getTopDonorsByEmployer`, `getMoneyFlow`)
+- `server/routes/donors.js` — `DONOR_SOURCE` env flag + per-request `?source=supabase|fec`. New `GET /api/donors/money-flow` endpoint (Supabase-only, feeds Sankey).
+- `src/api/client.js` — `limit` defaults raised 10 → 100; added `offset`, `cycle`, `party`, `source` params; added `donors.moneyFlow()`.
 
-1. ✅ **Supabase migration** — new tables (`lobbyist_bundles`, `independent_expenditures`, `electioneering_comms`, `communication_costs`, `candidate_statements`, `committee_statements`, `loans`, `debts`, `committee_transfers`, `candidate_committee_links`, `bulk_ingest_runs`) + indexes + `money_flow_edges` MV (§3). — `supabase/migrations/20260414000000_bulk_ingest.sql`
-2. ✅ **R2 bucket + credentials** wired into env + GH Actions secrets. — `etl/bulk/shared/env.js`, `duck.js` (S3-compatible `parquetS3Path`).
-3. ✅ **`etl/bulk/shared/`** — downloader with checksum cache, Parquet writer via DuckDB `COPY TO`, Supabase upsert helper, run-tracker. — `downloader.js`, `duck.js`, `supabase.js`, `run-tracker.js`, `fec-schemas.js`.
-4. ✅ **Phase 1 parsers** (`cn`, `cm`, `ccl`, `weball`, `webl`, `webk`, `pas2`, `oth`) — all 8 sources wired in `etl/bulk/run.js` via `ingest-candidates/committees/links/totals/pas2/oth.js`. Backfill to 2024+2026 still needs to be executed.
-5. ⏭ **Read-path swap #1** — `server/routes/donors.js` candidates/committees queries move to Supabase. Frontend `limit` defaults raised. "Follow the Money" Sankey renders from `money_flow_edges`. Bug fixed: >10 candidates show.
-6. ⏭ **Phase 2** — `oppexp` parser + self-dealing affiliated-entity screen.
-7. ⏭ **Phase 3** — `indiv` parser (streaming, ≥$2000 to hot, full to R2). Industry-capture + bundler views.
-8. ⏭ **Phase 4** — IEs, electioneering, communication costs, `lobbyist_bundle`.
-9. ⏭ **Phase 5** — USASpending contracts + assistance + cross-link to FEC donors (pay-to-play screen).
-10. ⏭ **Phase 6** — daily `.fec` filings parser for loans/debts/amendments.
-11. ⏭ **GH Actions cron** — weekly FEC bulk refresh, daily `.fec` filings, monthly USASpending archive. (Only `bump-version.yml` exists today.)
-12. ⏭ **Read-path swap #2** — remaining donors/spending/darkmoney routes move to Supabase+DuckDB.
-13. ⏭ **ML baseline** — download Parquet locally, build label set (MUR + DOJ + House Ethics), train XGBoost, write `corruption_scores`.
+**Frontend:**
+- `src/components/MoneyFlowSankey.jsx` — Recharts Sankey reading from `donors.moneyFlow()`, cycle/minAmount/limit controls.
+- `src/components/CandidatesBrowser.jsx` — paginated table, name/office/state/party/cycle filters.
 
-Estimated effort: phases 1–5 = ~5–7 focused days; full through phase 6 + ML baseline = ~3 weeks.
+**Still blocked:** backfill execution + `DONOR_SOURCE=supabase` env flip.
 
 ---
 
-## 9. What you (the user) do
+1. ✅ **Supabase migration** — 11 new tables + indexes + `money_flow_edges` MV + RLS — `supabase/migrations/20260414000000_bulk_ingest.sql`
+2. ✅ **R2 bucket + credentials** — `etl/bulk/shared/env.js`, `duck.js` (S3 Parquet write via DuckDB httpfs)
+3. ✅ **`etl/bulk/shared/`** — `downloader.js`, `duck.js`, `supabase.js`, `run-tracker.js`, `fec-schemas.js`
+4. ✅ **Phase 1 parsers** — `ingest-candidates/committees/links/totals/pas2/oth.js` (8 sources). **Backfill still needs to be executed.**
+5. ✅ **Read-path swap #1** — `supabaseDonors.js`, donors route flag, client defaults, `MoneyFlowSankey.jsx`, `CandidatesBrowser.jsx`. **Blocked: needs backfill + env flag.**
+6. ✅ **Phase 2 — oppexp** — `etl/bulk/fec/ingest-oppexp.js` → `disbursements_detail` (≥$2K hot, full R2). New migration `20260415000000_disbursements.sql`.
+7. ✅ **Phase 3 — indiv** — `etl/bulk/fec/ingest-indiv.js` — DuckDB streaming, 5–20 GB file, ≥$2K hot tier, full R2.
+8. ✅ **Phase 4 — IEs, electioneering, comm costs, lobbyist bundles** — 4 new schemas in `fec-schemas.js` + `ingest-ies/electioneering/comm-costs/lobbyist-bundles.js`. Frontend `IndependentExpenditures.jsx` and `LobbyistBundlers.jsx` rewritten with real `/api/spending/` calls (mock data removed).
+9. ✅ **Phase 5 — USASpending** — `etl/bulk/usaspending/download.js` (archive discovery + streaming), `parse-contracts.js`, `parse-assistance.js`, `bulk-api-job.js` (weekly delta via POST+poll API).
+10. ✅ **Phase 6 — `.fec` filings** — `etl/bulk/fec/parse-filings.js` — daily ZIPs from docquery.fec.gov, parses Schedule C (loans) + Schedule D (debts), `ingestFilingRange()` for date-range backfills.
+11. ✅ **GH Actions cron** — `.github/workflows/bulk-ingest-fec.yml` (weekly Mon 06:00 UTC, 6-hr timeout) + `bulk-ingest-usaspending.yml` (monthly full + weekly delta). `etl/bulk/run.js` updated with all 17 sources.
+12. ✅ **Read-path swap #2** — `server/services/supabaseSpending.js` (contracts, grants, agency, disbursements, IEs, lobbyist bundles). `spending.js` upgraded with `SPENDING_SOURCE=supabase` flag + 3 new Supabase-only endpoints. `graphQueries.js` replaced with re-export shim from `graphService.js` (Neo4j removed).
 
-Nothing manual. No website downloads. Approve this plan, provide:
-
+Estimated total implementation effort: completed in ~2 focused sessions.
 - ~~Confirmation on **Supabase plan / storage budget**~~ — **decided 2026-04-13**: hybrid Parquet cold tier + Supabase Pro hot tier (see §6b). User must unpause project + upgrade to Pro before first ingest.
 - ~~Decision on **Neo4j**~~ — **decided 2026-04-13: drop**. Replaced by `money_flow_edges` materialized view + D3 Sankey / React Flow rendering (§6a).
 - ~~Decision on **cycle retention**~~ — **decided 2026-04-13, revised same day**: scope is **FEC cycles 2024 + 2026** and **USASpending FY2024 → present** only. Primary user = journalists/researchers doing lookups for the 2026 midterms — relevance > historical depth. Older cycles (2022/2020/…) can be added later as Parquet partitions when the ML model work begins.

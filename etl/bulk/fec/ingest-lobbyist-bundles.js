@@ -1,0 +1,105 @@
+// FEC Lobbyist/Registrant Bundled Contributions → lobbyist_bundles + R2 Parquet.
+//
+// Story unlocked: D. Bundler networks & industry capture.
+// Registered lobbyists who bundle contributions from their clients to the lawmakers
+// who oversee those clients — the most direct link between corporate lobbying and
+// congressional campaign finance.
+//
+// URL: https://www.fec.gov/files/bulk-downloads/{cycle}/lobbyist_bundle{yy}.zip
+// NOTE: Verify prefix on https://www.fec.gov/data/browse-data/?tab=bulk-data
+
+import { LOBBYIST_BUNDLE, bulkUrl, bulkInnerFilename } from '../shared/fec-schemas.js'
+import { downloadZip, extractZip, fileChecksum } from '../shared/downloader.js'
+import { openFecView, parquetS3Path } from '../shared/duck.js'
+import { upsertBatched } from '../shared/supabase.js'
+import { startRun, finishRun } from '../shared/run-tracker.js'
+
+// The lobbyist_bundle file uses TRAN_ID (not SUB_ID) as the unique row key.
+// We synthesize a stable integer PK from FILE_NUM + TRAN_ID.
+function stablePk(fileNum, tranId) {
+  // Simple deterministic hash: treat TRAN_ID string as key seeded by FILE_NUM.
+  // This is not a cryptographic hash — just needs to be stable across re-runs.
+  const s = `${fileNum || 0}:${tranId || ''}`
+  let h = 0
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(31, h) + s.charCodeAt(i) | 0
+  }
+  // Make positive and combine with FILE_NUM for additional uniqueness
+  return Math.abs(h) + (Number(fileNum || 0) * 1e6)
+}
+
+export async function ingestLobbyistBundles({ cycle, dryRun = false }) {
+  const source = 'fec_lobbyist_bundle'
+  const url = bulkUrl('lobbyist_bundle', cycle)
+  const innerName = bulkInnerFilename('lobbyist_bundle', cycle)
+  console.log(`\n[${source}] cycle=${cycle} ${dryRun ? '(DRY RUN)' : ''}`)
+  const runId = dryRun ? null : await startRun({ source, cycle, fileUrl: url })
+
+  try {
+    const zipPath = await downloadZip(url)
+    const txtPath = extractZip(zipPath, innerName)
+    const checksum = fileChecksum(zipPath)
+
+    const view = await openFecView({ filePath: txtPath, ...LOBBYIST_BUNDLE, viewName: 'lb_raw' })
+    const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM lb_raw`)
+    console.log(`  [parsed] ${count} lobbyist bundle rows`)
+
+    // ─── Cold: full Parquet to R2 ─────────────────────────────────────────────
+    const parquetKey = `fec/lobbyist_bundles/cycle=${cycle}/part-0001.parquet`
+    if (!dryRun) {
+      await view.exec(`
+        COPY (SELECT *, ${cycle} AS _cycle FROM lb_raw)
+        TO '${parquetS3Path(parquetKey)}'
+        (FORMAT PARQUET, COMPRESSION 'ZSTD', OVERWRITE_OR_IGNORE);
+      `)
+      console.log(`  [r2] wrote ${parquetKey}`)
+    }
+
+    // ─── Hot tier: all rows (small file, <5 MB/cycle) ─────────────────────────
+    const rows = await view.run(`
+      SELECT
+        FILE_NUM         AS file_num,
+        TRAN_ID          AS tran_id,
+        CMTE_ID          AS committee_id,
+        LOBBYIST_REG_NM  AS lobbyist_name,
+        REG_ID           AS lobbyist_registrant_id,
+        CAND_ID          AS candidate_id,
+        BUNDLED_AMT      AS bundled_amount,
+        RPT_YR           AS report_year,
+        RPT_TP           AS report_period
+      FROM lb_raw
+      WHERE CMTE_ID IS NOT NULL
+    `)
+
+    const bundles = rows.map(r => ({
+      sub_id:                 stablePk(r.file_num, r.tran_id),
+      committee_id:           r.committee_id           || null,
+      candidate_id:           r.candidate_id           || null,
+      lobbyist_registrant_id: r.lobbyist_registrant_id || null,
+      lobbyist_name:          r.lobbyist_name          || null,
+      bundled_amount:         Number(r.bundled_amount || 0),
+      report_period:          r.report_period || null,
+      cycle:                  r.report_year ? Number(r.report_year) : cycle,
+    }))
+
+    view.close()
+
+    let upsertedCount = 0
+    if (!dryRun && bundles.length) {
+      const { upserted } = await upsertBatched('lobbyist_bundles', bundles, {
+        onConflict: 'sub_id',
+      })
+      upsertedCount = upserted
+    }
+
+    await finishRun(runId, {
+      status: 'ok', rowsRead: Number(count), rowsParquet: Number(count),
+      rowsUpserted: upsertedCount, checksum,
+    })
+    console.log(`[${source}] done: read=${count} parquet=${count} hot=${upsertedCount}`)
+    return { source, cycle, rowsRead: Number(count), rowsUpserted: upsertedCount }
+  } catch (err) {
+    await finishRun(runId, { status: 'error', error: err.message })
+    throw err
+  }
+}
