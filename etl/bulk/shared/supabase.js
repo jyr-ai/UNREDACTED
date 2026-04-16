@@ -12,6 +12,22 @@ export function sb() {
 }
 
 /**
+ * Deduplicate a batch by the onConflict key(s) so Postgres never sees two rows
+ * with the same PK in one upsert — that causes "ON CONFLICT DO UPDATE command
+ * cannot affect row a second time".  Last row wins on collision.
+ */
+function dedupBatch(rows, onConflict) {
+  if (!onConflict) return rows
+  const keys = onConflict.split(',').map(k => k.trim())
+  const seen = new Map()
+  for (const row of rows) {
+    const key = keys.map(k => row[k]).join('\x00')
+    seen.set(key, row)
+  }
+  return [...seen.values()]
+}
+
+/**
  * Batch-upsert rows into a Supabase table.
  * Returns { upserted, batches, skipped } — skipped = 0 or 1 (if Supabase disabled).
  */
@@ -24,7 +40,7 @@ export async function upsertBatched(table, rows, { onConflict, batchSize = 1000 
   let upserted = 0
   let batches = 0
   for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize)
+    const batch = dedupBatch(rows.slice(i, i + batchSize), onConflict)
     const { error } = await client.from(table).upsert(batch, { onConflict, ignoreDuplicates: false })
     if (error) {
       console.error(`  [supabase] batch ${batches} failed: ${error.message}`)

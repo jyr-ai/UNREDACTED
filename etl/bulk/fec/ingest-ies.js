@@ -4,27 +4,29 @@
 //   F. Attack-ad coordination — same media-buy vendors / timing across multiple SuperPACs
 //      signals coordination that is nominally prohibited.
 //
-// URL: https://www.fec.gov/files/bulk-downloads/{cycle}/independent_expenditure{yy}.zip
-// NOTE: Verify prefix on https://www.fec.gov/data/browse-data/?tab=bulk-data
-//   Alternative prefix observed: 'indep_exp', 'ies' — update bulkUrl call below if 404.
+// URL: https://www.fec.gov/files/bulk-downloads/{YYYY}/independent_expenditure_{YYYY}.csv
+// Direct CSV download — no ZIP extraction needed.
 
-import { IE, bulkUrl, bulkInnerFilename } from '../shared/fec-schemas.js'
-import { downloadZip, extractZip, fileChecksum } from '../shared/downloader.js'
+import { IE } from '../shared/fec-schemas.js'
+import { downloadFile, fileChecksum } from '../shared/downloader.js'
 import { openFecView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
 export async function ingestIEs({ cycle, dryRun = false }) {
   const source = 'fec_ie'
-  const url = bulkUrl('independent_expenditure', cycle)
-  const innerName = bulkInnerFilename('independent_expenditure', cycle)
+  const url = `https://www.fec.gov/files/bulk-downloads/${cycle}/independent_expenditure_${cycle}.csv`
   console.log(`\n[${source}] cycle=${cycle} ${dryRun ? '(DRY RUN)' : ''}`)
   const runId = dryRun ? null : await startRun({ source, cycle, fileUrl: url })
 
   try {
-    const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const txtPath = await downloadFile(url)
+    if (!txtPath) {
+      await finishRun(runId, { status: 'ok', rowsRead: 0, rowsParquet: 0, rowsUpserted: 0 })
+      console.log(`[${source}] skipped — file not available for cycle ${cycle}`)
+      return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
+    }
+    const checksum = fileChecksum(txtPath)
 
     const view = await openFecView({ filePath: txtPath, ...IE, viewName: 'ie_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM ie_raw`)

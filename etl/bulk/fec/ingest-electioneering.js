@@ -4,26 +4,29 @@
 // mention candidates near elections without explicitly saying "vote for/against."
 // These circumvent normal disclosure rules.
 //
-// URL: https://www.fec.gov/files/bulk-downloads/{cycle}/electioneering{yy}.zip
-// NOTE: Verify prefix on https://www.fec.gov/data/browse-data/?tab=bulk-data
+// URL: https://www.fec.gov/files/bulk-downloads/{YYYY}/ElectioneeringComm_{YYYY}.csv
+// Direct CSV download — no ZIP extraction needed.
 
-import { ELECTIONEERING, bulkUrl, bulkInnerFilename } from '../shared/fec-schemas.js'
-import { downloadZip, extractZip, fileChecksum } from '../shared/downloader.js'
+import { ELECTIONEERING } from '../shared/fec-schemas.js'
+import { downloadFile, fileChecksum } from '../shared/downloader.js'
 import { openFecView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
 export async function ingestElectioneering({ cycle, dryRun = false }) {
   const source = 'fec_electioneering'
-  const url = bulkUrl('electioneering', cycle)
-  const innerName = bulkInnerFilename('electioneering', cycle)
+  const url = `https://www.fec.gov/files/bulk-downloads/${cycle}/ElectioneeringComm_${cycle}.csv`
   console.log(`\n[${source}] cycle=${cycle} ${dryRun ? '(DRY RUN)' : ''}`)
   const runId = dryRun ? null : await startRun({ source, cycle, fileUrl: url })
 
   try {
-    const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const txtPath = await downloadFile(url)
+    if (!txtPath) {
+      await finishRun(runId, { status: 'ok', rowsRead: 0, rowsParquet: 0, rowsUpserted: 0 })
+      console.log(`[${source}] skipped — file not available for cycle ${cycle}`)
+      return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
+    }
+    const checksum = fileChecksum(txtPath)
 
     const view = await openFecView({ filePath: txtPath, ...ELECTIONEERING, viewName: 'ec_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM ec_raw`)

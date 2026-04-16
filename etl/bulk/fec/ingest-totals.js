@@ -19,7 +19,7 @@ async function ingestCandidateSummary({ cycle, prefix, schema, subfolder, source
 
   try {
     const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
+    const txtPath = await extractZip(zipPath, innerName)
     const checksum = fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...schema, viewName: `${prefix}_raw` })
@@ -108,7 +108,7 @@ export async function ingestPacTotals({ cycle, dryRun = false }) {
 
   try {
     const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
+    const txtPath = await extractZip(zipPath, innerName)
     const checksum = fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...WEBK, viewName: 'webk_raw' })

@@ -5,11 +5,11 @@
 // who oversee those clients — the most direct link between corporate lobbying and
 // congressional campaign finance.
 //
-// URL: https://www.fec.gov/files/bulk-downloads/{cycle}/lobbyist_bundle{yy}.zip
-// NOTE: Verify prefix on https://www.fec.gov/data/browse-data/?tab=bulk-data
+// URL: https://www.fec.gov/files/bulk-downloads/data.fec.gov/lobbyist_bundle.csv
+// Single file across all cycles (no per-cycle URL) — direct CSV download.
 
-import { LOBBYIST_BUNDLE, bulkUrl, bulkInnerFilename } from '../shared/fec-schemas.js'
-import { downloadZip, extractZip, fileChecksum } from '../shared/downloader.js'
+import { LOBBYIST_BUNDLE } from '../shared/fec-schemas.js'
+import { downloadFile, fileChecksum } from '../shared/downloader.js'
 import { openFecView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
@@ -28,17 +28,23 @@ function stablePk(fileNum, tranId) {
   return Math.abs(h) + (Number(fileNum || 0) * 1e6)
 }
 
+// Single cross-cycle file — all years bundled together
+const LOBBYIST_URL = 'https://www.fec.gov/files/bulk-downloads/data.fec.gov/lobbyist_bundle.csv'
+
 export async function ingestLobbyistBundles({ cycle, dryRun = false }) {
   const source = 'fec_lobbyist_bundle'
-  const url = bulkUrl('lobbyist_bundle', cycle)
-  const innerName = bulkInnerFilename('lobbyist_bundle', cycle)
+  const url = LOBBYIST_URL
   console.log(`\n[${source}] cycle=${cycle} ${dryRun ? '(DRY RUN)' : ''}`)
   const runId = dryRun ? null : await startRun({ source, cycle, fileUrl: url })
 
   try {
-    const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const txtPath = await downloadFile(url)
+    if (!txtPath) {
+      await finishRun(runId, { status: 'ok', rowsRead: 0, rowsParquet: 0, rowsUpserted: 0 })
+      console.log(`[${source}] skipped — file not available`)
+      return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
+    }
+    const checksum = fileChecksum(txtPath)
 
     const view = await openFecView({ filePath: txtPath, ...LOBBYIST_BUNDLE, viewName: 'lb_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM lb_raw`)

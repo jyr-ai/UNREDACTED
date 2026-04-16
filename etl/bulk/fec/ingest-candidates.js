@@ -21,7 +21,7 @@ export async function ingestCandidates({ cycle, dryRun = false }) {
 
   try {
     const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
+    const txtPath = await extractZip(zipPath, innerName)
     const checksum = fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...CN, viewName: 'cn_raw' })

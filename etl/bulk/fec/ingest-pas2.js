@@ -15,7 +15,7 @@ export async function ingestPas2({ cycle, hotMinAmount = 0, dryRun = false }) {
 
   try {
     const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
+    const txtPath = await extractZip(zipPath, innerName)
     const checksum = fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...PAS2, viewName: 'pas2_raw' })

@@ -3,26 +3,29 @@
 // Communication costs are internal corporate/union communications supporting or
 // opposing candidates — separate from IEs. Tracked for corporate advocacy exposure.
 //
-// URL: https://www.fec.gov/files/bulk-downloads/{cycle}/comm_csts_ex{yy}.zip
-// NOTE: Verify prefix on https://www.fec.gov/data/browse-data/?tab=bulk-data
+// URL: https://www.fec.gov/files/bulk-downloads/{YYYY}/CommunicationCosts_{YYYY}.csv
+// Direct CSV download — no ZIP extraction needed.
 
-import { COMM_COSTS, bulkUrl, bulkInnerFilename } from '../shared/fec-schemas.js'
-import { downloadZip, extractZip, fileChecksum } from '../shared/downloader.js'
+import { COMM_COSTS } from '../shared/fec-schemas.js'
+import { downloadFile, fileChecksum } from '../shared/downloader.js'
 import { openFecView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
 export async function ingestCommCosts({ cycle, dryRun = false }) {
   const source = 'fec_comm_costs'
-  const url = bulkUrl('comm_csts_ex', cycle)
-  const innerName = bulkInnerFilename('comm_csts_ex', cycle)
+  const url = `https://www.fec.gov/files/bulk-downloads/${cycle}/CommunicationCosts_${cycle}.csv`
   console.log(`\n[${source}] cycle=${cycle} ${dryRun ? '(DRY RUN)' : ''}`)
   const runId = dryRun ? null : await startRun({ source, cycle, fileUrl: url })
 
   try {
-    const zipPath = await downloadZip(url)
-    const txtPath = extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const txtPath = await downloadFile(url)
+    if (!txtPath) {
+      await finishRun(runId, { status: 'ok', rowsRead: 0, rowsParquet: 0, rowsUpserted: 0 })
+      console.log(`[${source}] skipped — file not available for cycle ${cycle}`)
+      return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
+    }
+    const checksum = fileChecksum(txtPath)
 
     const view = await openFecView({ filePath: txtPath, ...COMM_COSTS, viewName: 'cc_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM cc_raw`)
