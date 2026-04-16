@@ -12,15 +12,32 @@ import {
   getCandidateComparison,
   getPACSpending
 } from '../services/fec.js'
+import * as sbDonors from '../services/supabaseDonors.js'
 
 const router = Router()
 
+// Feature flag — flip per-request via ?source=supabase|fec, or globally via env.
+// Default to FEC live until Phase 1 backfill lands in Supabase.
+const DEFAULT_SOURCE = (process.env.DONOR_SOURCE || 'fec').toLowerCase()
+function useSupabase(req) {
+  const s = (req.query.source || DEFAULT_SOURCE).toString().toLowerCase()
+  return s === 'supabase'
+}
+
 router.get('/committees', async (req, res) => {
   try {
-    const { keyword, limit } = req.query
+    const { keyword, limit, offset, cycle } = req.query
+    if (useSupabase(req)) {
+      const data = await sbDonors.searchCommittees({
+        keyword, cycle,
+        limit:  parseInt(limit)  || 100,
+        offset: parseInt(offset) || 0,
+      })
+      return res.json({ success: true, source: 'supabase', data })
+    }
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword parameter required' })
     const data = await searchCommittees({ keyword, limit: parseInt(limit) || 10 })
-    res.json({ success: true, data })
+    res.json({ success: true, source: 'fec', data })
   } catch (e) {
     console.error('donors/committees error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch committee data' })
@@ -40,9 +57,17 @@ router.get('/committees/:id/receipts', async (req, res) => {
 
 router.get('/candidates', async (req, res) => {
   try {
-    const { name, office, state, limit } = req.query
+    const { name, office, state, party, cycle, limit, offset } = req.query
+    if (useSupabase(req)) {
+      const data = await sbDonors.searchCandidates({
+        name, office, state, party, cycle,
+        limit:  parseInt(limit)  || 100,
+        offset: parseInt(offset) || 0,
+      })
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await searchCandidates({ name, office, state, limit: parseInt(limit) || 10 })
-    res.json({ success: true, data })
+    res.json({ success: true, source: 'fec', data })
   } catch (e) {
     console.error('donors/candidates error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch candidates' })
@@ -51,8 +76,12 @@ router.get('/candidates', async (req, res) => {
 
 router.get('/candidates/:id/totals', async (req, res) => {
   try {
+    if (useSupabase(req)) {
+      const data = await sbDonors.getCandidateRaisedTotals(req.params.id)
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getCandidateRaisedTotals(req.params.id)
-    res.json({ success: true, data })
+    res.json({ success: true, source: 'fec', data })
   } catch (e) {
     console.error('donors/totals error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch candidate totals' })
@@ -63,13 +92,22 @@ router.get('/candidates/:id/totals', async (req, res) => {
 
 router.get('/candidates/:id/contributions', async (req, res) => {
   try {
-    const { limit, minAmount } = req.query
+    const { limit, minAmount, offset } = req.query
+    if (useSupabase(req)) {
+      const data = await sbDonors.getCandidateContributions(
+        req.params.id,
+        parseInt(limit) || 100,
+        parseInt(minAmount) || 1000,
+        parseInt(offset) || 0,
+      )
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getCandidateContributions(
       req.params.id,
       parseInt(limit) || 50,
       parseInt(minAmount) || 1000
     )
-    res.json({ success: true, data })
+    res.json({ success: true, source: 'fec', data })
   } catch (e) {
     console.error('donors/candidate/contributions error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch candidate contributions' })
@@ -78,13 +116,22 @@ router.get('/candidates/:id/contributions', async (req, res) => {
 
 router.get('/committees/:id/contributions', async (req, res) => {
   try {
-    const { limit, minAmount } = req.query
+    const { limit, minAmount, offset } = req.query
+    if (useSupabase(req)) {
+      const data = await sbDonors.getCommitteeContributions(
+        req.params.id,
+        parseInt(limit) || 100,
+        parseInt(minAmount) || 1000,
+        parseInt(offset) || 0,
+      )
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getCommitteeContributions(
       req.params.id,
       parseInt(limit) || 50,
       parseInt(minAmount) || 1000
     )
-    res.json({ success: true, data })
+    res.json({ success: true, source: 'fec', data })
   } catch (e) {
     console.error('donors/committee/contributions error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch committee contributions' })
@@ -168,6 +215,27 @@ router.get('/committees/:id/spending', async (req, res) => {
   } catch (e) {
     console.error('donors/committee/spending error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch PAC spending' })
+  }
+})
+
+// ─── Money-flow (Sankey) — Supabase-only, reads money_flow_edges MV ──────────
+
+router.get('/money-flow', async (req, res) => {
+  try {
+    const { cycle, sourceTier, targetTier, nodeId, nodeType, minAmount, limit } = req.query
+    const data = await sbDonors.getMoneyFlow({
+      cycle,
+      sourceTier,
+      targetTier,
+      nodeId,
+      nodeType,
+      minAmount: parseInt(minAmount) || 0,
+      limit: parseInt(limit) || 500,
+    })
+    res.json({ success: true, source: 'supabase', data })
+  } catch (e) {
+    console.error('donors/money-flow error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
   }
 })
 
