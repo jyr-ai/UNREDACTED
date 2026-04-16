@@ -5,23 +5,13 @@
 
 import { Router } from 'express'
 import { searchContracts as liveContracts, searchGrants as liveGrants, getAgencySpending as liveAgency } from '../services/usaSpending.js'
-import {
-  searchContracts as sbContracts,
-  searchGrants as sbGrants,
-  getAgencySpending as sbAgency,
-  getDisbursements,
-  getIndependentExpenditures,
-  getLobbyistBundles,
-} from '../services/supabaseSpending.js'
+import * as sbSpending from '../services/supabaseSpending.js'
 
 const router = Router()
 
-// Feature flag: env sets default, per-request ?source= overrides
-const DEFAULT_SOURCE = process.env.SPENDING_SOURCE || 'usaspending'
-
+const DEFAULT_SOURCE = (process.env.SPENDING_SOURCE || 'usaspending').toLowerCase()
 function useSupabase(req) {
-  const src = req.query.source || DEFAULT_SOURCE
-  return src === 'supabase'
+  return (req.query.source || DEFAULT_SOURCE).toString().toLowerCase() === 'supabase'
 }
 
 // ─── /contracts ───────────────────────────────────────────────────────────────
@@ -29,73 +19,84 @@ function useSupabase(req) {
 router.get('/contracts', async (req, res) => {
   try {
     const { keyword, agency, limit, fiscal_year } = req.query
-    let data
     if (useSupabase(req)) {
-      data = await sbContracts({ keyword, agency, limit: parseInt(limit) || 10, fiscalYear: fiscal_year })
-    } else {
-      data = await liveContracts({ keyword, agency, limit: parseInt(limit) || 10 })
+      const data = await sbSpending.searchContracts({ keyword, agency, limit: parseInt(limit) || 50, fiscalYear: fiscal_year })
+      return res.json({ success: true, source: 'supabase', data })
     }
+    const data = await liveContracts({ keyword, agency, limit: parseInt(limit) || 10 })
     const fiscalYear = data.length > 0 && data[0].fiscalYear ? data[0].fiscalYear : null
-    res.json({ success: true, data, fiscalYear, count: data.length })
+    res.json({ success: true, source: 'usaspending', data, fiscalYear, count: data.length })
   } catch (e) {
     console.error('spending/contracts error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch contract data' })
   }
 })
 
-// ─── /grants ─────────────────────────────────────────────────────────────────
+// ─── /grants ──────────────────────────────────────────────────────────────────
 
 router.get('/grants', async (req, res) => {
   try {
     const { keyword, limit, fiscal_year } = req.query
-    let data
     if (useSupabase(req)) {
-      data = await sbGrants({ keyword, limit: parseInt(limit) || 10, fiscalYear: fiscal_year })
-    } else {
-      data = await liveGrants({ keyword, limit: parseInt(limit) || 10 })
+      const data = await sbSpending.searchGrants({ keyword, limit: parseInt(limit) || 50, fiscalYear: fiscal_year })
+      return res.json({ success: true, source: 'supabase', data })
     }
-    res.json({ success: true, data })
+    const data = await liveGrants({ keyword, limit: parseInt(limit) || 10 })
+    res.json({ success: true, source: 'usaspending', data })
   } catch (e) {
     console.error('spending/grants error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch grants data' })
   }
 })
 
-// ─── /agency ─────────────────────────────────────────────────────────────────
+// ─── /agency ──────────────────────────────────────────────────────────────────
 
 router.get('/agency', async (req, res) => {
   try {
     const { year } = req.query
-    let data
     if (useSupabase(req)) {
-      data = await sbAgency(year ? parseInt(year) : null)
-    } else {
-      data = await liveAgency(year ? parseInt(year) : null)
+      const data = await sbSpending.getAgencySpending(year ? parseInt(year) : null)
+      return res.json({ success: true, source: 'supabase', data })
     }
-    res.json({ success: true, data })
+    const data = await liveAgency(year ? parseInt(year) : null)
+    res.json({ success: true, source: 'usaspending', data })
   } catch (e) {
     console.error('spending/agency error:', e.message)
     res.status(500).json({ success: false, error: 'Failed to fetch agency spending data' })
   }
 })
 
-// ─── /disbursements (Supabase-only — oppexp hot tier, Story A) ────────────────
+// ─── /disbursements (Supabase-only — oppexp, Story A) ─────────────────────────
 
 router.get('/disbursements', async (req, res) => {
   try {
     const { committee_id, cycle, recipient, min_amount, limit, offset } = req.query
-    const data = await getDisbursements({
+    const data = await sbSpending.getDisbursements({
       committeeId:   committee_id,
       cycle:         cycle ? Number(cycle) : undefined,
       recipientName: recipient,
-      minAmount:     min_amount ? Number(min_amount) : 2000,
+      minAmount:     min_amount ? Number(min_amount) : 0,
       limit:         parseInt(limit)  || 50,
       offset:        parseInt(offset) || 0,
     })
-    res.json({ success: true, data, count: data.length })
+    res.json({ success: true, source: 'supabase', ...data })
   } catch (e) {
     console.error('spending/disbursements error:', e.message)
-    res.status(500).json({ success: false, error: 'Failed to fetch disbursement data' })
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+// ─── /pay-to-play (Supabase-only — Story B) ───────────────────────────────────
+
+router.get('/pay-to-play', async (req, res) => {
+  try {
+    const { company, limit } = req.query
+    if (!company) return res.status(400).json({ success: false, error: 'company parameter required' })
+    const data = await sbSpending.getPayToPlayMatches({ company, limit: parseInt(limit) || 20 })
+    res.json({ success: true, source: 'supabase', ...data })
+  } catch (e) {
+    console.error('spending/pay-to-play error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
   }
 })
 
@@ -104,17 +105,17 @@ router.get('/disbursements', async (req, res) => {
 router.get('/independent-expenditures', async (req, res) => {
   try {
     const { candidate_id, committee_id, cycle, limit, offset } = req.query
-    const data = await getIndependentExpenditures({
+    const data = await sbSpending.getIndependentExpenditures({
       candidateId: candidate_id,
       committeeId: committee_id,
       cycle:       cycle ? Number(cycle) : undefined,
       limit:       parseInt(limit)  || 100,
       offset:      parseInt(offset) || 0,
     })
-    res.json({ success: true, data, count: data.length })
+    res.json({ success: true, source: 'supabase', ...data })
   } catch (e) {
     console.error('spending/independent-expenditures error:', e.message)
-    res.status(500).json({ success: false, error: 'Failed to fetch IE data' })
+    res.status(500).json({ success: false, error: e.message })
   }
 })
 
@@ -123,17 +124,17 @@ router.get('/independent-expenditures', async (req, res) => {
 router.get('/lobbyist-bundles', async (req, res) => {
   try {
     const { candidate_id, committee_id, cycle, limit, offset } = req.query
-    const data = await getLobbyistBundles({
+    const data = await sbSpending.getLobbyistBundles({
       candidateId: candidate_id,
       committeeId: committee_id,
       cycle:       cycle ? Number(cycle) : undefined,
       limit:       parseInt(limit)  || 100,
       offset:      parseInt(offset) || 0,
     })
-    res.json({ success: true, data, count: data.length })
+    res.json({ success: true, source: 'supabase', ...data })
   } catch (e) {
     console.error('spending/lobbyist-bundles error:', e.message)
-    res.status(500).json({ success: false, error: 'Failed to fetch lobbyist bundle data' })
+    res.status(500).json({ success: false, error: e.message })
   }
 })
 

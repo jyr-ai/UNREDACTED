@@ -1,158 +1,180 @@
-// Supabase read-path for spending + accountability data.
-// Activated by SPENDING_SOURCE=supabase env var or ?source=supabase per-request.
-// Mirrors the usaSpending.js interface so routes can swap without refactor.
+/**
+ * Supabase-backed spending queries.
+ * Reads from bulk-ingested USASpending + FEC spending tables:
+ * contracts, grants, disbursements_detail, independent_expenditures, lobbyist_bundles.
+ *
+ * Used by server/routes/spending.js when SPENDING_SOURCE=supabase.
+ */
+import { supabase } from '../lib/supabase.js'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-)
+function ensure() {
+  if (!supabase) throw new Error('Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing)')
+  return supabase
+}
 
 // ─── Contracts ────────────────────────────────────────────────────────────────
 
-/**
- * Search federal contracts by recipient name or description keyword.
- * Maps to the FEC pay-to-play story (B): contracts × donor employer cross-join.
- */
-export async function searchContracts({ keyword, agency, limit = 10, offset = 0, fiscalYear } = {}) {
-  let q = supabase
+export async function searchContracts({ keyword, agency, limit = 50, offset = 0, fiscalYear } = {}) {
+  const db = ensure()
+  let q = db
     .from('contracts')
-    .select('award_id, recipient_name, recipient_state, awarding_agency, sub_agency, action_date, fiscal_year, amount, total_value, award_type, naics_code, naics_description, description')
-    .order('amount', { ascending: false })
+    .select('*', { count: 'exact' })
+    .order('award_amount', { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1)
-
-  if (keyword) q = q.or(`recipient_name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
-  if (agency)  q = q.ilike('awarding_agency', `%${agency}%`)
+  if (keyword)    q = q.or(`recipient_name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
+  if (agency)     q = q.ilike('awarding_agency_name', `%${agency}%`)
   if (fiscalYear) q = q.eq('fiscal_year', Number(fiscalYear))
-
-  const { data, error } = await q
-  if (error) throw new Error(`supabaseSpending.searchContracts: ${error.message}`)
-
-  return (data || []).map(r => ({
-    id:           r.award_id,
-    recipientName:r.recipient_name,
-    state:        r.recipient_state,
-    agency:       r.awarding_agency,
-    subAgency:    r.sub_agency,
-    date:         r.action_date,
-    fiscalYear:   r.fiscal_year,
-    amount:       Number(r.amount || 0),
-    totalValue:   Number(r.total_value || 0),
-    awardType:    r.award_type,
-    naicsCode:    r.naics_code,
-    description:  r.description,
-  }))
+  const { data, error, count } = await q
+  if (error) throw new Error(`searchContracts: ${error.message}`)
+  return { results: data || [], pagination: { count, limit, offset } }
 }
 
-/**
- * Search federal grants/assistance.
- */
-export async function searchGrants({ keyword, agency, limit = 10, offset = 0, fiscalYear } = {}) {
-  let q = supabase
+export async function searchGrants({ keyword, agency, limit = 50, offset = 0, fiscalYear } = {}) {
+  const db = ensure()
+  let q = db
     .from('grants')
-    .select('award_id, recipient_name, recipient_state, awarding_agency, action_date, fiscal_year, amount, total_amount, award_type, assistance_type, cfda_number, cfda_title')
-    .order('amount', { ascending: false })
+    .select('*', { count: 'exact' })
+    .order('award_amount', { ascending: false, nullsFirst: false })
     .range(offset, offset + limit - 1)
-
   if (keyword)    q = q.ilike('recipient_name', `%${keyword}%`)
-  if (agency)     q = q.ilike('awarding_agency', `%${agency}%`)
+  if (agency)     q = q.ilike('awarding_agency_name', `%${agency}%`)
   if (fiscalYear) q = q.eq('fiscal_year', Number(fiscalYear))
-
-  const { data, error } = await q
-  if (error) throw new Error(`supabaseSpending.searchGrants: ${error.message}`)
-
-  return (data || []).map(r => ({
-    id:            r.award_id,
-    recipientName: r.recipient_name,
-    state:         r.recipient_state,
-    agency:        r.awarding_agency,
-    date:          r.action_date,
-    fiscalYear:    r.fiscal_year,
-    amount:        Number(r.amount || 0),
-    totalAmount:   Number(r.total_amount || 0),
-    assistanceType:r.assistance_type,
-    cfdaNumber:    r.cfda_number,
-    cfdaTitle:     r.cfda_title,
-  }))
+  const { data, error, count } = await q
+  if (error) throw new Error(`searchGrants: ${error.message}`)
+  return { results: data || [], pagination: { count, limit, offset } }
 }
 
-/**
- * Aggregate spend by agency for a fiscal year.
- */
 export async function getAgencySpending(fiscalYear) {
-  const { data, error } = await supabase
+  const db = ensure()
+  const { data, error } = await db
     .from('contracts')
-    .select('awarding_agency, amount.sum()')
+    .select('awarding_agency_name, award_amount')
     .eq('fiscal_year', fiscalYear || new Date().getFullYear())
-    .order('sum', { ascending: false })
-    .limit(50)
-
-  if (error) throw new Error(`supabaseSpending.getAgencySpending: ${error.message}`)
-  return (data || []).map(r => ({ agency: r.awarding_agency, totalSpend: Number(r.sum || 0) }))
+  if (error) throw new Error(`getAgencySpending: ${error.message}`)
+  const byAgency = new Map()
+  for (const row of (data || [])) {
+    const agency = row.awarding_agency_name || 'Unknown'
+    byAgency.set(agency, (byAgency.get(agency) || 0) + (row.award_amount || 0))
+  }
+  return Object.fromEntries([...byAgency.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20))
 }
 
-// ─── Disbursements (self-dealing, Story A) ────────────────────────────────────
+// ─── Disbursements (Story A — Self-Dealing) ───────────────────────────────────
 
-/**
- * Get disbursements for a committee, optionally filtered by recipient name or category.
- * Used by the self-dealing screen.
- */
 export async function getDisbursements({ committeeId, cycle, recipientName, minAmount = 0, limit = 50, offset = 0 } = {}) {
-  let q = supabase
+  const db = ensure()
+  let q = db
     .from('disbursements_detail')
-    .select('sub_id, committee_id, cycle, recipient_name, recipient_city, recipient_state, disbursement_date, disbursement_amount, disbursement_description, purpose_category, purpose_category_desc')
+    .select('sub_id, committee_id, cycle, recipient_name, recipient_city, recipient_state, disbursement_date, disbursement_amount, disbursement_description, purpose_category', { count: 'exact' })
     .gte('disbursement_amount', minAmount)
     .order('disbursement_amount', { ascending: false })
     .range(offset, offset + limit - 1)
-
   if (committeeId)   q = q.eq('committee_id', committeeId)
   if (cycle)         q = q.eq('cycle', Number(cycle))
   if (recipientName) q = q.ilike('recipient_name', `%${recipientName}%`)
+  const { data, error, count } = await q
+  if (error) throw new Error(`getDisbursements: ${error.message}`)
+  return { results: data || [], pagination: { count, limit, offset } }
+}
 
-  const { data, error } = await q
-  if (error) throw new Error(`supabaseSpending.getDisbursements: ${error.message}`)
-  return data || []
+// ─── Pay-to-Play (Story B) ────────────────────────────────────────────────────
+
+export async function getPayToPlayMatches({ company, limit = 20 }) {
+  const db = ensure()
+  if (!company) throw new Error('company parameter required')
+
+  const [contribRes, contractRes] = await Promise.all([
+    db
+      .from('contributions')
+      .select('contributor_employer, contributor_name, amount, date, candidate_id, committee_id')
+      .ilike('contributor_employer', `%${company}%`)
+      .order('amount', { ascending: false })
+      .limit(limit * 5),
+    db
+      .from('contracts')
+      .select('recipient_name, award_amount, period_of_performance_start_date, awarding_agency_name')
+      .ilike('recipient_name', `%${company}%`)
+      .order('award_amount', { ascending: false })
+      .limit(limit * 3),
+  ])
+
+  if (contribRes.error) throw new Error(`getPayToPlayMatches/contribs: ${contribRes.error.message}`)
+  if (contractRes.error) throw new Error(`getPayToPlayMatches/contracts: ${contractRes.error.message}`)
+
+  const contribs  = contribRes.data  || []
+  const contracts = contractRes.data || []
+
+  if (contracts.length === 0 || contribs.length === 0) {
+    return { matches: [], contractCount: contracts.length, donationCount: contribs.length }
+  }
+
+  const matches = []
+  for (const contract of contracts) {
+    const contractDate = new Date(contract.period_of_performance_start_date)
+    if (isNaN(contractDate.getTime())) continue
+    const oneYearBefore = new Date(contractDate.getTime() - 365 * 24 * 60 * 60 * 1000)
+    for (const donation of contribs) {
+      const donDate = new Date(donation.date)
+      if (isNaN(donDate.getTime())) continue
+      if (donDate >= oneYearBefore && donDate <= contractDate) {
+        matches.push({
+          company:        contract.recipient_name,
+          contractAmount: contract.award_amount,
+          contractDate:   contract.period_of_performance_start_date,
+          agency:         contract.awarding_agency_name,
+          donorName:      donation.contributor_name,
+          donorEmployer:  donation.contributor_employer,
+          donationAmount: donation.amount,
+          donationDate:   donation.date,
+          candidateId:    donation.candidate_id,
+          committeeId:    donation.committee_id,
+          daysBefore:     Math.round((contractDate - donDate) / 86400000),
+        })
+      }
+    }
+  }
+
+  const seen = new Set()
+  const deduped = matches.filter(m => {
+    const key = `${m.contractDate}|${m.donationDate}|${m.donorName}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  deduped.sort((a, b) => b.contractAmount - a.contractAmount)
+  return { matches: deduped.slice(0, limit), contractCount: contracts.length, donationCount: contribs.length }
 }
 
 // ─── Independent Expenditures (Story F) ───────────────────────────────────────
 
-/**
- * Get IEs for a candidate or committee.
- */
 export async function getIndependentExpenditures({ candidateId, committeeId, cycle, limit = 100, offset = 0 } = {}) {
-  let q = supabase
+  const db = ensure()
+  let q = db
     .from('independent_expenditures')
-    .select('sub_id, committee_id, candidate_id, support_oppose, expenditure_date, expenditure_amount, payee_name, purpose, cycle')
+    .select('sub_id, committee_id, candidate_id, support_oppose, expenditure_date, expenditure_amount, payee_name, purpose, cycle', { count: 'exact' })
     .order('expenditure_amount', { ascending: false })
     .range(offset, offset + limit - 1)
-
-  if (candidateId)  q = q.eq('candidate_id', candidateId)
-  if (committeeId)  q = q.eq('committee_id', committeeId)
-  if (cycle)        q = q.eq('cycle', Number(cycle))
-
-  const { data, error } = await q
-  if (error) throw new Error(`supabaseSpending.getIndependentExpenditures: ${error.message}`)
-  return data || []
+  if (candidateId) q = q.eq('candidate_id', candidateId)
+  if (committeeId) q = q.eq('committee_id', committeeId)
+  if (cycle)       q = q.eq('cycle', Number(cycle))
+  const { data, error, count } = await q
+  if (error) throw new Error(`getIndependentExpenditures: ${error.message}`)
+  return { results: data || [], pagination: { count, limit, offset } }
 }
 
 // ─── Lobbyist Bundles (Story D) ───────────────────────────────────────────────
 
-/**
- * Get lobbyist bundling records for a candidate or committee.
- */
 export async function getLobbyistBundles({ candidateId, committeeId, cycle, limit = 100, offset = 0 } = {}) {
-  let q = supabase
+  const db = ensure()
+  let q = db
     .from('lobbyist_bundles')
-    .select('sub_id, committee_id, candidate_id, lobbyist_name, lobbyist_registrant_id, bundled_amount, report_period, cycle')
+    .select('sub_id, committee_id, candidate_id, lobbyist_name, lobbyist_registrant_id, bundled_amount, report_period, cycle', { count: 'exact' })
     .order('bundled_amount', { ascending: false })
     .range(offset, offset + limit - 1)
-
   if (candidateId) q = q.eq('candidate_id', candidateId)
   if (committeeId) q = q.eq('committee_id', committeeId)
   if (cycle)       q = q.eq('cycle', Number(cycle))
-
-  const { data, error } = await q
-  if (error) throw new Error(`supabaseSpending.getLobbyistBundles: ${error.message}`)
-  return data || []
+  const { data, error, count } = await q
+  if (error) throw new Error(`getLobbyistBundles: ${error.message}`)
+  return { results: data || [], pagination: { count, limit, offset } }
 }

@@ -135,6 +135,69 @@ export async function getTopDonorsByEmployer(employer, limit = 20, cycle = null)
   return { results: data || [] }
 }
 
+// ─── Cash Flood Anomalies (Story J) ──────────────────────────────────────────
+
+/**
+ * Detect candidates with anomalous fundraising spikes.
+ * Compares the most recent 30-day window against the prior 30-day window.
+ * Returns candidates where recent receipts are >= 1.5× the prior window
+ * and at least $100k (to filter noise).
+ */
+export async function getCashFloodAlerts({ cycle = null, topN = 20 } = {}) {
+  const db = ensure()
+  const now = new Date()
+  const d30 = new Date(now - 30  * 86400000).toISOString().slice(0, 10)
+  const d60 = new Date(now - 60  * 86400000).toISOString().slice(0, 10)
+  const d90 = new Date(now - 90  * 86400000).toISOString().slice(0, 10)
+
+  let q = db
+    .from('contributions')
+    .select('candidate_id, amount, date')
+    .gte('date', d90)
+    .not('candidate_id', 'is', null)
+    .gte('amount', 200)
+    .order('date')
+    .limit(100000)
+  if (cycle) q = q.gte('date', `${cycle - 1}-01-01`).lte('date', `${cycle}-12-31`)
+
+  const { data, error } = await q
+  if (error) throw new Error(`getCashFloodAlerts: ${error.message}`)
+
+  // Bucket contributions into recent (0–30d) and prior (30–60d) windows
+  const byCandidate = new Map()
+  for (const row of (data || [])) {
+    if (!row.candidate_id) continue
+    if (!byCandidate.has(row.candidate_id)) byCandidate.set(row.candidate_id, { recent: 0, prior: 0 })
+    const d = byCandidate.get(row.candidate_id)
+    if (row.date >= d30)       d.recent += row.amount || 0
+    else if (row.date >= d60)  d.prior  += row.amount || 0
+  }
+
+  // Score spikes: recent vs prior
+  const spikes = []
+  for (const [candidateId, d] of byCandidate) {
+    if (d.recent < 100000) continue  // ignore small-dollar noise
+    const ratio = d.prior > 0 ? d.recent / d.prior : d.recent > 0 ? 99 : 0
+    if (ratio >= 1.5 || (d.prior === 0 && d.recent >= 250000)) {
+      spikes.push({ candidateId, recentAmount: d.recent, priorAmount: d.prior, spikeRatio: Number(ratio.toFixed(2)) })
+    }
+  }
+  spikes.sort((a, b) => b.spikeRatio - a.spikeRatio)
+  const top = spikes.slice(0, topN)
+  if (top.length === 0) return { alerts: [] }
+
+  // Hydrate with politician names
+  const ids = top.map(s => s.candidateId)
+  const { data: pols } = await db.from('politicians').select('fec_candidate_id, name, party, state').in('fec_candidate_id', ids)
+  const polMap = new Map((pols || []).map(p => [p.fec_candidate_id, p]))
+
+  return {
+    alerts: top.map(s => ({ ...s, ...(polMap.get(s.candidateId) || {}) })),
+    windowDays: 30,
+    asOf: now.toISOString().slice(0, 10),
+  }
+}
+
 // ─── Money-flow (Sankey) ──────────────────────────────────────────────────────
 
 /**
