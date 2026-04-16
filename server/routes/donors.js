@@ -239,4 +239,20 @@ router.get('/money-flow', async (req, res) => {
   }
 })
 
+// ─── Story J: Cash Flood Anomalies — Supabase-only ───────────────────────────
+
+router.get('/cash-flood', async (req, res) => {
+  try {
+    const { cycle, topN } = req.query
+    const data = await sbDonors.getCashFloodAlerts({
+      cycle: cycle ? Number(cycle) : null,
+      topN:  parseInt(topN) || 20,
+    })
+    res.json({ success: true, source: 'supabase', ...data })
+  } catch (e) {
+    console.error('donors/cash-flood error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
 export default router
