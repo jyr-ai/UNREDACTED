@@ -7,9 +7,8 @@
 // URL: https://www.fec.gov/files/bulk-downloads/{YYYY}/independent_expenditure_{YYYY}.csv
 // Direct CSV download — no ZIP extraction needed.
 
-import { IE } from '../shared/fec-schemas.js'
 import { downloadFile, fileChecksum } from '../shared/downloader.js'
-import { openFecView, parquetS3Path } from '../shared/duck.js'
+import { openCsvView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
@@ -28,7 +27,8 @@ export async function ingestIEs({ cycle, dryRun = false }) {
     }
     const checksum = fileChecksum(txtPath)
 
-    const view = await openFecView({ filePath: txtPath, ...IE, viewName: 'ie_raw' })
+    // CSV has header row: cand_id,spe_id,sup_opp,exp_date,exp_amo,pur,pay,tran_id,file_num,...
+    const view = await openCsvView({ filePath: txtPath, viewName: 'ie_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM ie_raw`)
     console.log(`  [parsed] ${count} IE rows`)
 
@@ -43,37 +43,49 @@ export async function ingestIEs({ cycle, dryRun = false }) {
       console.log(`  [r2] wrote ${parquetKey}`)
     }
 
-    // ─── Hot tier: all IEs go to Supabase (file is small, <100 MB/cycle) ──────
-    const fecDate = s => {
-      if (!s || String(s).length !== 8) return null
-      const ss = String(s)
-      return `${ss.slice(4, 8)}-${ss.slice(0, 2)}-${ss.slice(2, 4)}`
+    // ─── Hot tier: all IEs go to Supabase ────────────────────────────────────
+    // Dates in this CSV are DD-MON-YY (e.g. 27-SEP-24)
+    const MON = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'}
+    const parseDate = s => {
+      if (!s) return null
+      const m = String(s).trim().match(/^(\d{1,2})-([A-Z]{3})-(\d{2})$/)
+      if (!m) return null
+      return `20${m[3]}-${MON[m[2]] || '01'}-${m[1].padStart(2, '0')}`
+    }
+    // Synthetic sub_id from tran_id + file_num (no SUB_ID in this CSV)
+    const stablePk = (tranId, fileNum) => {
+      const s = `${fileNum || 0}:${tranId || ''}`
+      let h = 0
+      for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0
+      return Math.abs(h) + (Number(fileNum || 0) * 1e6)
     }
 
     const rows = await view.run(`
       SELECT
-        SUB_ID          AS sub_id,
-        CMTE_ID         AS committee_id,
-        CAND_ID         AS candidate_id,
-        S_O_IND         AS support_oppose,
-        TRANSACTION_DT  AS date_str,
-        TRANSACTION_AMT AS amount,
-        PAYEE_NM        AS payee_name,
-        CATG_DESC       AS purpose
+        spe_id        AS committee_id,
+        cand_id       AS candidate_id,
+        sup_opp       AS support_oppose,
+        exp_date      AS date_str,
+        exp_amo       AS amount,
+        pur           AS purpose,
+        pay           AS payee_name,
+        tran_id       AS tran_id,
+        file_num      AS file_num,
+        fec_election_yr AS cycle_yr
       FROM ie_raw
-      WHERE SUB_ID IS NOT NULL
+      WHERE spe_id IS NOT NULL
     `)
 
     const ies = rows.map(r => ({
-      sub_id:             Number(r.sub_id),
+      sub_id:             stablePk(r.tran_id, r.file_num),
       committee_id:       r.committee_id  || null,
       candidate_id:       r.candidate_id  || null,
       support_oppose:     r.support_oppose || null,
-      expenditure_date:   fecDate(r.date_str),
+      expenditure_date:   parseDate(r.date_str),
       expenditure_amount: Number(r.amount || 0),
       payee_name:         r.payee_name || null,
       purpose:            r.purpose    || null,
-      cycle,
+      cycle:              r.cycle_yr ? Number(r.cycle_yr) : cycle,
     }))
 
     view.close()

@@ -7,9 +7,8 @@
 // URL: https://www.fec.gov/files/bulk-downloads/{YYYY}/ElectioneeringComm_{YYYY}.csv
 // Direct CSV download — no ZIP extraction needed.
 
-import { ELECTIONEERING } from '../shared/fec-schemas.js'
 import { downloadFile, fileChecksum } from '../shared/downloader.js'
-import { openFecView, parquetS3Path } from '../shared/duck.js'
+import { openCsvView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
@@ -28,7 +27,9 @@ export async function ingestElectioneering({ cycle, dryRun = false }) {
     }
     const checksum = fileChecksum(txtPath)
 
-    const view = await openFecView({ filePath: txtPath, ...ELECTIONEERING, viewName: 'ec_raw' })
+    // CSV header: CANDIDATE_ID,COMMITTEE_ID,SB_IMAGE_NUM,PAYEE_NAME,
+    //             DISBURSEMENT_DESCRIPTION,COMMUNICATION_DATE,REPORTED_DISBURSEMENT_AMOUNT,...
+    const view = await openCsvView({ filePath: txtPath, viewName: 'ec_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM ec_raw`)
     console.log(`  [parsed] ${count} electioneering rows`)
 
@@ -43,36 +44,44 @@ export async function ingestElectioneering({ cycle, dryRun = false }) {
       console.log(`  [r2] wrote ${parquetKey}`)
     }
 
-    // ─── Hot tier: all rows (small file, <50 MB/cycle) ────────────────────────
-    const fecDate = s => {
-      if (!s || String(s).length !== 8) return null
-      const ss = String(s)
-      return `${ss.slice(4, 8)}-${ss.slice(0, 2)}-${ss.slice(2, 4)}`
+    // ─── Hot tier ─────────────────────────────────────────────────────────────
+    // Dates in this CSV are DD-MON-YY (e.g. 21-FEB-24)
+    const MON = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'}
+    const parseDate = s => {
+      if (!s) return null
+      const m = String(s).trim().match(/^(\d{1,2})-([A-Z]{3})-(\d{2})$/)
+      if (!m) return null
+      return `20${m[3]}-${MON[m[2]] || '01'}-${m[1].padStart(2, '0')}`
+    }
+    // Synthetic sub_id from SB_IMAGE_NUM (no SUB_ID in this CSV)
+    const stablePk = s => {
+      let h = 0
+      for (let i = 0; i < (s || '').length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0
+      return Math.abs(h)
     }
 
     const rows = await view.run(`
       SELECT
-        SUB_ID         AS sub_id,
-        CMTE_ID        AS committee_id,
-        CAND_ID        AS candidate_mentioned,
-        RECEIPT_DT     AS date_str,
-        AMT_OF_COMM    AS amount,
-        PAYEE_NM       AS payee_name,
-        PURPOSE        AS purpose,
-        FEC_ELECTION_YR AS election_yr
+        COMMITTEE_ID                  AS committee_id,
+        CANDIDATE_ID                  AS candidate_mentioned,
+        SB_IMAGE_NUM                  AS image_num,
+        PAYEE_NAME                    AS payee_name,
+        DISBURSEMENT_DESCRIPTION      AS purpose,
+        COMMUNICATION_DATE            AS date_str,
+        REPORTED_DISBURSEMENT_AMOUNT  AS amount
       FROM ec_raw
-      WHERE SUB_ID IS NOT NULL
+      WHERE COMMITTEE_ID IS NOT NULL
     `)
 
     const ecs = rows.map(r => ({
-      sub_id:             Number(r.sub_id),
-      committee_id:       r.committee_id       || null,
-      candidate_mentioned:r.candidate_mentioned|| null,
-      comm_date:          fecDate(r.date_str),
+      sub_id:             stablePk(r.image_num),
+      committee_id:       r.committee_id        || null,
+      candidate_mentioned:r.candidate_mentioned || null,
+      comm_date:          parseDate(r.date_str),
       amount:             Number(r.amount || 0),
       payee_name:         r.payee_name || null,
       purpose:            r.purpose    || null,
-      cycle:              r.election_yr ? Number(r.election_yr) : cycle,
+      cycle,
     }))
 
     view.close()

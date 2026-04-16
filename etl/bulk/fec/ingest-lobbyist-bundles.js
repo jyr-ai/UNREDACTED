@@ -8,9 +8,8 @@
 // URL: https://www.fec.gov/files/bulk-downloads/data.fec.gov/lobbyist_bundle.csv
 // Single file across all cycles (no per-cycle URL) — direct CSV download.
 
-import { LOBBYIST_BUNDLE } from '../shared/fec-schemas.js'
 import { downloadFile, fileChecksum } from '../shared/downloader.js'
-import { openFecView, parquetS3Path } from '../shared/duck.js'
+import { openCsvView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
@@ -46,9 +45,13 @@ export async function ingestLobbyistBundles({ cycle, dryRun = false }) {
     }
     const checksum = fileChecksum(txtPath)
 
-    const view = await openFecView({ filePath: txtPath, ...LOBBYIST_BUNDLE, viewName: 'lb_raw' })
+    // FEC bulk lobbyist_bundle.csv is a committee-level summary (no individual lobbyist
+    // records). Columns: Committee_Id, Report_Type, Quarterly_Contribution,
+    // Semi_Annual_Contribution — no lobbyist_name or candidate_id.
+    // Write to R2 Parquet for future use; skip Supabase hot tier (schema mismatch).
+    const view = await openCsvView({ filePath: txtPath, viewName: 'lb_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM lb_raw`)
-    console.log(`  [parsed] ${count} lobbyist bundle rows`)
+    console.log(`  [parsed] ${count} lobbyist bundle rows (committee summaries)`)
 
     // ─── Cold: full Parquet to R2 ─────────────────────────────────────────────
     const parquetKey = `fec/lobbyist_bundles/cycle=${cycle}/part-0001.parquet`
@@ -61,42 +64,12 @@ export async function ingestLobbyistBundles({ cycle, dryRun = false }) {
       console.log(`  [r2] wrote ${parquetKey}`)
     }
 
-    // ─── Hot tier: all rows (small file, <5 MB/cycle) ─────────────────────────
-    const rows = await view.run(`
-      SELECT
-        FILE_NUM         AS file_num,
-        TRAN_ID          AS tran_id,
-        CMTE_ID          AS committee_id,
-        LOBBYIST_REG_NM  AS lobbyist_name,
-        REG_ID           AS lobbyist_registrant_id,
-        CAND_ID          AS candidate_id,
-        BUNDLED_AMT      AS bundled_amount,
-        RPT_YR           AS report_year,
-        RPT_TP           AS report_period
-      FROM lb_raw
-      WHERE CMTE_ID IS NOT NULL
-    `)
-
-    const bundles = rows.map(r => ({
-      sub_id:                 stablePk(r.file_num, r.tran_id),
-      committee_id:           r.committee_id           || null,
-      candidate_id:           r.candidate_id           || null,
-      lobbyist_registrant_id: r.lobbyist_registrant_id || null,
-      lobbyist_name:          r.lobbyist_name          || null,
-      bundled_amount:         Number(r.bundled_amount || 0),
-      report_period:          r.report_period || null,
-      cycle:                  r.report_year ? Number(r.report_year) : cycle,
-    }))
-
+    // ─── Hot tier: skipped — bulk CSV only has committee totals, not individual
+    // lobbyist records. The lobbyist_bundles table expects lobbyist_name + candidate_id.
+    console.log(`  [skip] hot tier — lobbyist_bundle.csv is committee summaries only`)
     view.close()
 
-    let upsertedCount = 0
-    if (!dryRun && bundles.length) {
-      const { upserted } = await upsertBatched('lobbyist_bundles', bundles, {
-        onConflict: 'sub_id',
-      })
-      upsertedCount = upserted
-    }
+    const upsertedCount = 0
 
     await finishRun(runId, {
       status: 'ok', rowsRead: Number(count), rowsParquet: Number(count),

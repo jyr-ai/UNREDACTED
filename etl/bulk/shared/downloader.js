@@ -60,26 +60,23 @@ export async function downloadFile(url, { cache = true } = {}) {
 
 export async function extractZip(zipPath, innerName) {
   ensureTmp()
-  let outPath = null
-  await new Promise((resolve, reject) => {
-    fs.createReadStream(zipPath)
-      .pipe(unzipper.Parse())
-      .on('entry', entry => {
-        const matches = !innerName ||
-          entry.path === innerName ||
-          entry.path.toLowerCase() === innerName.toLowerCase()
-        if (matches && !outPath) {
-          outPath = path.join(env.tmpDir, path.basename(entry.path))
-          entry.pipe(fs.createWriteStream(outPath))
-            .on('finish', resolve)
-            .on('error', reject)
-        } else {
-          entry.autodrain()
-        }
-      })
-      .on('error', reject)
-      .on('finish', () => { if (!outPath) reject(new Error(`No matching entry in ${zipPath}`)) })
-  })
+  // Use Open.file to read the ZIP directory without loading all content into memory.
+  // Falls back to the first non-directory entry if innerName doesn't match — mirrors
+  // the original adm-zip behaviour where entries[0] was the fallback.
+  const directory = await unzipper.Open.file(zipPath)
+  const files = directory.files.filter(f => !f.path.endsWith('/'))
+  if (files.length === 0) throw new Error(`No file entries in ${zipPath}`)
+
+  const entry = (innerName
+    ? files.find(f => f.path === innerName || f.path.toLowerCase() === innerName.toLowerCase())
+    : null) || files[0]
+
+  if (innerName && entry.path !== innerName && entry.path.toLowerCase() !== innerName.toLowerCase()) {
+    console.warn(`  [warn] ${innerName} not found in ZIP, using ${entry.path}`)
+  }
+
+  const outPath = path.join(env.tmpDir, path.basename(entry.path))
+  await pipeline(entry.stream(), fs.createWriteStream(outPath))
   console.log(`  [extracted] ${outPath}`)
   return outPath
 }

@@ -6,9 +6,8 @@
 // URL: https://www.fec.gov/files/bulk-downloads/{YYYY}/CommunicationCosts_{YYYY}.csv
 // Direct CSV download — no ZIP extraction needed.
 
-import { COMM_COSTS } from '../shared/fec-schemas.js'
 import { downloadFile, fileChecksum } from '../shared/downloader.js'
-import { openFecView, parquetS3Path } from '../shared/duck.js'
+import { openCsvView, parquetS3Path } from '../shared/duck.js'
 import { upsertBatched } from '../shared/supabase.js'
 import { startRun, finishRun } from '../shared/run-tracker.js'
 
@@ -27,7 +26,9 @@ export async function ingestCommCosts({ cycle, dryRun = false }) {
     }
     const checksum = fileChecksum(txtPath)
 
-    const view = await openFecView({ filePath: txtPath, ...COMM_COSTS, viewName: 'cc_raw' })
+    // CSV header: CMTE_ID,CAND_ID,SUPPORT_OPPOSE_IND,TRANSACTION_DT,TRANSACTION_AMT,
+    //             SCHED_TP_CD,SUB_ID,FILE_NUM,RPT_YR,... (comma-delimited with headers)
+    const view = await openCsvView({ filePath: txtPath, viewName: 'cc_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM cc_raw`)
     console.log(`  [parsed] ${count} communication cost rows`)
 
@@ -42,35 +43,37 @@ export async function ingestCommCosts({ cycle, dryRun = false }) {
       console.log(`  [r2] wrote ${parquetKey}`)
     }
 
-    // ─── Hot tier: all rows (small file) ─────────────────────────────────────
+    // ─── Hot tier ─────────────────────────────────────────────────────────────
+    // TRANSACTION_DT is YYYYMMDD (e.g. 20241016)
     const fecDate = s => {
       if (!s || String(s).length !== 8) return null
       const ss = String(s)
-      return `${ss.slice(4, 8)}-${ss.slice(0, 2)}-${ss.slice(2, 4)}`
+      return `${ss.slice(0, 4)}-${ss.slice(4, 6)}-${ss.slice(6, 8)}`
     }
 
     const rows = await view.run(`
       SELECT
-        SUB_ID          AS sub_id,
-        CMTE_ID         AS committee_id,
-        CAND_ID         AS candidate_id,
-        S_O_IND         AS support_oppose,
-        TRANSACTION_DT  AS date_str,
-        TRANSACTION_AMT AS amount,
-        SCHED_TP_CD     AS comm_type
+        SUB_ID           AS sub_id,
+        CMTE_ID          AS committee_id,
+        CAND_ID          AS candidate_id,
+        SUPPORT_OPPOSE_IND AS support_oppose,
+        TRANSACTION_DT   AS date_str,
+        TRANSACTION_AMT  AS amount,
+        SCHED_TP_CD      AS comm_type,
+        RPT_YR           AS rpt_yr
       FROM cc_raw
       WHERE SUB_ID IS NOT NULL
     `)
 
     const costs = rows.map(r => ({
       sub_id:        Number(r.sub_id),
-      committee_id:  r.committee_id  || null,
-      candidate_id:  r.candidate_id  || null,
-      support_oppose:r.support_oppose|| null,
+      committee_id:  r.committee_id   || null,
+      candidate_id:  r.candidate_id   || null,
+      support_oppose:r.support_oppose || null,
       comm_date:     fecDate(r.date_str),
       amount:        Number(r.amount || 0),
       comm_type:     r.comm_type || null,
-      cycle,
+      cycle:         r.rpt_yr ? Number(r.rpt_yr) : cycle,
     }))
 
     view.close()
