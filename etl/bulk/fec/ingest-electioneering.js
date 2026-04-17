@@ -55,8 +55,9 @@ export async function ingestElectioneering({ cycle, dryRun = false }) {
     }
     // Synthetic sub_id from SB_IMAGE_NUM (no SUB_ID in this CSV)
     const stablePk = s => {
+      const str = String(s ?? '')  // coerce BigInt → string before hashing
       let h = 0
-      for (let i = 0; i < (s || '').length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0
+      for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0
       return Math.abs(h)
     }
 
