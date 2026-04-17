@@ -30,8 +30,11 @@ function dedupBatch(rows, onConflict) {
 /**
  * Batch-upsert rows into a Supabase table.
  * Returns { upserted, batches, skipped } — skipped = 0 or 1 (if Supabase disabled).
+ *
+ * batchSize default is 250 (down from 1000) to stay within Supabase Free tier's
+ * statement_timeout on large tables like contributions (~1M+ rows).
  */
-export async function upsertBatched(table, rows, { onConflict, batchSize = 1000 } = {}) {
+export async function upsertBatched(table, rows, { onConflict, batchSize = 250 } = {}) {
   if (!supabaseReady()) {
     console.log(`  [supabase] skipped (disabled) — would upsert ${rows.length} rows into ${table}`)
     return { upserted: 0, batches: 0, skipped: 1 }
@@ -48,7 +51,7 @@ export async function upsertBatched(table, rows, { onConflict, batchSize = 1000 
     }
     upserted += batch.length
     batches += 1
-    if (batches % 10 === 0) console.log(`  [supabase] upserted ${upserted}/${rows.length} into ${table}`)
+    if (batches % 20 === 0) console.log(`  [supabase] upserted ${upserted}/${rows.length} into ${table}`)
   }
   return { upserted, batches, skipped: 0 }
 }
