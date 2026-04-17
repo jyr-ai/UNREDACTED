@@ -23,7 +23,7 @@ export async function ingestOppexp({ cycle, hotMinAmount = 2000, dryRun = false 
   try {
     const zipPath = await downloadZip(url)
     const txtPath = await extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const checksum = await fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...OPPEXP, viewName: 'oppexp_raw' })
     const [{ count }] = await view.run(`SELECT COUNT(*) AS count FROM oppexp_raw`)

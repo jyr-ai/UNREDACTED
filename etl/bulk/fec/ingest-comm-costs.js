@@ -24,7 +24,7 @@ export async function ingestCommCosts({ cycle, dryRun = false }) {
       console.log(`[${source}] skipped — file not available for cycle ${cycle}`)
       return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
     }
-    const checksum = fileChecksum(txtPath)
+    const checksum = await fileChecksum(txtPath)
 
     // CSV header: CMTE_ID,CAND_ID,SUPPORT_OPPOSE_IND,TRANSACTION_DT,TRANSACTION_AMT,
     //             SCHED_TP_CD,SUB_ID,FILE_NUM,RPT_YR,... (comma-delimited with headers)

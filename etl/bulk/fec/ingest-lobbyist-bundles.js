@@ -43,7 +43,7 @@ export async function ingestLobbyistBundles({ cycle, dryRun = false }) {
       console.log(`[${source}] skipped — file not available`)
       return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
     }
-    const checksum = fileChecksum(txtPath)
+    const checksum = await fileChecksum(txtPath)
 
     // FEC bulk lobbyist_bundle.csv is a committee-level summary (no individual lobbyist
     // records). Columns: Committee_Id, Report_Type, Quarterly_Contribution,

@@ -25,7 +25,7 @@ export async function ingestIEs({ cycle, dryRun = false }) {
       console.log(`[${source}] skipped — file not available for cycle ${cycle}`)
       return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
     }
-    const checksum = fileChecksum(txtPath)
+    const checksum = await fileChecksum(txtPath)
 
     // CSV has header row: cand_id,spe_id,sup_opp,exp_date,exp_amo,pur,pay,tran_id,file_num,...
     const view = await openCsvView({ filePath: txtPath, viewName: 'ie_raw' })

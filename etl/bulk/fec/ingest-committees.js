@@ -29,7 +29,7 @@ export async function ingestCommittees({ cycle, dryRun = false }) {
   try {
     const zipPath = await downloadZip(url)
     const txtPath = await extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const checksum = await fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...CM, viewName: 'cm_raw' })
 

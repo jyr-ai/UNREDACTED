@@ -25,7 +25,7 @@ export async function ingestElectioneering({ cycle, dryRun = false }) {
       console.log(`[${source}] skipped — file not available for cycle ${cycle}`)
       return { source, cycle, rowsRead: 0, rowsUpserted: 0 }
     }
-    const checksum = fileChecksum(txtPath)
+    const checksum = await fileChecksum(txtPath)
 
     // CSV header: CANDIDATE_ID,COMMITTEE_ID,SB_IMAGE_NUM,PAYEE_NAME,
     //             DISBURSEMENT_DESCRIPTION,COMMUNICATION_DATE,REPORTED_DISBURSEMENT_AMOUNT,...

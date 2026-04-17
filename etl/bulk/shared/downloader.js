@@ -81,8 +81,10 @@ export async function extractZip(zipPath, innerName) {
   return outPath
 }
 
-export function fileChecksum(filePath) {
+export async function fileChecksum(filePath) {
   const hash = crypto.createHash('sha256')
-  hash.update(fs.readFileSync(filePath))
+  await pipeline(fs.createReadStream(filePath), async function* (source) {
+    for await (const chunk of source) hash.update(chunk)
+  })
   return hash.digest('hex')
 }

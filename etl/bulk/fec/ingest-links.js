@@ -17,7 +17,7 @@ export async function ingestLinks({ cycle, dryRun = false }) {
   try {
     const zipPath = await downloadZip(url)
     const txtPath = await extractZip(zipPath, innerName)
-    const checksum = fileChecksum(zipPath)
+    const checksum = await fileChecksum(zipPath)
 
     const view = await openFecView({ filePath: txtPath, ...CCL, viewName: 'ccl_raw' })
 
