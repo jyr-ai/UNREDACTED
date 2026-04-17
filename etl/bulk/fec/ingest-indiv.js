@@ -112,8 +112,9 @@ export async function ingestIndiv({ cycle, hotMinAmount = 2000, dryRun = false }
     let upsertedCount = 0
     if (!dryRun && contribs.length) {
       const { upserted } = await upsertBatched('contributions', contribs, {
-        onConflict: 'contribution_id',
-        batchSize: 2000,
+        onConflict:       'contribution_id',
+        batchSize:        100,    // small batches to stay within Supabase Free statement_timeout
+        ignoreDuplicates: true,   // DO NOTHING on conflict — far faster than DO UPDATE on re-runs
       })
       upsertedCount = upserted
     }

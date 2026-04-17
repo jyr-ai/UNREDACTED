@@ -34,7 +34,7 @@ function dedupBatch(rows, onConflict) {
  * batchSize default is 250 (down from 1000) to stay within Supabase Free tier's
  * statement_timeout on large tables like contributions (~1M+ rows).
  */
-export async function upsertBatched(table, rows, { onConflict, batchSize = 250 } = {}) {
+export async function upsertBatched(table, rows, { onConflict, batchSize = 250, ignoreDuplicates = false } = {}) {
   if (!supabaseReady()) {
     console.log(`  [supabase] skipped (disabled) — would upsert ${rows.length} rows into ${table}`)
     return { upserted: 0, batches: 0, skipped: 1 }
@@ -44,7 +44,7 @@ export async function upsertBatched(table, rows, { onConflict, batchSize = 250 }
   let batches = 0
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = dedupBatch(rows.slice(i, i + batchSize), onConflict)
-    const { error } = await client.from(table).upsert(batch, { onConflict, ignoreDuplicates: false })
+    const { error } = await client.from(table).upsert(batch, { onConflict, ignoreDuplicates })
     if (error) {
       console.error(`  [supabase] batch ${batches} failed: ${error.message}`)
       throw new Error(`Supabase upsert into ${table} failed: ${error.message}`)
