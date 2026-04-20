@@ -47,12 +47,14 @@ export const donors = {
     }).toString()
     return request(`/api/donors/committees?${qs}`)
   },
-  candidates:    ({ name, office, state, party, cycle, limit = 100, offset = 0, source } = {}) => {
+  candidates:    ({ name, office, state, party, cycle, limit = 100, offset = 0, source, sortBy, sortDir } = {}) => {
     const qs = new URLSearchParams({
       ...(name && { name }), ...(office && { office }), ...(state && { state }),
       ...(party && { party }), ...(cycle && { cycle }),
       limit, offset,
       ...(source && { source }),
+      ...(sortBy  && { sortBy }),
+      ...(sortDir && { sortDir }),
     }).toString()
     return request(`/api/donors/candidates?${qs}`)
   },

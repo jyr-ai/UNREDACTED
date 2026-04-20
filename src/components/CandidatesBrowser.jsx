@@ -3,7 +3,7 @@
  * candidate-cycle dataset (~15k rows for 2024+2026) served by
  * /api/donors/candidates?source=supabase.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "../theme/index.js";
 import { ORANGE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
 import { Band, Card, CardTitle, SourceFooter } from "./ui/index.js";
@@ -29,6 +29,8 @@ export default function CandidatesBrowser() {
   const [party, setParty]   = useState("");
   const [cycle, setCycle]   = useState("2026");
   const [offset, setOffset] = useState(0);
+  const [sortBy,  setSortBy]  = useState("total_receipts");
+  const [sortDir, setSortDir] = useState("desc");
   const [data, setData]   = useState({ results: [], pagination: { count: 0 } });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
@@ -38,7 +40,12 @@ export default function CandidatesBrowser() {
     return () => clearTimeout(id);
   }, [name]);
 
-  useEffect(() => { setOffset(0); }, [office, state, party, cycle]);
+  useEffect(() => { setOffset(0); }, [office, state, party, cycle, sortBy, sortDir]);
+
+  // When filters are active, disable server-side sort (server falls back to name order)
+  const hasFilters = nameQ || office || state || party;
+  const serverSortBy  = hasFilters ? "name" : sortBy;
+  const serverSortDir = hasFilters ? "asc"  : sortDir;
 
   useEffect(() => {
     let cancelled = false;
@@ -52,17 +59,38 @@ export default function CandidatesBrowser() {
       ...(cycle  && { cycle }),
       limit: PAGE_SIZE,
       offset,
+      sortBy:  serverSortBy,
+      sortDir: serverSortDir,
     })
       .then(r => { if (!cancelled) setData(r?.data || { results: [], pagination: { count: 0 } }); })
       .catch(e => { if (!cancelled) setErr(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [nameQ, office, state, party, cycle, offset]);
+  }, [nameQ, office, state, party, cycle, offset, serverSortBy, serverSortDir]);
 
-  const rows = data?.results || [];
+  const rawRows = data?.results || [];
+  // When filters are active, apply client-side sort of the current page
+  const rows = (hasFilters && sortBy === "total_receipts")
+    ? [...rawRows].sort((a, b) => {
+        const av = a.totals?.total_receipts ?? -1;
+        const bv = b.totals?.total_receipts ?? -1;
+        return sortDir === "desc" ? bv - av : av - bv;
+      })
+    : rawRows;
+
   const count = data?.pagination?.count ?? 0;
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+
+  function toggleRaisedSort() {
+    if (sortBy === "total_receipts") {
+      setSortDir(d => d === "desc" ? "asc" : "desc");
+    } else {
+      setSortBy("total_receipts");
+      setSortDir("desc");
+    }
+    setOffset(0);
+  }
 
   const selectStyle = {
     background: t.card, color: t.hi, border: `1px solid ${t.border}`,
@@ -105,7 +133,17 @@ export default function CandidatesBrowser() {
           <table style={{ width:"100%", borderCollapse:"collapse", fontFamily:MF, fontSize:10 }}>
             <thead>
               <tr style={{ background:t.cardB, position:"sticky", top:0 }}>
-                {["Name","Party","State","Office","Cycle","Raised","Spent","Cash"].map(h => (
+                {["Name","Party","State","Office","Cycle"].map(h => (
+                  <th key={h} style={{ textAlign:"left", padding:"8px 10px", color:t.mid, borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9 }}>{h.toUpperCase()}</th>
+                ))}
+                <th
+                  onClick={toggleRaisedSort}
+                  style={{ textAlign:"left", padding:"8px 10px", borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9, cursor:"pointer", userSelect:"none", color: sortBy === "total_receipts" ? ORANGE : t.mid, whiteSpace:"nowrap" }}
+                >
+                  RAISED {sortBy === "total_receipts" ? (sortDir === "desc" ? "▼" : "▲") : ""}
+                  {hasFilters && sortBy === "total_receipts" && <span style={{ fontSize:7, marginLeft:3, opacity:0.6 }}>(page)</span>}
+                </th>
+                {["Spent","Cash"].map(h => (
                   <th key={h} style={{ textAlign:"left", padding:"8px 10px", color:t.mid, borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9 }}>{h.toUpperCase()}</th>
                 ))}
               </tr>

@@ -47,7 +47,15 @@ router.get('/committees', async (req, res) => {
 
 router.get('/committees/:id/receipts', async (req, res) => {
   try {
-    const { limit } = req.query
+    const { limit, cycle } = req.query
+    if (useSupabase(req)) {
+      const data = await sbDonors.getCommitteeReceipts({
+        committeeId: req.params.id,
+        limit: parseInt(limit) || 20,
+        cycle: cycle ? parseInt(cycle) : undefined,
+      })
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getCommitteeReceipts(req.params.id, parseInt(limit) || 20)
     res.json({ success: true, data })
   } catch (e) {
@@ -58,12 +66,14 @@ router.get('/committees/:id/receipts', async (req, res) => {
 
 router.get('/candidates', async (req, res) => {
   try {
-    const { name, office, state, party, cycle, limit, offset } = req.query
+    const { name, office, state, party, cycle, limit, offset, sortBy, sortDir } = req.query
     if (useSupabase(req)) {
       const data = await sbDonors.searchCandidates({
         name, office, state, party, cycle,
-        limit:  parseInt(limit)  || 100,
-        offset: parseInt(offset) || 0,
+        limit:   parseInt(limit)  || 100,
+        offset:  parseInt(offset) || 0,
+        sortBy:  sortBy  || 'name',
+        sortDir: sortDir || 'asc',
       })
       return res.json({ success: true, source: 'supabase', data })
     }
@@ -144,6 +154,14 @@ router.get('/donors/by-employer', async (req, res) => {
     const { employer, limit, cycle } = req.query
     if (!employer) return res.status(400).json({ success: false, error: 'employer parameter required' })
 
+    if (useSupabase(req)) {
+      const data = await sbDonors.getTopDonorsByEmployer(
+        employer,
+        parseInt(limit) || 20,
+        cycle ? parseInt(cycle) : null
+      )
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getTopDonorsByEmployer(
       employer,
       parseInt(limit) || 20,
@@ -176,6 +194,14 @@ router.get('/contributions/by-industry', async (req, res) => {
     if (!keywords) return res.status(400).json({ success: false, error: 'keywords parameter required' })
 
     const industryKeywords = keywords.split(',').map(k => k.trim())
+    if (useSupabase(req)) {
+      const data = await sbDonors.getContributionsByIndustry({
+        keywords: industryKeywords,
+        limit: parseInt(limit) || 50,
+        cycle: cycle ? parseInt(cycle) : undefined,
+      })
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getIndustryContributions(
       industryKeywords,
       parseInt(limit) || 50,
@@ -194,6 +220,13 @@ router.get('/candidates/compare', async (req, res) => {
     if (!ids) return res.status(400).json({ success: false, error: 'ids parameter required' })
 
     const candidateIds = ids.split(',').map(id => id.trim())
+    if (useSupabase(req)) {
+      const data = await sbDonors.getCandidateTotalsComparison({
+        candidateIds,
+        cycle: cycle ? parseInt(cycle) : undefined,
+      })
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getCandidateComparison(
       candidateIds,
       cycle ? parseInt(cycle) : null
@@ -207,7 +240,15 @@ router.get('/candidates/compare', async (req, res) => {
 
 router.get('/committees/:id/spending', async (req, res) => {
   try {
-    const { limit } = req.query
+    const { limit, cycle } = req.query
+    if (useSupabase(req)) {
+      const data = await sbDonors.getCommitteeSpending({
+        committeeId: req.params.id,
+        limit: parseInt(limit) || 20,
+        cycle: cycle ? parseInt(cycle) : undefined,
+      })
+      return res.json({ success: true, source: 'supabase', data })
+    }
     const data = await getPACSpending(
       req.params.id,
       parseInt(limit) || 20
