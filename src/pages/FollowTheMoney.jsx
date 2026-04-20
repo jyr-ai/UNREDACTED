@@ -19,6 +19,7 @@ import DarkMoneyTracker from "../components/DarkMoneyTracker.jsx";
 import LobbyistBundlers from "../components/LobbyistBundlers.jsx";
 import IndependentExpenditures from "../components/IndependentExpenditures.jsx";
 import EmployerLeaderboard from "../components/EmployerLeaderboard.jsx";
+import CorporatePACFlow from "../components/CorporatePACFlow.jsx";
 import CashFloodAnomalies from "../components/CashFloodAnomalies.jsx";
 
 const SUBTABS = [
@@ -29,6 +30,7 @@ const SUBTABS = [
   { id: "web",       label: "Donor Web"                        },
   { id: "bundlers",  label: "Lobbyist Bundlers",   badge: "NEW" },
   { id: "ie",        label: "Indep. Expenditures", badge: "NEW" },
+  { id: "corpacs",   label: "Corporate PACs",      badge: "NEW" },
 ];
 
 function SubTabBar({ tabs, active, onChange }) {
@@ -84,6 +86,7 @@ export default function FollowTheMoney({ DonorIntel, DonorWeb, theme }) {
       {sub === "web"       && DonorWeb && <DonorWeb />}
       {sub === "bundlers"  && <LobbyistBundlers />}
       {sub === "ie"        && <IndependentExpenditures />}
+      {sub === "corpacs"   && <CorporatePACFlow />}
     </div>
   );
 }

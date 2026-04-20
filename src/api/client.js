@@ -102,6 +102,14 @@ export const donors = {
     }).toString()
     return request(`/api/donors/employers/${encodeURIComponent(employerId)}/flow?${qs}`)
   },
+  corporatePACs: ({ cycle, limit = 20, minAmount = 0 } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }), limit, minAmount }).toString()
+    return request(`/api/donors/corporate-pacs?${qs}`)
+  },
+  corporatePACRecipients: (corpId, { cycle, limit = 15 } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }), limit }).toString()
+    return request(`/api/donors/corporate-pacs/${encodeURIComponent(corpId)}/recipients?${qs}`)
+  },
 }
 
 // ── Policy / Federal Register ─────────────────────────────────────────────────
