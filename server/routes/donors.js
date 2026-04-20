@@ -337,4 +337,37 @@ router.get('/employers/:id/flow', async (req, res) => {
   }
 })
 
+// ─── Corporate PAC flow — Supabase-only ──────────────────────────────────────
+
+router.get('/corporate-pacs', async (req, res) => {
+  try {
+    const { cycle, limit, minAmount } = req.query
+    const data = await sbDonors.getCorporatePACs({
+      cycle:     cycle     ? parseInt(cycle)     : undefined,
+      limit:     parseInt(limit)     || 20,
+      minAmount: parseInt(minAmount) || 0,
+    })
+    res.json({ success: true, source: 'supabase', data })
+  } catch (e) {
+    console.error('donors/corporate-pacs error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+router.get('/corporate-pacs/:id/recipients', async (req, res) => {
+  try {
+    const { cycle, limit } = req.query
+    const corpId = decodeURIComponent(req.params.id)
+    const data = await sbDonors.getCorporatePACRecipients({
+      corpId,
+      cycle: cycle ? parseInt(cycle) : undefined,
+      limit: parseInt(limit) || 15,
+    })
+    res.json({ success: true, source: 'supabase', data })
+  } catch (e) {
+    console.error('donors/corporate-pacs/:id/recipients error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
 export default router

@@ -452,3 +452,116 @@ export async function getCommitteeSpending({ committeeId, limit = 20, cycle } = 
   if (error) throw new Error(`getCommitteeSpending: ${error.message}`)
   return { results: data || [] }
 }
+
+// ─── Corporate PAC flow ───────────────────────────────────────────────────────
+
+/**
+ * Top corporations ranked by combined PAC spending across connected PACs,
+ * Super PACs, and 501(c)4s. Aggregates pac_committees grouped by connected_org_name.
+ */
+export async function getCorporatePACs({ cycle, limit = 20, minAmount = 0 } = {}) {
+  const db = ensure()
+  let q = db
+    .from('pac_committees')
+    .select('committee_id, name, connected_org_name, total_receipts, is_super_pac, is_501c4, cycle')
+    .not('connected_org_name', 'is', null)
+    .not('connected_org_name', 'eq', 'NONE')
+    .not('connected_org_name', 'eq', '')
+    .order('total_receipts', { ascending: false, nullsFirst: false })
+    .limit(5000)
+  if (cycle) q = q.eq('cycle', Number(cycle))
+  const { data, error } = await q
+  if (error) throw new Error(`getCorporatePACs: ${error.message}`)
+
+  // Group by corp (lowercased connected_org_name), aggregate by PAC type
+  const byCorpId = new Map()
+  for (const pac of (data || [])) {
+    const raw = (pac.connected_org_name || '').trim()
+    if (!raw || raw.toUpperCase() === 'NONE') continue
+    const corpId = raw.toLowerCase()
+    if (!byCorpId.has(corpId)) {
+      byCorpId.set(corpId, {
+        corp_id: corpId, corp: raw,
+        pac_total: 0, super_pac_total: 0, c4_total: 0, total: 0,
+        pac_count: 0, pacs: [],
+      })
+    }
+    const corp = byCorpId.get(corpId)
+    const amount = Number(pac.total_receipts) || 0
+    if (pac.is_super_pac)  corp.super_pac_total += amount
+    else if (pac.is_501c4) corp.c4_total        += amount
+    else                    corp.pac_total        += amount
+    corp.total += amount
+    corp.pac_count += 1
+    corp.pacs.push({ committee_id: pac.committee_id, type: pac.is_super_pac ? 'super_pac' : pac.is_501c4 ? '501c4' : 'connected_pac' })
+    // prefer longer/better label
+    if (raw.length > corp.corp.length) corp.corp = raw
+  }
+
+  const results = [...byCorpId.values()]
+    .filter(c => c.total >= minAmount)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit)
+  return { results }
+}
+
+/**
+ * Top politician recipients of PAC money from a specific corporation.
+ * corpId = lowercased connected_org_name used as key in getCorporatePACs.
+ */
+export async function getCorporatePACRecipients({ corpId, cycle, limit = 15 } = {}) {
+  const db = ensure()
+
+  // Step 1: find all PAC committees for this corp
+  let pq = db
+    .from('pac_committees')
+    .select('committee_id, name, is_super_pac, is_501c4')
+    .ilike('connected_org_name', corpId)
+  if (cycle) pq = pq.eq('cycle', Number(cycle))
+  const { data: pacs, error: pErr } = await pq
+  if (pErr) throw new Error(`getCorporatePACRecipients/pacs: ${pErr.message}`)
+  if (!pacs || pacs.length === 0) return { recipients: [], pacs: [] }
+
+  const committeeIds = pacs.map(p => p.committee_id)
+
+  // Step 2: contributions from those committees to candidates
+  let cq = db
+    .from('contributions')
+    .select('candidate_id, amount')
+    .in('committee_id', committeeIds)
+    .not('candidate_id', 'is', null)
+    .order('amount', { ascending: false })
+    .limit(10000)
+  if (cycle) cq = cq.gte('date', `${cycle - 1}-01-01`).lte('date', `${cycle}-12-31`)
+  const { data: contribs, error: cErr } = await cq
+  if (cErr) throw new Error(`getCorporatePACRecipients/contribs: ${cErr.message}`)
+
+  // Aggregate by candidate
+  const byCand = new Map()
+  for (const c of (contribs || [])) {
+    if (!c.candidate_id) continue
+    byCand.set(c.candidate_id, (byCand.get(c.candidate_id) || 0) + (Number(c.amount) || 0))
+  }
+
+  const topCands = [...byCand.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit)
+  const pacList = pacs.map(p => ({
+    committee_id: p.committee_id, name: p.name,
+    type: p.is_super_pac ? 'super_pac' : p.is_501c4 ? '501c4' : 'connected_pac',
+  }))
+  if (topCands.length === 0) return { recipients: [], pacs: pacList }
+
+  // Hydrate with politician names
+  const candIds = topCands.map(([id]) => id)
+  const { data: pols } = await db
+    .from('politicians')
+    .select('fec_candidate_id, name, party, state, chamber, office')
+    .in('fec_candidate_id', candIds)
+  const polMap = new Map((pols || []).map(p => [p.fec_candidate_id, p]))
+
+  const recipients = topCands.map(([candidateId, amount]) => ({
+    fec_candidate_id: candidateId,
+    amount,
+    ...(polMap.get(candidateId) || {}),
+  }))
+  return { recipients, pacs: pacList }
+}
