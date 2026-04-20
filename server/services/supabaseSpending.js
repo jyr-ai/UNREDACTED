@@ -142,7 +142,27 @@ export async function getPayToPlayMatches({ company, limit = 20 }) {
     return true
   })
   deduped.sort((a, b) => b.contractAmount - a.contractAmount)
-  return { matches: deduped.slice(0, limit), contractCount: contracts.length, donationCount: contribs.length }
+  const final = deduped.slice(0, limit)
+
+  // Hydrate with politician names
+  const candIds = [...new Set(final.map(m => m.candidateId).filter(Boolean))]
+  if (candIds.length > 0) {
+    const { data: pols } = await db
+      .from('politicians')
+      .select('fec_candidate_id, name, party, state, chamber')
+      .in('fec_candidate_id', candIds)
+    const polMap = new Map((pols || []).map(p => [p.fec_candidate_id, p]))
+    for (const m of final) {
+      const pol = polMap.get(m.candidateId)
+      if (pol) {
+        m.candidateName  = pol.name
+        m.candidateParty = pol.party
+        m.candidateState = pol.state
+      }
+    }
+  }
+
+  return { matches: final, contractCount: contracts.length, donationCount: contribs.length }
 }
 
 // ─── Independent Expenditures (Story F) ───────────────────────────────────────

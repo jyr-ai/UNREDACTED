@@ -454,6 +454,39 @@ export async function getCommitteeSpending({ committeeId, limit = 20, cycle } = 
   return { results: data || [] }
 }
 
+// ─── Per-candidate top industries (Story D) ──────────────────────────────────
+
+/**
+ * Aggregate contributions by sector for a single candidate.
+ * Uses classifySector() on contributor_employer strings.
+ */
+export async function getCandidateTopIndustries(candidateId, { cycle, limit = 15 } = {}) {
+  const db = ensure()
+  let q = db
+    .from('contributions')
+    .select('contributor_employer, amount')
+    .eq('candidate_id', candidateId)
+    .gte('amount', 200)
+    .order('amount', { ascending: false })
+    .limit(20000)
+  if (cycle) q = q.gte('date', `${cycle - 1}-01-01`).lte('date', `${cycle}-12-31`)
+  const { data, error } = await q
+  if (error) throw new Error(`getCandidateTopIndustries: ${error.message}`)
+
+  const bySector = new Map()
+  for (const row of (data || [])) {
+    const sector = classifySector(row.contributor_employer || '')
+    const cur = bySector.get(sector) || { sector, total: 0, donorCount: 0 }
+    cur.total += Number(row.amount) || 0
+    cur.donorCount += 1
+    bySector.set(sector, cur)
+  }
+
+  return [...bySector.values()]
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit)
+}
+
 // ─── Corporate PAC flow ───────────────────────────────────────────────────────
 
 /**

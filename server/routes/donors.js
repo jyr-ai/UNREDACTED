@@ -125,6 +125,20 @@ router.get('/candidates/:id/contributions', async (req, res) => {
   }
 })
 
+router.get('/candidates/:id/top-industries', async (req, res) => {
+  try {
+    const { cycle, limit } = req.query
+    const data = await sbDonors.getCandidateTopIndustries(req.params.id, {
+      cycle: cycle ? parseInt(cycle) : undefined,
+      limit: parseInt(limit) || 15,
+    })
+    res.json({ success: true, source: 'supabase', data: { results: data } })
+  } catch (e) {
+    console.error('donors/candidates/:id/top-industries error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
 router.get('/committees/:id/contributions', async (req, res) => {
   try {
     const { limit, minAmount, offset } = req.query

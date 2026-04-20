@@ -20,6 +20,14 @@ const STATES = [
 
 const fmt$ = v => v == null ? "—" : v >= 1e6 ? `$${(v/1e6).toFixed(1)}m` : v >= 1e3 ? `$${(v/1e3).toFixed(0)}k` : `$${v}`;
 
+const SECTOR_COLOR = {
+  'Finance': '#4A7FFF', 'Technology': '#00AADD', 'Healthcare': '#44CC88',
+  'Energy': '#FFB84D', 'Legal': '#CC88FF', 'Real Estate': '#FF8C42',
+  'Defense': '#FF4466', 'Media & Entertainment': '#FF66AA', 'Education': '#66CCFF',
+  'Labor / Unions': '#FFDD44', 'Consulting': '#88BBFF', 'Government / Politics': '#FF8844',
+  'Retired / Inactive': '#666666', 'Other': '#444444',
+};
+
 export default function CandidatesBrowser() {
   const t = useTheme();
   const [name, setName]   = useState("");
@@ -34,6 +42,9 @@ export default function CandidatesBrowser() {
   const [data, setData]   = useState({ results: [], pagination: { count: 0 } });
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [industries, setIndustries] = useState([]);
+  const [loadingInd, setLoadingInd] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => { setNameQ(name); setOffset(0); }, 350);
@@ -91,6 +102,17 @@ export default function CandidatesBrowser() {
       setSortDir("desc");
     }
     setOffset(0);
+  }
+
+  function expandCandidate(id) {
+    if (expandedId === id) { setExpandedId(null); return; }
+    setExpandedId(id);
+    setLoadingInd(true);
+    setIndustries([]);
+    donors.candidateTopIndustries(id, { cycle: cycle || undefined })
+      .then(r => setIndustries(r?.data?.results || []))
+      .catch(() => setIndustries([]))
+      .finally(() => setLoadingInd(false));
   }
 
   const selectStyle = {
@@ -168,9 +190,15 @@ export default function CandidatesBrowser() {
               )}
               {rows.map((r, i) => {
                 const tot = r.totals || {};
-                return (
-                  <tr key={`${r.fec_candidate_id}-${r.cycle ?? "x"}-${i}`} style={{ borderBottom:`1px solid ${t.border}` }}>
-                    <td style={{ padding:"7px 10px", color:t.hi, fontFamily:SF, fontSize:12 }}>{r.name || "—"}</td>
+                const isExpanded = expandedId === r.fec_candidate_id;
+                const rowKey = `${r.fec_candidate_id}-${r.cycle ?? "x"}-${i}`;
+                return [
+                  <tr
+                    key={rowKey}
+                    onClick={() => r.fec_candidate_id && expandCandidate(r.fec_candidate_id)}
+                    style={{ borderBottom:`1px solid ${t.border}`, cursor: r.fec_candidate_id ? "pointer" : "default", background: isExpanded ? `${ORANGE}10` : undefined }}
+                  >
+                    <td style={{ padding:"7px 10px", color: isExpanded ? ORANGE : t.hi, fontFamily:SF, fontSize:12 }}>{r.name || "—"}</td>
                     <td style={{ padding:"7px 10px", color:t.mid }}>{r.party || "—"}</td>
                     <td style={{ padding:"7px 10px", color:t.mid }}>{r.state || "—"}{r.district ? `-${r.district}` : ""}</td>
                     <td style={{ padding:"7px 10px", color:t.mid }}>{r.office || r.chamber || "—"}</td>
@@ -178,8 +206,42 @@ export default function CandidatesBrowser() {
                     <td style={{ padding:"7px 10px", color:ORANGE }}>{fmt$(tot.total_receipts)}</td>
                     <td style={{ padding:"7px 10px", color:t.mid }}>{fmt$(tot.total_disbursements)}</td>
                     <td style={{ padding:"7px 10px", color:t.mid }}>{fmt$(tot.cash_on_hand)}</td>
-                  </tr>
-                );
+                  </tr>,
+                  isExpanded && (
+                    <tr key={`${rowKey}-detail`}>
+                      <td colSpan={8} style={{ padding: 0, background: t.cardB || t.card, borderBottom:`2px solid ${ORANGE}30` }}>
+                        <div style={{ padding:"12px 16px" }}>
+                          <div style={{ fontFamily:MF, fontSize:8, color:ORANGE, letterSpacing:2, marginBottom:8 }}>
+                            TOP DONOR INDUSTRIES · {r.name || r.fec_candidate_id}
+                          </div>
+                          {loadingInd && <div style={{ fontFamily:MF, fontSize:10, color:t.low, padding:"8px 0" }}>Loading industries…</div>}
+                          {!loadingInd && industries.length === 0 && (
+                            <div style={{ fontFamily:MF, fontSize:10, color:t.low, padding:"8px 0" }}>No contribution data found for this candidate.</div>
+                          )}
+                          {!loadingInd && industries.length > 0 && (() => {
+                            const maxTotal = industries[0].total;
+                            return industries.map(ind => {
+                              const pct = maxTotal > 0 ? (ind.total / maxTotal) * 100 : 0;
+                              const color = SECTOR_COLOR[ind.sector] || "#444";
+                              return (
+                                <div key={ind.sector} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5 }}>
+                                  <span style={{ fontFamily:MF, fontSize:8.5, color, minWidth:130, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                                    {ind.sector}
+                                  </span>
+                                  <div style={{ flex:1, height:12, background:`${t.border}`, borderRadius:2, overflow:"hidden" }}>
+                                    <div style={{ width:`${pct}%`, height:"100%", background:color, borderRadius:2, transition:"width .2s" }} />
+                                  </div>
+                                  <span style={{ fontFamily:MF, fontSize:9, color:ORANGE, fontWeight:700, minWidth:55, textAlign:"right" }}>{fmt$(ind.total)}</span>
+                                  <span style={{ fontFamily:MF, fontSize:8, color:t.low, minWidth:40, textAlign:"right" }}>{ind.donorCount} txns</span>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                ];
               })}
             </tbody>
           </table>

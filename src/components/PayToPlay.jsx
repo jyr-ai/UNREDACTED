@@ -192,7 +192,9 @@ export default function PayToPlay() {
                 {/* Donor detail */}
                 <div style={{ padding: "0 10px 8px", fontFamily: MF, fontSize: 8.5, color: t.low }}>
                   Donor: {m.donorName || "—"} · {m.donorEmployer || "—"}
-                  {m.candidateId && <span> · Candidate: {m.candidateId}</span>}
+                  {m.candidateName
+                    ? <span> · Candidate: {m.candidateName} ({m.candidateParty}-{m.candidateState})</span>
+                    : m.candidateId && <span> · Candidate: {m.candidateId}</span>}
                 </div>
               </div>
             );

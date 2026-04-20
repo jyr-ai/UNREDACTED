@@ -64,6 +64,10 @@ export const donors = {
     const qs = new URLSearchParams({ limit, offset, minAmount, ...(source && { source }) }).toString()
     return request(`/api/donors/candidates/${id}/contributions?${qs}`)
   },
+  candidateTopIndustries: (id, { cycle, limit = 15 } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }), limit }).toString()
+    return request(`/api/donors/candidates/${id}/top-industries?${qs}`)
+  },
   committeeContributions: (id, { limit = 100, offset = 0, minAmount = 1000, source } = {}) => {
     const qs = new URLSearchParams({ limit, offset, minAmount, ...(source && { source }) }).toString()
     return request(`/api/donors/committees/${id}/contributions?${qs}`)

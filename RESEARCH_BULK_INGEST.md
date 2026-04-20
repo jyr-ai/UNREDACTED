@@ -1,9 +1,9 @@
 # Bulk Ingest Plan — FEC + USASpending → Supabase
 
-**Branch:** `feature/research`
-**Author:** research doc, 2026-04-13
-**Status:** ✅ IMPLEMENTATION COMPLETE — all 12 steps code-complete as of 2026-04-15
-**Awaiting user action:** Phase 1 backfill execution + env flag flip (see §9)
+**Branch:** `feature-research` (pending merge → `main`)
+**Author:** research doc, 2026-04-13 · last updated 2026-04-20
+**Status:** ✅ CODE COMPLETE + PARTIAL LIVE — Phase 1 backfill executed, env flags live, frontend shipped
+**Remaining user actions:** R2 bucket creation · full individual contribs + USASpending backfill · neo4j-driver removal · merge to main (see §9)
 
 ---
 
@@ -602,15 +602,32 @@ With ~500 labeled corrupt vs ~5000 clean members as a starting training set, a g
 
 **Progress (as of 2026-04-15): ALL 12 STEPS CODE-COMPLETE.** Steps 1–5 were done by 2026-04-14. Steps 6–12 completed 2026-04-15. Step 13 (ML baseline) removed from scope.
 
-### ⚠️ Awaiting user action before going live
+### ✅ Completed user actions (as of 2026-04-20)
 
-1. **Unpause Supabase project** and apply both migrations:
-   - `supabase/migrations/20260414000000_bulk_ingest.sql`
-   - `supabase/migrations/20260415000000_disbursements.sql`
-2. **Run Phase 1–4 backfill:** `node etl/bulk/run.js --all --cycle 2024 --cycle 2026`
-3. **Set env flags** in Render/Vercel: `DONOR_SOURCE=supabase`, `SPENDING_SOURCE=supabase`
-4. **Create R2 bucket** `unredacted-bulk` + add 5 R2 env vars + GH Secrets (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`)
-5. **`npm uninstall neo4j-driver`** — `graphQueries.js` is now a re-export shim of `graphService.js`; once all callers updated to import directly from `graphService.js`, delete the shim
+1. ✅ **Supabase unpaused + both migrations applied** (`20260414000000_bulk_ingest.sql`, `20260415000000_disbursements.sql`)
+2. ✅ **Phase 1 FEC backfill executed** — `politicians`, `pac_committees`, `candidate_totals`, `candidate_committee_links`, `committee_transfers`, `contributions` (pas2 + partial indiv) now populated. `money_flow_edges` MV refreshed (~1.7M rows — required `SET statement_timeout = 0` directly in Supabase SQL editor; RPC `refresh_money_flow_edges()` created for future GH Actions use).
+3. ✅ **Env flags set in Vercel** — `DONOR_SOURCE=supabase`, `SPENDING_SOURCE=supabase`
+4. ✅ **ESM dotenv timing fixed** — `server/app.js` changed to `import 'dotenv/config'` as first import (Supabase client was initialising before env vars loaded, returning `null`)
+5. ✅ **IPv6 proxy fixed** — `vite.config.js` proxy target changed to `http://127.0.0.1:3001` (Windows `localhost` → `::1` was hitting wrong process)
+
+### ✅ Additional completed actions (as of 2026-04-20)
+
+1. ✅ **Full individual contributions backfilled** — FEC Schedule A `indiv` data is now in `contributions` table; story types B, D, J have data to query against.
+2. ✅ **USASpending backfill complete** — `contracts` and `grants` tables populated; `SPENDING_SOURCE=supabase` active.
+5. ✅ **`feature-research` merged → `main`** — production Vercel running latest code.
+
+### ⚠️ Still pending
+
+3. **Create Cloudflare R2 bucket** `unredacted-bulk` — required for cold Parquet tier (full individual contribs, oppexp, USASpending). Add to `.env` and GitHub Actions secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ENDPOINT`
+4. **`npm uninstall neo4j-driver`** — `graphQueries.js` is now a re-export shim; once confirmed no active callers, delete the shim and remove the dep.
+
+### 🔨 Now actionable — story type screens (data is live)
+
+With contributions + contracts/grants backfilled, the following story screens can now be built:
+
+- **Story B — Pay-to-play / Contractor Donations** — join `contracts.recipient_name` against `contributions.contributor_employer`; show contractors who donated to committees before/after receiving contracts. Timeline correlation: donation month N → contract award month N+k.
+- **Story D — Industry Capture** — per-candidate "top employer industries" breakdown using `contributions.contributor_employer` + `classifySector()`; explicit lobbyist bundler table from `lobbyist_bundles`.
+- **Story J — Cash Flood Anomalies** — ✅ already implemented (`CashFloodAnomalies.jsx`, `getCashFloodAlerts()` in `supabaseDonors.js`).
 
 ### Step 5 — what was done
 
@@ -639,6 +656,17 @@ With ~500 labeled corrupt vs ~5000 clean members as a starting training set, a g
 10. ✅ **Phase 6 — `.fec` filings** — `etl/bulk/fec/parse-filings.js` — daily ZIPs from docquery.fec.gov, parses Schedule C (loans) + Schedule D (debts), `ingestFilingRange()` for date-range backfills.
 11. ✅ **GH Actions cron** — `.github/workflows/bulk-ingest-fec.yml` (weekly Mon 06:00 UTC, 6-hr timeout) + `bulk-ingest-usaspending.yml` (monthly full + weekly delta). `etl/bulk/run.js` updated with all 17 sources.
 12. ✅ **Read-path swap #2** — `server/services/supabaseSpending.js` (contracts, grants, agency, disbursements, IEs, lobbyist bundles). `spending.js` upgraded with `SPENDING_SOURCE=supabase` flag + 3 new Supabase-only endpoints. `graphQueries.js` replaced with re-export shim from `graphService.js` (Neo4j removed).
+
+13. ✅ **Post-MVP frontend + source-switch (2026-04-19/20)** — additional work on `feature-research`:
+    - **FEC→Supabase for 5 remaining FEC-only routes** — added `useSupabase()` check to `/committees/:id/receipts`, `/donors/by-employer`, `/contributions/by-industry`, `/candidates/compare`, `/committees/:id/spending`. New functions in `supabaseDonors.js`: `getCommitteeReceipts`, `getContributionsByIndustry`, `getCandidateTotalsComparison`, `getCommitteeSpending`.
+    - **Corporate PAC flow** — `getCorporatePACs` + `getCorporatePACRecipients` in `supabaseDonors.js`; `/corporate-pacs` and `/corporate-pacs/:id/recipients` routes; `CorporatePACFlow.jsx` stacked bar chart with politician recipients showing real names (not FEC IDs).
+    - **Cash Flood Anomalies** — `getCashFloodAlerts()` detects 30-day fundraising spikes (≥1.5× prior window, ≥$100k); `CashFloodAnomalies.jsx` component; `/cash-flood` route.
+    - **Employer Leaderboard** — `getTopEmployers()` and `getEmployerFlow()` via `money_flow_edges` MV; `EmployerLeaderboard.jsx` split-panel with sector badges and 3-tier mini Sankey.
+    - **FollowTheMoney restructure** — 8 subtabs: Money Flow · Donor Intelligence · Dark Money · Cash Flood · Donor Web · Lobbyist Bundlers · Indep. Expenditures · Corporate PACs. DonorIntel (politician profile + candidate lookup) restored on its own tab.
+    - **CandidatesBrowser sort** — default sort by Raised ▼ (server-side `candidate_totals`-led query when no filters); Spent column also sortable; client-side fallback sort when filters active.
+    - **Sankey light-mode fix** — `SankeyNode fill="#BBB"` → `fill={theme?.mid||"#BBB"}` in `MoneyFlowSankey.jsx` and `EmployerLeaderboard.jsx`; `color: t.hi` added to all Sankey Tooltip `contentStyle` objects.
+    - **LobbyistBundlers + IndependentExpenditures** — rewritten to remove MUI imports (MUI not installed); uses `useTheme()` inline styles.
+    - **CLAUDE.md** — created project guidance file.
 
 Estimated total implementation effort: completed in ~2 focused sessions.
 - ~~Confirmation on **Supabase plan / storage budget**~~ — **decided 2026-04-13**: hybrid Parquet cold tier + Supabase Pro hot tier (see §6b). User must unpause project + upgrade to Pro before first ingest.
