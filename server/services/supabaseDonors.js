@@ -7,6 +7,7 @@
  * Coexists with services/fec.js (live FEC API) so the cutover is a flag flip.
  */
 import { supabase } from '../lib/supabase.js'
+import { classifySector } from '../lib/sectorClassifier.js'
 
 function ensure() {
   if (!supabase) throw new Error('Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing)')
@@ -19,12 +20,43 @@ function ensure() {
  * Search politicians, optionally joined with candidate_totals for a given cycle
  * so the same candidate appears once per cycle they filed in.
  */
-export async function searchCandidates({ name, office, state, party, cycle, limit = 100, offset = 0 }) {
+export async function searchCandidates({ name, office, state, party, cycle, limit = 100, offset = 0, sortBy = 'name', sortDir = 'asc' }) {
   const db = ensure()
 
-  // Two-step: filter politicians, then hydrate with candidate_totals for the
-  // returned page. No FK between politicians.fec_candidate_id and
-  // candidate_totals.candidate_id, so PostgREST embed isn't available.
+  // When sortBy=total_receipts and no politician-table filters are active,
+  // lead with candidate_totals (ordered by receipts) for accurate pagination.
+  const hasPolFilters = name || office || state || party
+  if (sortBy === 'total_receipts' && !hasPolFilters) {
+    const ascending = sortDir === 'asc'
+    let tq = db
+      .from('candidate_totals')
+      .select('candidate_id, total_receipts, total_disbursements, cash_on_hand, individual_contributions, pac_contributions, cycle', { count: 'exact' })
+      .order('total_receipts', { ascending, nullsFirst: false })
+      .range(offset, offset + limit - 1)
+    if (cycle) tq = tq.eq('cycle', Number(cycle))
+    const { data: totals, error: tErr, count } = await tq
+    if (tErr) throw new Error(`searchCandidates/totals-led: ${tErr.message}`)
+    if (!totals || totals.length === 0) return { results: [], pagination: { count: count || 0, limit, offset } }
+
+    const ids = totals.map(t => t.candidate_id).filter(Boolean)
+    const { data: pols, error: pErr } = await db
+      .from('politicians')
+      .select('fec_candidate_id, name, party, state, district, chamber, office, in_office, next_election')
+      .in('fec_candidate_id', ids)
+    if (pErr) throw new Error(`searchCandidates/pols: ${pErr.message}`)
+    const polMap = new Map((pols || []).map(p => [p.fec_candidate_id, p]))
+
+    const rows = totals.map(t => ({
+      ...(polMap.get(t.candidate_id) || { fec_candidate_id: t.candidate_id }),
+      cycle: t.cycle,
+      totals: t,
+    }))
+    return { results: rows, pagination: { count, limit, offset } }
+  }
+
+  // Default path: filter politicians, hydrate with candidate_totals.
+  // No FK between politicians.fec_candidate_id and candidate_totals.candidate_id,
+  // so PostgREST embed isn't available — two-step query.
   let q = db
     .from('politicians')
     .select('fec_candidate_id, name, party, state, district, chamber, office, in_office, next_election', { count: 'exact' })
@@ -314,4 +346,109 @@ export async function getMoneyFlow({ cycle, sourceTier, targetTier, nodeId, node
   const { data, error } = await q
   if (error) throw new Error(`getMoneyFlow: ${error.message}`)
   return { edges: data || [] }
+}
+
+// ─── Committee receipts ───────────────────────────────────────────────────────
+
+/**
+ * Top individual contributions into a committee (Schedule A receipts).
+ * Falls back to querying `contributions` by committee_id.
+ */
+export async function getCommitteeReceipts({ committeeId, limit = 20, cycle } = {}) {
+  const db = ensure()
+  let q = db
+    .from('contributions')
+    .select('contributor_name, contributor_employer, contributor_occupation, amount, date, receipt_type')
+    .eq('committee_id', committeeId)
+    .order('amount', { ascending: false })
+    .limit(limit)
+  if (cycle) q = q.gte('date', `${cycle - 1}-01-01`).lte('date', `${cycle}-12-31`)
+  const { data, error } = await q
+  if (error) throw new Error(`getCommitteeReceipts: ${error.message}`)
+  return { results: data || [] }
+}
+
+// ─── Contributions by industry ────────────────────────────────────────────────
+
+/**
+ * Aggregate contributions by sector, using keyword matching on contributor_employer.
+ * Keywords are OR'd together; results are grouped by sector via classifySector().
+ */
+export async function getContributionsByIndustry({ keywords, limit = 50, cycle } = {}) {
+  const db = ensure()
+  // Build OR clause: each keyword applied as ilike on contributor_employer
+  const orClause = keywords.map(k => `contributor_employer.ilike.%${k}%`).join(',')
+  let q = db
+    .from('contributions')
+    .select('contributor_employer, amount')
+    .or(orClause)
+    .order('amount', { ascending: false })
+    .limit(20000)
+  if (cycle) q = q.gte('date', `${cycle - 1}-01-01`).lte('date', `${cycle}-12-31`)
+  const { data, error } = await q
+  if (error) throw new Error(`getContributionsByIndustry: ${error.message}`)
+
+  // Group by sector
+  const bySector = new Map()
+  for (const row of (data || [])) {
+    const sector = classifySector(row.contributor_employer || '')
+    const cur = bySector.get(sector) || { sector, total: 0, employer_count: 0 }
+    cur.total += Number(row.amount) || 0
+    cur.employer_count += 1
+    bySector.set(sector, cur)
+  }
+
+  const results = [...bySector.values()]
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit)
+  return { results }
+}
+
+// ─── Candidate comparison ─────────────────────────────────────────────────────
+
+/**
+ * Return candidate_totals rows for a list of candidate IDs, enriched with
+ * politician names from the politicians table.
+ */
+export async function getCandidateTotalsComparison({ candidateIds, cycle } = {}) {
+  const db = ensure()
+  let tq = db
+    .from('candidate_totals')
+    .select('*')
+    .in('candidate_id', candidateIds)
+  if (cycle) tq = tq.eq('cycle', Number(cycle))
+  const { data: totals, error: tErr } = await tq
+  if (tErr) throw new Error(`getCandidateTotalsComparison: ${tErr.message}`)
+
+  const { data: pols, error: pErr } = await db
+    .from('politicians')
+    .select('fec_candidate_id, name, party, state, chamber, office')
+    .in('fec_candidate_id', candidateIds)
+  if (pErr) throw new Error(`getCandidateTotalsComparison/pols: ${pErr.message}`)
+
+  const polMap = new Map((pols || []).map(p => [p.fec_candidate_id, p]))
+  const results = (totals || []).map(t => ({
+    ...(polMap.get(t.candidate_id) || {}),
+    ...t,
+  }))
+  return { results }
+}
+
+// ─── Committee spending (disbursements) ───────────────────────────────────────
+
+/**
+ * Top disbursements for a committee from the disbursements_detail table (FEC oppexp).
+ */
+export async function getCommitteeSpending({ committeeId, limit = 20, cycle } = {}) {
+  const db = ensure()
+  let q = db
+    .from('disbursements_detail')
+    .select('recipient_name, disbursement_amount, disbursement_date, purpose_category, disbursement_description')
+    .eq('committee_id', committeeId)
+    .order('disbursement_amount', { ascending: false })
+    .limit(limit)
+  if (cycle) q = q.gte('disbursement_date', `${cycle - 1}-01-01`).lte('disbursement_date', `${cycle}-12-31`)
+  const { data, error } = await q
+  if (error) throw new Error(`getCommitteeSpending: ${error.message}`)
+  return { results: data || [] }
 }

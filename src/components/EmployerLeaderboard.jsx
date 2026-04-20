@@ -69,7 +69,7 @@ function SectorBadge({ sector }) {
   )
 }
 
-function SankeyNode({ x, y, width, height, payload }) {
+function SankeyNode({ x, y, width, height, payload, theme }) {
   if (!payload || height < 2) return null
   const color = TIER_COLOR[payload.tier] || ORANGE
   const label = payload.label || payload.name || '—'
@@ -78,7 +78,7 @@ function SankeyNode({ x, y, width, height, payload }) {
       <Rectangle x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.85} stroke={color} />
       {height > 12 && (
         <text x={x + width + 6} y={y + height / 2} textAnchor="start" dominantBaseline="middle"
-              fontFamily={MF} fontSize={9} fill="#BBB">
+              fontFamily={MF} fontSize={9} fill={theme?.mid || "#BBB"}>
           {label.length > 32 ? label.slice(0, 30) + '…' : label}
         </text>
       )}
@@ -120,12 +120,12 @@ function MiniSankey({ edges, t }) {
         nodeWidth={10}
         linkCurvature={0.5}
         iterations={32}
-        node={<SankeyNode />}
+        node={<SankeyNode theme={t} />}
         link={{ stroke: ORANGE, strokeOpacity: 0.25, fill: ORANGE, fillOpacity: 0.2 }}
         margin={{ top: 8, right: 200, bottom: 8, left: 8 }}
       >
         <Tooltip
-          contentStyle={{ background: t.card, border: `1px solid ${t.border}`, fontFamily: MF, fontSize: 10 }}
+          contentStyle={{ background: t.card, border: `1px solid ${t.border}`, fontFamily: MF, fontSize: 10, color: t.hi }}
           formatter={v => [fmt$(v), 'amount']}
         />
       </Sankey>
