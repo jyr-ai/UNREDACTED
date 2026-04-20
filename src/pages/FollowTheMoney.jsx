@@ -18,7 +18,7 @@ import { ORANGE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
 import DarkMoneyTracker from "../components/DarkMoneyTracker.jsx";
 import LobbyistBundlers from "../components/LobbyistBundlers.jsx";
 import IndependentExpenditures from "../components/IndependentExpenditures.jsx";
-import MoneyFlowSankey from "../components/MoneyFlowSankey.jsx";
+import EmployerLeaderboard from "../components/EmployerLeaderboard.jsx";
 import CashFloodAnomalies from "../components/CashFloodAnomalies.jsx";
 
 const SUBTABS = [
@@ -77,7 +77,7 @@ export default function FollowTheMoney({ DonorIntel, DonorWeb, theme }) {
 
       <SubTabBar tabs={SUBTABS} active={sub} onChange={setSub} />
 
-      {sub === "flow"      && <MoneyFlowSankey />}
+      {sub === "flow"      && <EmployerLeaderboard />}
       {sub === "intel"     && DonorIntel && <DonorIntel />}
       {sub === "darkmoney" && <DarkMoneyTracker />}
       {sub === "anomalies" && <CashFloodAnomalies />}

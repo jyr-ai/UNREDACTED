@@ -86,6 +86,22 @@ export const donors = {
     }).toString()
     return request(`/api/donors/money-flow?${qs}`)
   },
+  employers: ({ cycle, minAmount, limit = 100, sector } = {}) => {
+    const qs = new URLSearchParams({
+      ...(cycle     && { cycle }),
+      ...(minAmount && { minAmount }),
+      ...(sector    && { sector }),
+      limit,
+    }).toString()
+    return request(`/api/donors/employers?${qs}`)
+  },
+  employerFlow: (employerId, { cycle, limit = 50 } = {}) => {
+    const qs = new URLSearchParams({
+      ...(cycle && { cycle }),
+      limit,
+    }).toString()
+    return request(`/api/donors/employers/${encodeURIComponent(employerId)}/flow?${qs}`)
+  },
 }
 
 // ── Policy / Federal Register ─────────────────────────────────────────────────

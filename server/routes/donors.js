@@ -13,6 +13,7 @@ import {
   getPACSpending
 } from '../services/fec.js'
 import * as sbDonors from '../services/supabaseDonors.js'
+import { classifySector } from '../lib/sectorClassifier.js'
 
 const router = Router()
 
@@ -251,6 +252,46 @@ router.get('/cash-flood', async (req, res) => {
     res.json({ success: true, source: 'supabase', ...data })
   } catch (e) {
     console.error('donors/cash-flood error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+// ─── Employer leaderboard ─────────────────────────────────────────────────────
+
+router.get('/employers', async (req, res) => {
+  try {
+    const { cycle, minAmount, limit, sector } = req.query
+    const requestedLimit = parseInt(limit) || 100
+    // Fetch more rows when sector filter is active so post-filter has enough coverage
+    const fetchLimit = sector ? Math.max(requestedLimit * 5, 200) : requestedLimit
+    const rows = await sbDonors.getTopEmployers({
+      cycle,
+      minAmount: parseInt(minAmount) || 0,
+      limit:     fetchLimit,
+    })
+    // Apply sector classification, optional sector filter, then re-limit
+    let results = rows.map(r => ({ ...r, sector: classifySector(r.employer) }))
+    if (sector) results = results.filter(r => r.sector === sector)
+    results = results.slice(0, requestedLimit)
+    res.json({ success: true, source: 'supabase', data: { results, pagination: { count: results.length, limit: requestedLimit, offset: 0 } } })
+  } catch (e) {
+    console.error('donors/employers error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+router.get('/employers/:id/flow', async (req, res) => {
+  try {
+    const { cycle, limit } = req.query
+    const employerId = decodeURIComponent(req.params.id).toLowerCase().trim()
+    const data = await sbDonors.getEmployerFlow({
+      employerId,
+      cycle,
+      limit: parseInt(limit) || 50,
+    })
+    res.json({ success: true, source: 'supabase', data })
+  } catch (e) {
+    console.error('donors/employers/:id/flow error:', e.message)
     res.status(500).json({ success: false, error: e.message })
   }
 })

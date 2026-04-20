@@ -1,14 +1,8 @@
 import { useState, useEffect } from 'react'
-import {
-  Box, Typography, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Paper, Chip, CircularProgress, Alert,
-  TextField, InputAdornment, MenuItem, Select, FormControl, InputLabel,
-} from '@mui/material'
-import SearchIcon from '@mui/icons-material/Search'
-import { useTheme } from '@mui/material/styles'
+import { useTheme } from '../theme/index.js'
 
 // Story F: Attack-ad coordination — independent expenditures from committees
-// supporting or opposing candidates. Real data from Supabase (fec_ie ingest).
+// supporting or opposing candidates. Real data from Supabase (fec-ies ingest).
 // Journalists: look for same payee_name (media buyer / ad vendor) appearing
 // across multiple SuperPACs near the same election — coordination signal.
 
@@ -26,31 +20,36 @@ async function fetchIEs({ candidateId, committeeId, cycle, limit = 100 } = {}) {
   return json.data || []
 }
 
-function SupportChip({ value }) {
-  if (!value) return null
-  const isSupport = value.toUpperCase().startsWith('S')
-  return (
-    <Chip
-      label={isSupport ? 'Support' : 'Oppose'}
-      size="small"
-      color={isSupport ? 'success' : 'error'}
-      variant="outlined"
-    />
-  )
-}
-
 function fmtMoney(n) {
   if (!n && n !== 0) return '—'
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
 }
 
+function SupportBadge({ value }) {
+  if (!value) return <span>—</span>
+  const isSupport = value.toUpperCase().startsWith('S')
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 7px',
+      borderRadius: 3,
+      fontSize: '0.7rem',
+      fontWeight: 600,
+      border: `1px solid ${isSupport ? '#4A7FFF' : '#FF8000'}`,
+      color: isSupport ? '#4A7FFF' : '#FF8000',
+    }}>
+      {isSupport ? 'Support' : 'Oppose'}
+    </span>
+  )
+}
+
 export default function IndependentExpenditures({ candidateId, committeeId, cycle: propCycle }) {
   const t = useTheme()
-  const [rows, setRows] = useState([])
+  const [rows, setRows]     = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError]   = useState(null)
   const [search, setSearch] = useState('')
-  const [cycle, setCycle] = useState(propCycle || 2026)
+  const [cycle, setCycle]   = useState(propCycle || 2026)
 
   useEffect(() => {
     setLoading(true)
@@ -72,78 +71,79 @@ export default function IndependentExpenditures({ candidateId, committeeId, cycl
   })
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+    <div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <h6 style={{ margin: 0, flexGrow: 1, color: t.hi, fontSize: '1rem', fontWeight: 600 }}>
           Independent Expenditures
-        </Typography>
-        <FormControl size="small" sx={{ minWidth: 100 }}>
-          <InputLabel>Cycle</InputLabel>
-          <Select value={cycle} label="Cycle" onChange={e => setCycle(e.target.value)}>
-            <MenuItem value={2026}>2026</MenuItem>
-            <MenuItem value={2024}>2024</MenuItem>
-            <MenuItem value={2022}>2022</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField
-          size="small"
+        </h6>
+        <select
+          value={cycle}
+          onChange={e => setCycle(Number(e.target.value))}
+          style={{ background: t.inputBg, color: t.hi, border: `1px solid ${t.border}`, borderRadius: 4, padding: '4px 8px', fontSize: '0.85rem' }}
+        >
+          <option value={2026}>2026</option>
+          <option value={2024}>2024</option>
+          <option value={2022}>2022</option>
+        </select>
+        <input
+          type="text"
           placeholder="Search payee, candidate, purpose…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          sx={{ minWidth: 260 }}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+          style={{ background: t.inputBg, color: t.hi, border: `1px solid ${t.border}`, borderRadius: 4, padding: '5px 10px', fontSize: '0.85rem', minWidth: 240 }}
         />
-      </Box>
+      </div>
 
-      {loading && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}
-      {error   && <Alert severity="warning" sx={{ mb: 2 }}>
-        {error.includes('Failed') || error.includes('fetch') ? (
-          <>Data not yet available — run <code>fec-ies</code> ingest for cycle {cycle}.</>
-        ) : error}
-      </Alert>}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '24px 0', color: t.mid }}>Loading…</div>
+      )}
+
+      {error && (
+        <div style={{ background: t.card, border: `1px solid ${t.warn}`, borderRadius: 4, padding: '10px 14px', color: t.warn, marginBottom: 12, fontSize: '0.875rem' }}>
+          {error.includes('Failed') || error.includes('fetch')
+            ? <>Data not yet available — run <code>fec-ies</code> ingest for cycle {cycle}.</>
+            : error}
+        </div>
+      )}
 
       {!loading && !error && filtered.length === 0 && (
-        <Alert severity="info">No independent expenditure records found for this filter.</Alert>
+        <div style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 4, padding: '10px 14px', color: t.mid, fontSize: '0.875rem' }}>
+          No independent expenditure records found for this filter.
+        </div>
       )}
 
       {!loading && filtered.length > 0 && (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: t.palette.action.hover }}>
-                <TableCell><strong>Committee</strong></TableCell>
-                <TableCell><strong>Candidate</strong></TableCell>
-                <TableCell><strong>S/O</strong></TableCell>
-                <TableCell><strong>Amount</strong></TableCell>
-                <TableCell><strong>Payee</strong></TableCell>
-                <TableCell><strong>Purpose</strong></TableCell>
-                <TableCell><strong>Date</strong></TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.slice(0, 200).map(r => (
-                <TableRow key={r.sub_id} hover>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{r.committee_id}</TableCell>
-                  <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{r.candidate_id || '—'}</TableCell>
-                  <TableCell><SupportChip value={r.support_oppose} /></TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{fmtMoney(r.expenditure_amount)}</TableCell>
-                  <TableCell>{r.payee_name || '—'}</TableCell>
-                  <TableCell sx={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.purpose || '—'}
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{r.expenditure_date || '—'}</TableCell>
-                </TableRow>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ background: t.cardB, borderBottom: `1px solid ${t.border}` }}>
+                {['Committee','Candidate','S/O','Amount','Payee','Purpose','Date'].map(h => (
+                  <th key={h} style={{ padding: '6px 10px', textAlign: 'left', color: t.mid, fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.slice(0, 200).map((r, i) => (
+                <tr key={r.sub_id || i} style={{ borderBottom: `1px solid ${t.border}`, background: i % 2 === 0 ? t.card : t.tableAlt }}>
+                  <td style={{ padding: '5px 10px', fontFamily: 'monospace', fontSize: '0.72rem', color: t.mid }}>{r.committee_id}</td>
+                  <td style={{ padding: '5px 10px', fontFamily: 'monospace', fontSize: '0.72rem', color: t.mid }}>{r.candidate_id || '—'}</td>
+                  <td style={{ padding: '5px 10px' }}><SupportBadge value={r.support_oppose} /></td>
+                  <td style={{ padding: '5px 10px', fontWeight: 600, color: t.accent }}>{fmtMoney(r.expenditure_amount)}</td>
+                  <td style={{ padding: '5px 10px', color: t.hi }}>{r.payee_name || '—'}</td>
+                  <td style={{ padding: '5px 10px', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: t.mid }}>{r.purpose || '—'}</td>
+                  <td style={{ padding: '5px 10px', whiteSpace: 'nowrap', color: t.mid }}>{r.expenditure_date || '—'}</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </tbody>
+          </table>
+        </div>
       )}
 
       {filtered.length > 200 && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        <p style={{ margin: '8px 0 0', fontSize: '0.75rem', color: t.low }}>
           Showing top 200 of {filtered.length} records. Use candidate/committee filters to narrow.
-        </Typography>
+        </p>
       )}
-    </Box>
+    </div>
   )
 }

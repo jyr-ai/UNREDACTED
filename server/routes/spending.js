@@ -55,8 +55,13 @@ router.get('/agency', async (req, res) => {
   try {
     const { year } = req.query
     if (useSupabase(req)) {
-      const data = await sbSpending.getAgencySpending(year ? parseInt(year) : null)
-      return res.json({ success: true, source: 'supabase', data })
+      try {
+        const data = await sbSpending.getAgencySpending(year ? parseInt(year) : null)
+        return res.json({ success: true, source: 'supabase', data })
+      } catch (sbErr) {
+        // Supabase spending tables not yet populated — fall through to live API
+        console.warn('spending/agency Supabase unavailable, falling back to live API:', sbErr.message)
+      }
     }
     const data = await liveAgency(year ? parseInt(year) : null)
     res.json({ success: true, source: 'usaspending', data })

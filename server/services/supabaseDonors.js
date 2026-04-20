@@ -198,6 +198,98 @@ export async function getCashFloodAlerts({ cycle = null, topN = 20 } = {}) {
   }
 }
 
+// ─── Employer leaderboard ─────────────────────────────────────────────────────
+
+/**
+ * Top employers by total contribution volume, for the leaderboard panel.
+ * Sector classification is applied server-side in the route handler.
+ */
+export async function getTopEmployers({ cycle, minAmount = 0, limit = 100 } = {}) {
+  const db = ensure()
+  // Use money_flow_edges MV (already aggregated per employer→committee pair)
+  // Fetch all tier-1 employer rows, then group by employer in JS.
+  let q = db
+    .from('money_flow_edges')
+    .select('source_id, source_label, amount, txn_count')
+    .eq('source_type', 'employer')
+    .eq('source_tier', 1)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(5000)
+  if (cycle) q = q.eq('cycle', Number(cycle))
+  const { data, error } = await q
+  if (error) throw new Error(`getTopEmployers: ${error.message}`)
+
+  // Group by employer_id, summing amount and txn_count across committees
+  const byId = new Map()
+  for (const row of (data || [])) {
+    const id  = row.source_id
+    const cur = byId.get(id) || { employer_id: id, employer: row.source_label || id, total: 0, txn_count: 0 }
+    cur.total     += Number(row.amount)    || 0
+    cur.txn_count += Number(row.txn_count) || 0
+    if (row.source_label) cur.employer = row.source_label  // keep most recent raw label
+    byId.set(id, cur)
+  }
+
+  return [...byId.values()]
+    .filter(r => r.total >= minAmount)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit)
+}
+
+/**
+ * 3-tier money flow for a specific employer:
+ * employer → committee (tier1→2) + committee → candidate (tier4→5 for those committees).
+ * Enriches committee IDs with names from pac_committees.
+ */
+export async function getEmployerFlow({ employerId, cycle, limit = 50 } = {}) {
+  const db = ensure()
+
+  // Step 1: employer → committee edges from MV
+  let q1 = db
+    .from('money_flow_edges')
+    .select('*')
+    .eq('source_type', 'employer')
+    .eq('source_tier', 1)
+    .eq('source_id', employerId)
+    .order('amount', { ascending: false })
+    .limit(limit)
+  if (cycle) q1 = q1.eq('cycle', Number(cycle))
+  const { data: empEdges, error: e1 } = await q1
+  if (e1) throw new Error(`getEmployerFlow step1: ${e1.message}`)
+  if (!empEdges || empEdges.length === 0) return { edges: [] }
+
+  // Step 2: collect committee IDs, fetch their names
+  const committeeIds = [...new Set(empEdges.map(e => e.target_id).filter(Boolean))]
+  const { data: committees, error: e2 } = await db
+    .from('pac_committees')
+    .select('committee_id, name')
+    .in('committee_id', committeeIds)
+  if (e2) throw new Error(`getEmployerFlow step2: ${e2.message}`)
+  const nameById = Object.fromEntries((committees || []).map(c => [c.committee_id, c.name]))
+
+  // Step 3: committee → candidate edges from MV
+  let q3 = db
+    .from('money_flow_edges')
+    .select('*')
+    .in('source_id', committeeIds)
+    .eq('target_type', 'candidate')
+    .order('amount', { ascending: false })
+    .limit(limit)
+  if (cycle) q3 = q3.eq('cycle', Number(cycle))
+  const { data: candEdges, error: e3 } = await q3
+  if (e3) throw new Error(`getEmployerFlow step3: ${e3.message}`)
+
+  // Enrich labels
+  const enrich = edges => (edges || []).map(e => ({
+    ...e,
+    source_label: e.source_type === 'committee' ? (nameById[e.source_id] || e.source_id) : (e.source_label || e.source_id),
+    target_label: e.target_type === 'committee' ? (nameById[e.target_id] || e.target_id) : (e.target_label || e.target_id),
+  }))
+
+  return { edges: [...enrich(empEdges), ...enrich(candEdges)] }
+}
+
 // ─── Money-flow (Sankey) ──────────────────────────────────────────────────────
 
 /**
