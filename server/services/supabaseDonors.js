@@ -23,15 +23,16 @@ function ensure() {
 export async function searchCandidates({ name, office, state, party, cycle, limit = 100, offset = 0, sortBy = 'name', sortDir = 'asc' }) {
   const db = ensure()
 
-  // When sortBy=total_receipts and no politician-table filters are active,
-  // lead with candidate_totals (ordered by receipts) for accurate pagination.
+  // When sortBy is a candidate_totals column and no politician-table filters are active,
+  // lead with candidate_totals for accurate server-side pagination.
+  const TOTALS_SORT_FIELDS = ['total_receipts', 'total_disbursements']
   const hasPolFilters = name || office || state || party
-  if (sortBy === 'total_receipts' && !hasPolFilters) {
+  if (TOTALS_SORT_FIELDS.includes(sortBy) && !hasPolFilters) {
     const ascending = sortDir === 'asc'
     let tq = db
       .from('candidate_totals')
       .select('candidate_id, total_receipts, total_disbursements, cash_on_hand, individual_contributions, pac_contributions, cycle', { count: 'exact' })
-      .order('total_receipts', { ascending, nullsFirst: false })
+      .order(sortBy, { ascending, nullsFirst: false })
       .range(offset, offset + limit - 1)
     if (cycle) tq = tq.eq('cycle', Number(cycle))
     const { data: totals, error: tErr, count } = await tq

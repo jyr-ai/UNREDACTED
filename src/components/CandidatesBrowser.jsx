@@ -70,10 +70,11 @@ export default function CandidatesBrowser() {
 
   const rawRows = data?.results || [];
   // When filters are active, apply client-side sort of the current page
-  const rows = (hasFilters && sortBy === "total_receipts")
+  const SORTABLE_FIELDS = ["total_receipts", "total_disbursements"];
+  const rows = (hasFilters && SORTABLE_FIELDS.includes(sortBy))
     ? [...rawRows].sort((a, b) => {
-        const av = a.totals?.total_receipts ?? -1;
-        const bv = b.totals?.total_receipts ?? -1;
+        const av = a.totals?.[sortBy] ?? -1;
+        const bv = b.totals?.[sortBy] ?? -1;
         return sortDir === "desc" ? bv - av : av - bv;
       })
     : rawRows;
@@ -82,11 +83,11 @@ export default function CandidatesBrowser() {
   const page = Math.floor(offset / PAGE_SIZE) + 1;
   const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
 
-  function toggleRaisedSort() {
-    if (sortBy === "total_receipts") {
+  function toggleSort(field) {
+    if (sortBy === field) {
       setSortDir(d => d === "desc" ? "asc" : "desc");
     } else {
-      setSortBy("total_receipts");
+      setSortBy(field);
       setSortDir("desc");
     }
     setOffset(0);
@@ -137,13 +138,20 @@ export default function CandidatesBrowser() {
                   <th key={h} style={{ textAlign:"left", padding:"8px 10px", color:t.mid, borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9 }}>{h.toUpperCase()}</th>
                 ))}
                 <th
-                  onClick={toggleRaisedSort}
+                  onClick={() => toggleSort("total_receipts")}
                   style={{ textAlign:"left", padding:"8px 10px", borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9, cursor:"pointer", userSelect:"none", color: sortBy === "total_receipts" ? ORANGE : t.mid, whiteSpace:"nowrap" }}
                 >
                   RAISED {sortBy === "total_receipts" ? (sortDir === "desc" ? "▼" : "▲") : ""}
                   {hasFilters && sortBy === "total_receipts" && <span style={{ fontSize:7, marginLeft:3, opacity:0.6 }}>(page)</span>}
                 </th>
-                {["Spent","Cash"].map(h => (
+                <th
+                  onClick={() => toggleSort("total_disbursements")}
+                  style={{ textAlign:"left", padding:"8px 10px", borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9, cursor:"pointer", userSelect:"none", color: sortBy === "total_disbursements" ? ORANGE : t.mid, whiteSpace:"nowrap" }}
+                >
+                  SPENT {sortBy === "total_disbursements" ? (sortDir === "desc" ? "▼" : "▲") : ""}
+                  {hasFilters && sortBy === "total_disbursements" && <span style={{ fontSize:7, marginLeft:3, opacity:0.6 }}>(page)</span>}
+                </th>
+                {["Cash"].map(h => (
                   <th key={h} style={{ textAlign:"left", padding:"8px 10px", color:t.mid, borderBottom:`1px solid ${t.border}`, letterSpacing:1, fontSize:9 }}>{h.toUpperCase()}</th>
                 ))}
               </tr>
