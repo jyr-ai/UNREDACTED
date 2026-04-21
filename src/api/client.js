@@ -205,7 +205,7 @@ export const stockAct = {
 
 // ── Dark Money ────────────────────────────────────────────────────────────────
 export const darkMoney = {
-  orgs:       (limit = 20) => request(`/api/darkmoney/orgs?limit=${limit}`),
+  orgs:       (limit = 20, cycle) => request(`/api/darkmoney/orgs?limit=${limit}${cycle ? `&cycle=${cycle}` : ''}`),
   trace:      (committeeId) => request(`/api/darkmoney/trace/${committeeId}`),
   exposure:   (candidateId) => request(`/api/darkmoney/candidate/${candidateId}/exposure`),
   infer:      (committeeId) => request(`/api/darkmoney/candidate/${committeeId}/infer`),
@@ -266,7 +266,7 @@ export const getAccountabilityLeaderboard = (chamber, party, limit) => corruptio
 export const getCompanyProfile            = (name)   => companies.profile(name)
 export const getCompanyPoliticalFootprint = (name)   => companies.politicalFootprint(name)
 export const getCompanyConflicts          = (name)   => companies.conflicts(name)
-export const getDarkMoneyOrgs             = (limit)  => darkMoney.orgs(limit)
+export const getDarkMoneyOrgs             = (limit, cycle) => darkMoney.orgs(limit, cycle)
 export const getDarkMoneyFlowData         = (cycle)  => darkMoney.flow(cycle)
 export const getRecentStockTrades         = (chamber, limit) => stockAct.recent(chamber, limit)
 export const getStockActWatchlist         = ()       => stockAct.watchlist()

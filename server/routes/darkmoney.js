@@ -19,9 +19,9 @@ function useSupabase(req) {
 // GET /api/darkmoney/orgs
 router.get('/orgs', async (req, res) => {
   try {
-    const { limit } = req.query
+    const { limit, cycle } = req.query
     if (useSupabase(req)) {
-      const data = await sbDarkMoney.getDarkMoneyOrgs(parseInt(limit) || 20)
+      const data = await sbDarkMoney.getDarkMoneyOrgs(parseInt(limit) || 20, cycle ? parseInt(cycle) : undefined)
       return res.json({ success: true, source: 'supabase', data })
     }
     const data = await getDarkMoneyOrgs(parseInt(limit) || 20)

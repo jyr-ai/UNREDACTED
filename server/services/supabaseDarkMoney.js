@@ -27,14 +27,16 @@ function inferIssues(name = '') {
 /**
  * Get dark money organizations — Super PACs and 501(c)(4)s ranked by spending.
  */
-export async function getDarkMoneyOrgs(limit = 20) {
+export async function getDarkMoneyOrgs(limit = 20, cycle) {
   const db = ensure()
-  const { data, error } = await db
+  let q = db
     .from('pac_committees')
     .select('committee_id, name, connected_org_name, total_receipts, total_disbursements, committee_type, cycle')
     .or('committee_type.eq.O,committee_type.eq.U,committee_type.eq.V,committee_type.eq.W')
     .order('total_disbursements', { ascending: false, nullsFirst: false })
     .limit(limit)
+  if (cycle) q = q.eq('cycle', Number(cycle))
+  const { data, error } = await q
   if (error) throw new Error(`getDarkMoneyOrgs: ${error.message}`)
 
   // Committee types: O=Super PAC (independent-expenditure-only), U=Super PAC (non-contribution),
