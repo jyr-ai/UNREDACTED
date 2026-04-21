@@ -457,14 +457,18 @@ export async function getCommitteeSpending({ committeeId, limit = 20, cycle } = 
 // ─── Per-candidate top industries (Story D) ──────────────────────────────────
 
 /**
- * Aggregate contributions by sector for a single candidate.
- * Uses classifySector() on contributor_employer strings.
+ * Top donor sources for a single candidate — combines individual employers
+ * with PAC/committee names. Returns traceable org names, not just sectors.
+ *
+ * Individual contributions → grouped by contributor_employer
+ * PAC contributions (no employer) → grouped by committee_id, enriched with
+ *   pac_committees.name and connected_org_name
  */
 export async function getCandidateTopIndustries(candidateId, { cycle, limit = 15 } = {}) {
   const db = ensure()
   let q = db
     .from('contributions')
-    .select('contributor_employer, amount')
+    .select('contributor_employer, committee_id, amount')
     .eq('candidate_id', candidateId)
     .gte('amount', 200)
     .order('amount', { ascending: false })
@@ -473,18 +477,51 @@ export async function getCandidateTopIndustries(candidateId, { cycle, limit = 15
   const { data, error } = await q
   if (error) throw new Error(`getCandidateTopIndustries: ${error.message}`)
 
-  const bySector = new Map()
+  // Split: individual donors (have employer) vs PAC contributions (no employer)
+  const byEmployer = new Map()
+  const byCommittee = new Map()
   for (const row of (data || [])) {
-    const sector = classifySector(row.contributor_employer || '')
-    const cur = bySector.get(sector) || { sector, total: 0, donorCount: 0 }
-    cur.total += Number(row.amount) || 0
-    cur.donorCount += 1
-    bySector.set(sector, cur)
+    const amt = Number(row.amount) || 0
+    const emp = (row.contributor_employer || '').trim()
+    if (emp && emp.length > 1) {
+      const key = emp.toUpperCase()
+      const cur = byEmployer.get(key) || { source: emp, total: 0, count: 0 }
+      cur.total += amt
+      cur.count += 1
+      if (emp.length > cur.source.length) cur.source = emp
+      byEmployer.set(key, cur)
+    } else if (row.committee_id) {
+      const cur = byCommittee.get(row.committee_id) || { committeeId: row.committee_id, total: 0, count: 0 }
+      cur.total += amt
+      cur.count += 1
+      byCommittee.set(row.committee_id, cur)
+    }
   }
 
-  return [...bySector.values()]
-    .sort((a, b) => b.total - a.total)
-    .slice(0, limit)
+  // Enrich committee entries with names from pac_committees
+  const committeeIds = [...byCommittee.keys()]
+  if (committeeIds.length > 0) {
+    const { data: pacs } = await db
+      .from('pac_committees')
+      .select('committee_id, name, connected_org_name')
+      .in('committee_id', committeeIds)
+    const pacMap = new Map((pacs || []).map(p => [p.committee_id, p]))
+    for (const [cid, entry] of byCommittee) {
+      const pac = pacMap.get(cid)
+      entry.source = pac?.connected_org_name || pac?.name || cid
+    }
+  }
+
+  // Merge both lists, classify sector, rank by total
+  const all = []
+  for (const e of byEmployer.values()) {
+    all.push({ source: e.source, sector: classifySector(e.source), total: e.total, donorCount: e.count, type: 'employer' })
+  }
+  for (const e of byCommittee.values()) {
+    all.push({ source: e.source, sector: classifySector(e.source), total: e.total, donorCount: e.count, type: 'pac' })
+  }
+  all.sort((a, b) => b.total - a.total)
+  return all.slice(0, limit)
 }
 
 // ─── Corporate PAC flow ───────────────────────────────────────────────────────

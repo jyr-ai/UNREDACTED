@@ -212,27 +212,37 @@ export default function CandidatesBrowser() {
                       <td colSpan={8} style={{ padding: 0, background: t.cardB || t.card, borderBottom:`2px solid ${ORANGE}30` }}>
                         <div style={{ padding:"12px 16px" }}>
                           <div style={{ fontFamily:MF, fontSize:8, color:ORANGE, letterSpacing:2, marginBottom:8 }}>
-                            TOP DONOR INDUSTRIES · {r.name || r.fec_candidate_id}
+                            TOP DONOR SOURCES · {r.name || r.fec_candidate_id}
                           </div>
-                          {loadingInd && <div style={{ fontFamily:MF, fontSize:10, color:t.low, padding:"8px 0" }}>Loading industries…</div>}
+                          {loadingInd && <div style={{ fontFamily:MF, fontSize:10, color:t.low, padding:"8px 0" }}>Loading donor sources…</div>}
                           {!loadingInd && industries.length === 0 && (
                             <div style={{ fontFamily:MF, fontSize:10, color:t.low, padding:"8px 0" }}>No contribution data found for this candidate.</div>
                           )}
                           {!loadingInd && industries.length > 0 && (() => {
                             const maxTotal = industries[0].total;
-                            return industries.map(ind => {
+                            const fmtSource = s => s ? s.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : "—";
+                            return industries.map((ind, idx) => {
                               const pct = maxTotal > 0 ? (ind.total / maxTotal) * 100 : 0;
-                              const color = SECTOR_COLOR[ind.sector] || "#444";
+                              const color = SECTOR_COLOR[ind.sector] || "#666";
                               return (
-                                <div key={ind.sector} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5 }}>
-                                  <span style={{ fontFamily:MF, fontSize:8.5, color, minWidth:130, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                                    {ind.sector}
-                                  </span>
+                                <div key={`${ind.source}-${idx}`} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5 }}>
+                                  <span style={{ fontFamily:MF, fontSize:8, color:t.low, minWidth:14, textAlign:"right" }}>{idx + 1}</span>
+                                  <div style={{ minWidth:160, maxWidth:200, overflow:"hidden" }}>
+                                    <div style={{ fontFamily:MF, fontSize:9, color:t.hi, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                                      {fmtSource(ind.source)}
+                                    </div>
+                                    <div style={{ display:"flex", gap:4, alignItems:"center", marginTop:1 }}>
+                                      <span style={{ fontFamily:MF, fontSize:7, color, border:`1px solid ${color}44`, background:`${color}18`, padding:"0px 4px", borderRadius:2, whiteSpace:"nowrap" }}>
+                                        {ind.sector}
+                                      </span>
+                                      {ind.type === "pac" && <span style={{ fontFamily:MF, fontSize:6.5, color:t.low, letterSpacing:0.5 }}>PAC</span>}
+                                    </div>
+                                  </div>
                                   <div style={{ flex:1, height:12, background:`${t.border}`, borderRadius:2, overflow:"hidden" }}>
                                     <div style={{ width:`${pct}%`, height:"100%", background:color, borderRadius:2, transition:"width .2s" }} />
                                   </div>
                                   <span style={{ fontFamily:MF, fontSize:9, color:ORANGE, fontWeight:700, minWidth:55, textAlign:"right" }}>{fmt$(ind.total)}</span>
-                                  <span style={{ fontFamily:MF, fontSize:8, color:t.low, minWidth:40, textAlign:"right" }}>{ind.donorCount} txns</span>
+                                  <span style={{ fontFamily:MF, fontSize:8, color:t.low, minWidth:45, textAlign:"right" }}>{ind.donorCount} txns</span>
                                 </div>
                               );
                             });
