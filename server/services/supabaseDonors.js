@@ -466,18 +466,38 @@ export async function getCommitteeSpending({ committeeId, limit = 20, cycle } = 
  */
 export async function getCandidateTopIndustries(candidateId, { cycle, limit = 15 } = {}) {
   const db = ensure()
+
+  // Step 1: Find the candidate's campaign committees via candidate_committee_links
+  let linkQ = db
+    .from('candidate_committee_links')
+    .select('committee_id')
+    .eq('fec_candidate_id', candidateId)
+  if (cycle) linkQ = linkQ.eq('cycle', Number(cycle))
+  const { data: links } = await linkQ
+  const candCommitteeIds = (links || []).map(l => l.committee_id).filter(Boolean)
+
+  // Step 2: Query contributions both to the candidate directly (pas2)
+  // AND to the candidate's principal committees (individual donations)
   let q = db
     .from('contributions')
     .select('contributor_employer, committee_id, amount')
-    .eq('candidate_id', candidateId)
     .gte('amount', 200)
     .order('amount', { ascending: false })
     .limit(20000)
+  if (candCommitteeIds.length > 0) {
+    // Match contributions to candidate directly OR to their committees
+    const orClause = `candidate_id.eq.${candidateId},committee_id.in.(${candCommitteeIds.join(',')})`
+    q = q.or(orClause)
+  } else {
+    q = q.eq('candidate_id', candidateId)
+  }
   if (cycle) q = q.gte('date', `${cycle - 1}-01-01`).lte('date', `${cycle}-12-31`)
   const { data, error } = await q
   if (error) throw new Error(`getCandidateTopIndustries: ${error.message}`)
 
   // Split: individual donors (have employer) vs PAC contributions (no employer)
+  // Exclude the candidate's own committees from the PAC donor list
+  const ownCommittees = new Set(candCommitteeIds.map(c => c.toUpperCase()))
   const byEmployer = new Map()
   const byCommittee = new Map()
   for (const row of (data || [])) {
@@ -490,7 +510,8 @@ export async function getCandidateTopIndustries(candidateId, { cycle, limit = 15
       cur.count += 1
       if (emp.length > cur.source.length) cur.source = emp
       byEmployer.set(key, cur)
-    } else if (row.committee_id) {
+    } else if (row.committee_id && !ownCommittees.has(row.committee_id.toUpperCase())) {
+      // Only count external PACs/committees as donors, not the candidate's own committees
       const cur = byCommittee.get(row.committee_id) || { committeeId: row.committee_id, total: 0, count: 0 }
       cur.total += amt
       cur.count += 1
