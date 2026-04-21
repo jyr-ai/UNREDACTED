@@ -31,14 +31,16 @@ export async function getDarkMoneyOrgs(limit = 20) {
   const db = ensure()
   const { data, error } = await db
     .from('pac_committees')
-    .select('committee_id, name, connected_org_name, total_receipts, total_disbursements, committee_type, is_super_pac, is_501c4, cycle, state, treasurer_name')
-    .or('is_super_pac.eq.true,is_501c4.eq.true')
+    .select('committee_id, name, connected_org_name, total_receipts, total_disbursements, committee_type, cycle')
+    .or('committee_type.eq.O,committee_type.eq.U,committee_type.eq.V,committee_type.eq.W')
     .order('total_disbursements', { ascending: false, nullsFirst: false })
     .limit(limit)
   if (error) throw new Error(`getDarkMoneyOrgs: ${error.message}`)
 
+  // Committee types: O=Super PAC (independent-expenditure-only), U=Super PAC (non-contribution),
+  // V=Hybrid PAC (has non-contribution account), W=Hybrid PAC (has contribution account)
   return (data || []).map(c => {
-    const type = c.is_501c4 ? '501c4' : 'super_pac'
+    const type = (c.committee_type === 'O' || c.committee_type === 'U') ? 'super_pac' : '501c4'
     let disclosureLevel = 'dark'
     if (c.connected_org_name && c.connected_org_name !== 'NONE') disclosureLevel = 'disclosed'
     else if (c.committee_type === 'O' || c.committee_type === 'U') disclosureLevel = 'partial'
@@ -51,8 +53,8 @@ export async function getDarkMoneyOrgs(limit = 20) {
       cycle: c.cycle || 2024,
       disclosureLevel,
       connectedOrg: c.connected_org_name || null,
-      treasurer: c.treasurer_name || null,
-      state: c.state,
+      treasurer: null,
+      state: null,
       linkedCandidates: 0,
       issues: inferIssues(c.name),
     }
@@ -67,7 +69,7 @@ export async function traceDarkMoneyFlow(committeeId) {
 
   const [committeeRes, transfersRes, receiptsRes] = await Promise.all([
     db.from('pac_committees')
-      .select('committee_id, name, committee_type, is_super_pac, is_501c4')
+      .select('committee_id, name, committee_type')
       .eq('committee_id', committeeId)
       .limit(1),
     db.from('committee_transfers')
@@ -164,13 +166,13 @@ export async function getCandidateDarkMoneyExposure(candidateId) {
   if (cids.length > 0) {
     const { data: pacs } = await db
       .from('pac_committees')
-      .select('committee_id, name, is_super_pac, is_501c4, committee_type')
+      .select('committee_id, name, committee_type')
       .in('committee_id', cids)
     const pacMap = new Map((pacs || []).map(p => [p.committee_id, p]))
     for (const [cid, entry] of byCommittee) {
       const pac = pacMap.get(cid)
       entry.name = pac?.name || cid
-      entry.disclosureLevel = pac?.is_501c4 ? 'dark' : pac?.is_super_pac ? 'partial' : 'disclosed'
+      entry.disclosureLevel = (pac?.committee_type === 'V' || pac?.committee_type === 'W') ? 'dark' : (pac?.committee_type === 'O' || pac?.committee_type === 'U') ? 'partial' : 'disclosed'
     }
   }
 
@@ -257,7 +259,7 @@ export async function getDarkMoneyFlowData(cycle = null) {
   }
   const { data: pacs } = await db
     .from('pac_committees')
-    .select('committee_id, name, is_super_pac, is_501c4, committee_type')
+    .select('committee_id, name, committee_type')
     .in('committee_id', [...allIds])
   const pacMap = new Map((pacs || []).map(p => [p.committee_id, p]))
 
@@ -279,8 +281,8 @@ export async function getDarkMoneyFlowData(cycle = null) {
 
     const fromName = fromPac?.name || t.from_committee_id
     const toName = toPac?.name || t.to_committee_id
-    const fromType = fromPac?.is_501c4 ? '501c4' : fromPac?.is_super_pac ? 'super_pac' : 'committee'
-    const toType = toPac?.is_501c4 ? '501c4' : toPac?.is_super_pac ? 'super_pac' : 'committee'
+    const fromType = (fromPac?.committee_type === 'V' || fromPac?.committee_type === 'W') ? '501c4' : (fromPac?.committee_type === 'O' || fromPac?.committee_type === 'U') ? 'super_pac' : 'committee'
+    const toType = (toPac?.committee_type === 'V' || toPac?.committee_type === 'W') ? '501c4' : (toPac?.committee_type === 'O' || toPac?.committee_type === 'U') ? 'super_pac' : 'committee'
 
     const fromIdx = addNode(t.from_committee_id, fromName, fromType, Number(t.transfer_amount) || 0)
     const toIdx = addNode(t.to_committee_id, toName, toType, 0)
