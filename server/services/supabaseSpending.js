@@ -92,7 +92,7 @@ export async function getPayToPlayMatches({ company, limit = 20 }) {
       .limit(limit * 5),
     db
       .from('contracts')
-      .select('recipient_name, award_amount, period_of_performance_start_date, awarding_agency_name')
+      .select('recipient_name, award_amount, period_of_performance_start, awarding_agency')
       .ilike('recipient_name', `%${company}%`)
       .order('award_amount', { ascending: false })
       .limit(limit * 3),
@@ -110,7 +110,7 @@ export async function getPayToPlayMatches({ company, limit = 20 }) {
 
   const matches = []
   for (const contract of contracts) {
-    const contractDate = new Date(contract.period_of_performance_start_date)
+    const contractDate = new Date(contract.period_of_performance_start)
     if (isNaN(contractDate.getTime())) continue
     const oneYearBefore = new Date(contractDate.getTime() - 365 * 24 * 60 * 60 * 1000)
     for (const donation of contribs) {
@@ -120,8 +120,8 @@ export async function getPayToPlayMatches({ company, limit = 20 }) {
         matches.push({
           company:        contract.recipient_name,
           contractAmount: contract.award_amount,
-          contractDate:   contract.period_of_performance_start_date,
-          agency:         contract.awarding_agency_name,
+          contractDate:   contract.period_of_performance_start,
+          agency:         contract.awarding_agency,
           donorName:      donation.contributor_name,
           donorEmployer:  donation.contributor_employer,
           donationAmount: donation.amount,
