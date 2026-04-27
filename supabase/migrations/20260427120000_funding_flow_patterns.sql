@@ -2,6 +2,8 @@
 -- Funding Flow Galaxy — AI-detected money flow patterns
 -- Spec: docs/superpowers/specs/2026-04-27-funding-flow-galaxy-design.md
 
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS funding_flow_patterns (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pattern_type    TEXT NOT NULL CHECK (pattern_type IN (
@@ -35,3 +37,10 @@ CREATE INDEX IF NOT EXISTS idx_patterns_sector
 
 COMMENT ON TABLE funding_flow_patterns IS
   'AI-detected money flow patterns surfaced in the Funding Flow Galaxy. Generated weekly by etl/patterns/detectFundingPatterns.js.';
+
+ALTER TABLE funding_flow_patterns ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS funding_flow_patterns_public_select ON funding_flow_patterns;
+CREATE POLICY funding_flow_patterns_public_select
+  ON funding_flow_patterns FOR SELECT USING (visible = TRUE);
+
+COMMIT;
