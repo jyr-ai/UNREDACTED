@@ -28,6 +28,7 @@ import congressRouter from './routes/congress.js'
 import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
 import flagsRouter from './routes/flags.js'
+import galaxyRouter from './routes/galaxy.js'
 
 const app = express()
 const isVercelDeployment =
@@ -133,6 +134,7 @@ app.use('/api/congress',       generalLimiter, congressRouter)
 app.use('/api/watchlist',      generalLimiter, watchlistRouter)
 app.use('/api/alerts',         generalLimiter, alertsRouter)
 app.use('/api/flags',          generalLimiter, flagsRouter)
+app.use('/api/galaxy',         generalLimiter, galaxyRouter)
 
 app.use((err, _req, res, _next) => {
   console.error(err.stack)
