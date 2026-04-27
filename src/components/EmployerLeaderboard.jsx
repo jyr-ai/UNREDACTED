@@ -10,6 +10,7 @@
  * raw string (e.g. "GOLDMAN SACHS & CO") written by the donor at filing.
  */
 import { useEffect, useMemo, useState } from 'react'
+import FundingFlowGalaxy from './galaxy/FundingFlowGalaxy.jsx'
 import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from 'recharts'
 import { useTheme } from '../theme/index.js'
 import { ORANGE, FONT_MONO as MF } from '../theme/tokens.js'
@@ -136,7 +137,7 @@ function MiniSankey({ edges, t }) {
 export default function EmployerLeaderboard() {
   const t = useTheme()
   const [cycle, setCycle]       = useState('2026')
-  const [sector, setSector]     = useState('All Sectors')
+  const [sector, setSector]     = useState('Finance')
   const [minAmount, setMin]     = useState(200)
   const [employers, setEmp]     = useState([])
   const [loadingEmp, setLdEmp]  = useState(false)
@@ -260,38 +261,49 @@ export default function EmployerLeaderboard() {
             )}
           </div>
 
-          {/* Right: mini Sankey */}
+          {/* Right: galaxy (sector mode when no employer, employer mode when one selected) */}
           <div style={{ border: `1px solid ${t.border}`, borderRadius: 3, background: t.cardB, display: 'flex', flexDirection: 'column' }}>
-            {!selected ? (
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-                <div style={{ textAlign: 'center', color: t.low, fontFamily: MF, fontSize: 10, lineHeight: 1.8 }}>
-                  ← Select an employer<br />to explore their money flow
-                </div>
-              </div>
+            {import.meta.env.VITE_GALAXY_ENABLED === 'true' ? (
+              <FundingFlowGalaxy
+                mode={selected ? 'employer' : 'sector'}
+                cycle={cycle}
+                sector={selected ? null : (sector !== 'All Sectors' ? sector : null)}
+                employerId={selected?.employer_id ?? null}
+                height={420}
+              />
             ) : (
-              <div style={{ padding: '12px 12px 8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontFamily: MF, fontSize: 11, fontWeight: 700, color: t.hi }}>
-                    {fmtName(selected.employer)}
-                  </span>
-                  <SectorBadge sector={selected.sector} />
+              /* LEGACY: original Sankey right-panel (unchanged) */
+              !selected ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+                  <div style={{ textAlign: 'center', color: t.low, fontFamily: MF, fontSize: 10, lineHeight: 1.8 }}>
+                    ← Select an employer<br />to explore their money flow
+                  </div>
                 </div>
-                <div style={{ fontFamily: MF, fontSize: 8.5, color: t.mid, marginBottom: 10 }}>
-                  {fmt$(selected.total)} total · {selected.txn_count?.toLocaleString()} donors · {cycle} cycle
+              ) : (
+                <div style={{ padding: '12px 12px 8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontFamily: MF, fontSize: 11, fontWeight: 700, color: t.hi }}>
+                      {fmtName(selected.employer)}
+                    </span>
+                    <SectorBadge sector={selected.sector} />
+                  </div>
+                  <div style={{ fontFamily: MF, fontSize: 8.5, color: t.mid, marginBottom: 10 }}>
+                    {fmt$(selected.total)} total · {selected.txn_count?.toLocaleString()} donors · {cycle} cycle
+                  </div>
+                  {loadingFlow && (
+                    <div style={{ padding: 20, textAlign: 'center', color: t.mid, fontFamily: MF, fontSize: 10 }}>Loading flow…</div>
+                  )}
+                  {flowErr && (
+                    <div style={{ padding: 12, color: t.warn, fontFamily: MF, fontSize: 9 }}>Flow unavailable: {flowErr}</div>
+                  )}
+                  {!loadingFlow && !flowErr && (
+                    <MiniSankey edges={flow} t={t} />
+                  )}
+                  <div style={{ fontFamily: MF, fontSize: 7.5, color: t.low, marginTop: 6 }}>
+                    Employer → Committee → Candidate · top 50 edges by volume
+                  </div>
                 </div>
-                {loadingFlow && (
-                  <div style={{ padding: 20, textAlign: 'center', color: t.mid, fontFamily: MF, fontSize: 10 }}>Loading flow…</div>
-                )}
-                {flowErr && (
-                  <div style={{ padding: 12, color: t.warn, fontFamily: MF, fontSize: 9 }}>Flow unavailable: {flowErr}</div>
-                )}
-                {!loadingFlow && !flowErr && (
-                  <MiniSankey edges={flow} t={t} />
-                )}
-                <div style={{ fontFamily: MF, fontSize: 7.5, color: t.low, marginTop: 6 }}>
-                  Employer → Committee → Candidate · top 50 edges by volume
-                </div>
-              </div>
+              )
             )}
           </div>
         </div>
