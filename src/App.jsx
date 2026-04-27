@@ -5,6 +5,7 @@ import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CandidatesBrowser from "./components/CandidatesBrowser.jsx";
 import MoneyFlowSankey from "./components/MoneyFlowSankey.jsx";
+import FundingFlowGalaxy from "./components/galaxy/FundingFlowGalaxy.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import Monitor from "./pages/Monitor.jsx";
 import FollowTheMoney from "./pages/FollowTheMoney.jsx";
@@ -66,38 +67,6 @@ const DARK_THEME = {
   scatterOk: "#4A7FFF",
 };
 
-const LIGHT_THEME = {
-  bg:       "#FFFFFF",
-  page:     "#F7F7F7",
-  card:     "#FAFAFA",
-  cardB:    "#F0F0F0",
-  border:   "#DEDEDE",
-  hi:       BLUE,
-  mid:      "#555555",
-  low:      "#AAAAAA",
-  ink:      "#F2F2F2",
-  accent:   ORANGE,
-  blue:     BLUE,
-  trueBlue: BLUE,
-  band:     BLUE,
-  bandText: "#FFFFFF",
-  navBg:    "#FFFFFF",
-  tickerBg: "#FFF3E0",
-  tickerTx: ORANGE,
-  risk:     ORANGE,
-  ok:       BLUE,
-  warn:     "#E06000",
-  grid:     "#EBEBEB",
-  shadow:   "rgba(0,40,170,0.08)",
-  kpiNum:   ORANGE,
-  tableAlt: "#F5F5F5",
-  inputBg:  "#F8F8F8",
-  sigBg:    "#FFF8F0",
-  findBg:   "#F8F8F8",
-  redactBg: "#FFFFFF",
-  redactSt: "#DDD 0,#DDD 7px,#EBEBEB 7px,#EBEBEB 9px",
-  scatterOk: BLUE,
-};
 
 const ThemeCtx = createContext(DARK_THEME);
 const useT = () => useContext(ThemeCtx);
@@ -405,90 +374,103 @@ function DonorIntel() {
         <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>A systematic analysis of PAC contributions, individual donations and independent expenditures across the 2023–24 federal election cycle.</p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr", gap: isMobile ? 14 : 20 }}>
+      {import.meta.env.VITE_GALAXY_ENABLED === 'true' ? (
         <div>
-          <Band label="Top corporate donors — PAC + individual ($m)" right="FEC · FY2024"/>
-          <Card>
-            <CT h="Defence contractors collectively outspend every other sector. Lockheed Martin led at $210m total." sub="Combined PAC and individual contributions · top 8 entities · $m"/>
-            <ResponsiveContainer width="100%" height={270}>
-              <BarChart data={DONORS} layout="vertical" margin={{ left:4, right:52, top:0, bottom:0 }} barCategoryGap="22%">
-                <CartesianGrid horizontal={false} stroke={t.grid}/>
-                <XAxis type="number" {...ap(t)} tickFormatter={v=>`$${v}m`}/>
-                <YAxis type="category" dataKey="n" {...ap(t)} width={114}/>
-                <Tooltip content={<ETip fmt={v=>`$${v}m`}/>}/>
-                <Bar dataKey="pac" name="PAC"        stackId="a" radius={0} barSize={13} fill={ORANGE}/>
-                <Bar dataKey="ind" name="Individual" stackId="a" radius={0} barSize={13} fill={t.blue}/>
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={{ display:"flex", gap:16, marginTop:8 }}>
-              {[["PAC contributions",ORANGE],["Individual donations",t.blue]].map(([l,c]) => (
-                <div key={l} style={{ display:"flex", alignItems:"center", gap:5 }}>
-                  <div style={{ width:10, height:10, background:c }}/>
-                  <span style={{ fontFamily:MF, fontSize:9, color:t.mid }}>{l}</span>
-                </div>
-              ))}
-            </div>
-            <Src s="FEC schedule B; FPDS; 2024 election cycle"/>
+          <Band label="Funding flow galaxy — 2024 cycle" right="AI PATTERN DETECTION · LIVE" />
+          <Card style={{ padding: 0 }}>
+            <FundingFlowGalaxy mode="universe" cycle="2024" height={640} />
           </Card>
         </div>
-
-        <div>
-          <Band label="Politician donor profiles" right="CLICK TO EXPLORE"/>
-          <Card p="0">
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr" }}>
-              <div style={{ borderRight:`1px solid ${t.border}` }}>
-                {POLS.map((p,i) => {
-                  const c = p.sc<35?ORANGE:p.sc<55?t.warn:t.ok;
-                  return (
-                    <div key={i} onClick={() => setSel(i)} style={{ padding:"11px 14px", borderBottom:`1px solid ${t.border}`, borderLeft:`3px solid ${sel===i?c:"transparent"}`, background:sel===i?c+"12":"transparent", cursor:"pointer", transition:"all .13s" }}>
-                      <div style={{ fontFamily:MF, fontSize:10.5, color:sel===i?t.hi:t.mid, marginBottom:3 }}>{p.n}</div>
-                      <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                        <span style={{ fontFamily:MF, fontSize:9, color:t.low }}>{p.raised} raised</span>
-                        {p.flags>0 && <span style={{ fontFamily:MF, fontSize:8, color:ORANGE, border:`1px solid ${ORANGE}55`, padding:"1px 5px" }}>{p.flags} FLAG{p.flags>1?"S":""}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ padding:"14px 16px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                  <div>
-                    <div style={{ fontFamily:SF, fontSize:13, color:t.hi, lineHeight:1.3, marginBottom:3 }}>{POLS[sel].n}</div>
-                    <div style={{ fontFamily:MF, fontSize:8.5, color:t.low, letterSpacing:1 }}>U.S. CONGRESS</div>
-                  </div>
-                  <Score v={POLS[sel].sc}/>
-                </div>
-                <div style={{ fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:2, marginBottom:8 }}>TOP DONOR INDUSTRIES</div>
-                {[["Defence",72],[	"Finance",51],["Health",38],["Pharma",29]].map(([l,pct],i) => (
-                  <div key={l} style={{ marginBottom:7 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+      ) : (
+        <>
+          {/* legacy charts — kept until flag retired */}
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr", gap: isMobile ? 14 : 20 }}>
+            <div>
+              <Band label="Top corporate donors — PAC + individual ($m)" right="FEC · FY2024"/>
+              <Card>
+                <CT h="Defence contractors collectively outspend every other sector. Lockheed Martin led at $210m total." sub="Combined PAC and individual contributions · top 8 entities · $m"/>
+                <ResponsiveContainer width="100%" height={270}>
+                  <BarChart data={DONORS} layout="vertical" margin={{ left:4, right:52, top:0, bottom:0 }} barCategoryGap="22%">
+                    <CartesianGrid horizontal={false} stroke={t.grid}/>
+                    <XAxis type="number" {...ap(t)} tickFormatter={v=>`$${v}m`}/>
+                    <YAxis type="category" dataKey="n" {...ap(t)} width={114}/>
+                    <Tooltip content={<ETip fmt={v=>`$${v}m`}/>}/>
+                    <Bar dataKey="pac" name="PAC"        stackId="a" radius={0} barSize={13} fill={ORANGE}/>
+                    <Bar dataKey="ind" name="Individual" stackId="a" radius={0} barSize={13} fill={t.blue}/>
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ display:"flex", gap:16, marginTop:8 }}>
+                  {[["PAC contributions",ORANGE],["Individual donations",t.blue]].map(([l,c]) => (
+                    <div key={l} style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <div style={{ width:10, height:10, background:c }}/>
                       <span style={{ fontFamily:MF, fontSize:9, color:t.mid }}>{l}</span>
-                      <span style={{ fontFamily:MF, fontSize:9, color:ORANGE }}>{Math.round(pct*(1-sel*0.07))}%</span>
                     </div>
-                    <div style={{ background:t.border, height:4 }}>
-                      <div style={{ width:`${pct*(1-sel*0.07)}%`, height:"100%", background:[ORANGE,t.blue,t.warn,t.ok][i%4] }}/>
-                    </div>
-                  </div>
-                ))}
-                {POLS[sel].flags>0 && (
-                  <div style={{ marginTop:12, background:t.sigBg, border:`1px solid ${ORANGE}33`, padding:"10px 12px" }}>
-                    <div style={{ fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:1.5, marginBottom:6 }}>⚠ CONFLICT SIGNALS</div>
-                    <div style={{ fontFamily:SF, fontSize:11, fontStyle:"italic", color:t.mid, lineHeight:1.6 }}>
-                      {POLS[sel].flags} potential conflict{POLS[sel].flags>1?"s":""} detected: stock trades near committee hearings; PAC donors receiving sole-source contracts from overseen agencies.
-                    </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+                <Src s="FEC schedule B; FPDS; 2024 election cycle"/>
+              </Card>
             </div>
-            <div style={{ padding:"6px 14px", borderTop:`1px solid ${t.border}`, fontFamily:MF, fontSize:8.5, color:t.low }}>
-              Sources: FEC · OpenSecrets · Senate/House financial disclosures
+
+            <div>
+              <Band label="Politician donor profiles" right="CLICK TO EXPLORE"/>
+              <Card p="0">
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr" }}>
+                  <div style={{ borderRight:`1px solid ${t.border}` }}>
+                    {POLS.map((p,i) => {
+                      const c = p.sc<35?ORANGE:p.sc<55?t.warn:t.ok;
+                      return (
+                        <div key={i} onClick={() => setSel(i)} style={{ padding:"11px 14px", borderBottom:`1px solid ${t.border}`, borderLeft:`3px solid ${sel===i?c:"transparent"}`, background:sel===i?c+"12":"transparent", cursor:"pointer", transition:"all .13s" }}>
+                          <div style={{ fontFamily:MF, fontSize:10.5, color:sel===i?t.hi:t.mid, marginBottom:3 }}>{p.n}</div>
+                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                            <span style={{ fontFamily:MF, fontSize:9, color:t.low }}>{p.raised} raised</span>
+                            {p.flags>0 && <span style={{ fontFamily:MF, fontSize:8, color:ORANGE, border:`1px solid ${ORANGE}55`, padding:"1px 5px" }}>{p.flags} FLAG{p.flags>1?"S":""}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ padding:"14px 16px" }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                      <div>
+                        <div style={{ fontFamily:SF, fontSize:13, color:t.hi, lineHeight:1.3, marginBottom:3 }}>{POLS[sel].n}</div>
+                        <div style={{ fontFamily:MF, fontSize:8.5, color:t.low, letterSpacing:1 }}>U.S. CONGRESS</div>
+                      </div>
+                      <Score v={POLS[sel].sc}/>
+                    </div>
+                    <div style={{ fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:2, marginBottom:8 }}>TOP DONOR INDUSTRIES</div>
+                    {[["Defence",72],[	"Finance",51],["Health",38],["Pharma",29]].map(([l,pct],i) => (
+                      <div key={l} style={{ marginBottom:7 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                          <span style={{ fontFamily:MF, fontSize:9, color:t.mid }}>{l}</span>
+                          <span style={{ fontFamily:MF, fontSize:9, color:ORANGE }}>{Math.round(pct*(1-sel*0.07))}%</span>
+                        </div>
+                        <div style={{ background:t.border, height:4 }}>
+                          <div style={{ width:`${pct*(1-sel*0.07)}%`, height:"100%", background:[ORANGE,t.blue,t.warn,t.ok][i%4] }}/>
+                        </div>
+                      </div>
+                    ))}
+                    {POLS[sel].flags>0 && (
+                      <div style={{ marginTop:12, background:t.sigBg, border:`1px solid ${ORANGE}33`, padding:"10px 12px" }}>
+                        <div style={{ fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:1.5, marginBottom:6 }}>⚠ CONFLICT SIGNALS</div>
+                        <div style={{ fontFamily:SF, fontSize:11, fontStyle:"italic", color:t.mid, lineHeight:1.6 }}>
+                          {POLS[sel].flags} potential conflict{POLS[sel].flags>1?"s":""} detected: stock trades near committee hearings; PAC donors receiving sole-source contracts from overseen agencies.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ padding:"6px 14px", borderTop:`1px solid ${t.border}`, fontFamily:MF, fontSize:8.5, color:t.low }}>
+                  Sources: FEC · OpenSecrets · Senate/House financial disclosures
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
-      </div>
+          </div>
+
+          <MoneyFlowSankey />
+        </>
+      )}
 
       <CandidatesBrowser />
-      <MoneyFlowSankey />
     </div>
   );
 }
@@ -1049,7 +1031,7 @@ RESPONSE FORMAT — Always structure your response as JSON with this exact schem
 
 Always use real-sounding but clearly illustrative figures. Be direct and use the editorial voice of a senior investigative analyst. Reference specific agency names, dollar amounts, and dates.`;
 
-function AnalystPanel({ onClose, dark }) {
+function AnalystPanel({ onClose }) {
   const t = useT();
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -1172,13 +1154,13 @@ function AnalystPanel({ onClose, dark }) {
     <div style={{
       display:"flex", flexDirection:"column",
       height:"100%",
-      background: dark ? "#0A0A0A" : "#FAFAFA",
+      background: "#0A0A0A",
       borderLeft:`1px solid ${t.border}`,
       fontFamily:MF,
     }}>
       {/* Panel header */}
       <div style={{
-        background: dark ? "#111" : WHITE,
+        background: "#111111",
         borderBottom:`1px solid ${t.border}`,
         padding:"0 18px",
         height:52,
@@ -1269,7 +1251,7 @@ function AnalystPanel({ onClose, dark }) {
             {m.role==="user" ? (
               <div style={{ display:"flex", justifyContent:"flex-end" }}>
                 <div style={{
-                  background: dark ? "#1E1E1E" : "#F0F0F0",
+                  background: "#1E1E1E",
                   border:`1px solid ${t.border}`,
                   borderBottomRightRadius:0,
                   padding:"11px 14px",
@@ -1301,7 +1283,7 @@ function AnalystPanel({ onClose, dark }) {
                   const meta = AGENT_META[f.agent] || AGENT_META.orchestrator;
                   const rc = RISK_COLOR[f.risk] || t.mid;
                   return (
-                    <div key={fi} style={{ background: dark ? "#0F0F0F" : WHITE, border:`1px solid ${t.border}`, borderLeft:`3px solid ${meta.color}` }}>
+                    <div key={fi} style={{ background: "#0F0F0F", border:`1px solid ${t.border}`, borderLeft:`3px solid ${meta.color}` }}>
                       <div style={{ padding:"10px 14px 8px", borderBottom:`1px solid ${t.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:7 }}>
                           <span style={{ color:meta.color, fontSize:11 }}>{meta.icon}</span>
@@ -1379,7 +1361,7 @@ function AnalystPanel({ onClose, dark }) {
       <div style={{
         borderTop:`1px solid ${t.border}`,
         padding:"14px 18px",
-        background: dark ? "#0F0F0F" : WHITE,
+        background: "#0F0F0F",
         flexShrink:0,
       }}>
         <div style={{ display:"flex", gap:9, alignItems:"flex-end" }}>
@@ -1425,7 +1407,6 @@ function AnalystPanel({ onClose, dark }) {
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 function AppInner() {
   const [tab, setTab]           = useState("monitor");
-  const [dark, setDark]         = useState(true);
   const [analyst, setAnalyst]   = useState(false);
   const [appVersion, setAppVersion] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);   // mobile hamburger
@@ -1504,7 +1485,7 @@ function AppInner() {
 
   const [showAuth, setShowAuth] = useState(false);
   const { isAuthenticated, user, profile, signOut } = useAuth();
-  const theme = dark ? DARK_THEME : LIGHT_THEME;
+  const theme = DARK_THEME;
 
   const renderTab = () => {
     if (tab==="monitor")        return <Monitor/>;
@@ -1531,7 +1512,7 @@ function AppInner() {
           ::-webkit-scrollbar-track{background:transparent}
           ::-webkit-scrollbar-thumb{background:${ORANGE}55}
           button{cursor:pointer}
-          input,textarea{color-scheme:${dark?"dark":"light"}}
+          input,textarea{color-scheme:dark}
           @keyframes dot{from{opacity:.2;transform:scale(.7)}to{opacity:1;transform:scale(1.3)}}
           @keyframes pulse{from{opacity:.5;box-shadow:0 0 4px #00FF88}to{opacity:1;box-shadow:0 0 10px #00FF88}}
           [data-active="true"]{background:${ORANGE} !important;box-shadow:0 0 14px ${ORANGE}66 !important;}
@@ -1673,13 +1654,6 @@ function AppInner() {
                   <div style={{ height:1, background:theme.border, margin:"8px 16px" }}/>
                   {/* Theme + Auth in drawer */}
                   <div style={{ display:"flex", gap:8, padding:"8px 16px", flexWrap:"wrap" }}>
-                    <button onClick={() => { const next=!dark; setDark(next); track("theme_toggle",{theme:next?"dark":"light"}); }} style={{
-                      display:"flex", alignItems:"center", gap:6, background:theme.cardB,
-                      border:`1px solid ${theme.border}`, borderRadius:20, padding:"6px 12px",
-                      fontFamily:MF, fontSize:10, color:theme.mid,
-                    }}>
-                      <span>{dark?"☀":"🌙"}</span><span>{dark?"LIGHT":"DARK"}</span>
-                    </button>
                     {isAuthenticated ? (
                       <button onClick={() => { track("auth_sign_out"); signOut(); setMenuOpen(false); }} style={{
                         display:"flex", alignItems:"center", gap:6, background:theme.cardB,
@@ -1726,16 +1700,7 @@ function AppInner() {
             })}
 
             <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:9, flexShrink:0 }}>
-              <button onClick={() => { const next = !dark; setDark(next); track("theme_toggle", { theme: next ? "dark" : "light" }); }} style={{
-                display:"flex", alignItems:"center", gap:6,
-                background:theme.cardB, border:`1px solid ${theme.border}`, borderRadius:20,
-                padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s",
-              }}>
-                <span style={{ fontSize:12 }}>{dark?"☀":"🌙"}</span>
-                <span style={{ letterSpacing:1 }}>{dark?"LIGHT":"DARK"}</span>
-              </button>
-
-              {isAuthenticated ? (
+{isAuthenticated ? (
                 <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                   <button
                     onClick={() => { setTab("accountability"); track("tab_view", { tab: "accountability" }); }}
@@ -1799,7 +1764,7 @@ function AppInner() {
                 cursor:"col-resize",
               }}
             />
-            <div style={{ maxWidth: (analyst || tab === "monitor") ? "none" : 1200, margin:"0 auto", padding: isMobile ? "14px 14px 48px" : tab === "monitor" ? "28px 12px 52px" : "28px 28px 52px" }} key={tab}>
+            <div style={{ maxWidth: (analyst || tab === "monitor" || ["money","accountability","policy","budget"].includes(tab)) ? "none" : 1200, margin: ["money","accountability","policy","budget"].includes(tab) ? "0" : "0 auto", padding: isMobile ? "14px 14px 48px" : tab === "monitor" ? "28px 12px 52px" : ["money","accountability","policy","budget"].includes(tab) ? "0 0 52px" : "28px 28px 52px" }} key={tab}>
               {renderTab()}
               <div style={{ marginTop:32, borderTop:`1px solid ${theme.border}`, paddingTop:14, display:"flex", justifyContent:"space-between" }}>
                 <span style={{ fontFamily:MF, fontSize:8.5, color:theme.low }}>UN*REDACTED · Public record intelligence · All data from public federal sources</span>
@@ -1845,8 +1810,8 @@ function AppInner() {
 
           {/* Analyst panel — full-screen overlay on mobile, resizable side panel on desktop */}
           {isMobile && analyst ? (
-            <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", flexDirection:"column", background: dark?"#0A0A0A":"#FAFAFA" }}>
-              <AnalystPanel onClose={() => setAnalyst(false)} dark={dark}/>
+            <div style={{ position:"fixed", inset:0, zIndex:300, display:"flex", flexDirection:"column", background: "#0A0A0A" }}>
+              <AnalystPanel onClose={() => setAnalyst(false)}/>
             </div>
           ) : (
             <div
@@ -1861,7 +1826,7 @@ function AppInner() {
               }}
             >
               {analyst && (
-                <AnalystPanel onClose={() => setAnalyst(false)} dark={dark}/>
+                <AnalystPanel onClose={() => setAnalyst(false)}/>
               )}
             </div>
           )}
