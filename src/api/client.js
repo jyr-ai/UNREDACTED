@@ -243,6 +243,23 @@ export const campaignWatch = {
   clearCache:        (prefix)    => request(`/api/campaign-watch/cache${prefix ? `?prefix=${prefix}` : ''}`, { method: 'DELETE' }),
 }
 
+// ── Galaxy ────────────────────────────────────────────────────────────────────
+export const galaxy = {
+  universe: ({ cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/universe${qs ? '?' + qs : ''}`)
+  },
+  sector: (sector, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/sector/${encodeURIComponent(sector)}${qs ? '?' + qs : ''}`)
+  },
+  employer: (employerId, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/employer/${encodeURIComponent(employerId)}${qs ? '?' + qs : ''}`)
+  },
+  pattern: (id) => request(`/api/galaxy/patterns/${encodeURIComponent(id)}`),
+}
+
 // ── Version ──────────────────────────────────────────────────────────────────
 export const version = {
   get: () => request('/api/version'),
@@ -273,5 +290,5 @@ export const getStockActWatchlist         = ()       => stockAct.watchlist()
 
 export default {
   spending, donors, policy, congress, feed, agent, aiAgent, settings,
-  corruption, companies, stockAct, darkMoney, campaignWatch, health,
+  corruption, companies, stockAct, darkMoney, campaignWatch, galaxy, health,
 }
