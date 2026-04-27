@@ -17,6 +17,17 @@ export const supabase = SUPABASE_URL && SERVICE_KEY
     })
   : null
 
+/**
+ * Returns the Supabase client, throwing a clear error if env vars are missing.
+ * Use this in services that require Supabase to be configured.
+ */
+export function ensure() {
+  if (!supabase) {
+    throw new Error('Supabase not configured — set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY')
+  }
+  return supabase
+}
+
 // ─── CORRUPTION SCORE CACHE ───────────────────────────────────────────────────
 
 /**
