@@ -18,9 +18,13 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const CYCLE = process.argv.includes('--cycle')
+const _cycleArg = process.argv.includes('--cycle')
   ? process.argv[process.argv.indexOf('--cycle') + 1]
-  : (process.env.PATTERN_CYCLE || '2024')
+  : null
+if (_cycleArg !== null && (typeof _cycleArg === 'undefined' || _cycleArg.startsWith('--'))) {
+  throw new Error('--cycle requires a value, e.g. --cycle 2024')
+}
+const CYCLE = _cycleArg || process.env.PATTERN_CYCLE || '2024'
 
 const TOP_N_EDGES = 400
 const DEDUP_WINDOW_DAYS = 14
@@ -90,8 +94,10 @@ async function fetchRecentPatterns(cycle) {
 
 function nodeId(type, id) {
   if (type === 'employer') return `emp:${id}`
-  if (type === 'politician' || type === 'candidate') return `pol:${id}`
-  return `cmt:${id}`
+  if (type === 'candidate') return `pol:${id}`
+  if (type === 'committee') return `cmt:${id}`
+  console.warn(`[patterns] nodeId: unexpected type "${type}" for id "${id}"`)
+  return `unk:${id}`
 }
 
 function formatEdgesForPrompt(edges) {
@@ -99,7 +105,7 @@ function formatEdgesForPrompt(edges) {
     const src = nodeId(e.source_type, e.source_id)
     const tgt = nodeId(e.target_type, e.target_id)
     const amt = Math.round(Number(e.amount) || 0).toLocaleString()
-    return `${src}\t${e.source_label || '?'}\t→\t${tgt}\t${e.target_label || '?'}\t$${amt}\t(${e.txn_count || 0} txns)`
+    return `${src} | ${e.source_label || '?'} → ${tgt} | ${e.target_label || '?'} | $${amt} | ${e.txn_count || 0} txns`
   })
   return rows.join('\n')
 }
@@ -118,7 +124,7 @@ async function callClaude({ systemPrompt, edges, recents, cycle }) {
     formatRecentsForPrompt(recents),
     ``,
     `# Top money flow edges (descending by amount)`,
-    `Columns: source_id · source_label · → · target_id · target_label · amount · (txn count)`,
+    `Columns: source_id | source_label | → | target_id | target_label | amount | txn_count`,
     ``,
     formatEdgesForPrompt(edges),
     ``,
@@ -126,20 +132,28 @@ async function callClaude({ systemPrompt, edges, recents, cycle }) {
     `Analyze the edges above. Extract patterns matching the types defined in your system prompt. Call extract_funding_patterns with your final output.`
   ].join('\n')
 
-  const res = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
-    system: [
-      {
-        type: 'text',
-        text: systemPrompt,
-        cache_control: { type: 'ephemeral' }   // prompt-cache breakpoint: system block stable across weekly runs
-      }
-    ],
-    tools: [TOOL_SCHEMA],
-    tool_choice: { type: 'tool', name: TOOL_SCHEMA.name },
-    messages: [{ role: 'user', content: userPrompt }]
-  })
+  let res
+  try {
+    res = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      system: [
+        {
+          type: 'text',
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' }   // prompt-cache breakpoint: system block stable across weekly runs
+        }
+      ],
+      tools: [TOOL_SCHEMA],
+      tool_choice: { type: 'tool', name: TOOL_SCHEMA.name },
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  } catch (e) {
+    if (e?.status) {
+      console.error(`[patterns] Claude API error status=${e.status}: ${e.message}`)
+    }
+    throw e
+  }
 
   const toolUse = res.content.find(b => b.type === 'tool_use' && b.name === TOOL_SCHEMA.name)
   if (!toolUse) throw new Error('Claude did not return a tool_use block')
@@ -167,7 +181,7 @@ function validatePatterns(patterns, edges) {
     if (!p.node_ids || p.node_ids.length < 3) reasons.push('too_few_nodes')
     const unknown = (p.node_ids || []).filter(id => !knownIds.has(id))
     if (unknown.length > 0) reasons.push(`unknown_nodes:${unknown.slice(0, 3).join(',')}`)
-    if (p.severity_score < 0 || p.severity_score > 10) reasons.push('bad_severity')
+    if (typeof p.severity_score !== 'number' || p.severity_score < 0 || p.severity_score > 10 || !Number.isInteger(p.severity_score)) reasons.push('bad_severity')
     if (!p.pattern_type) reasons.push('missing_pattern_type')
     if (!p.sector) reasons.push('missing_sector')
     if (reasons.length) rejected.push({ pattern: p, reasons })
@@ -209,7 +223,7 @@ async function main() {
   console.log(`[patterns] ${valid.length} patterns passed validation`)
 
   // Steps 6-8 (dedup, upsert, log) added in Task 5
-  return { ok: true, edges: edges.length, candidates: patterns.length, valid: valid.length, rejected: rejected.length }
+  return { ok: true, edges: edges.length, recents: recents.length, candidates: patterns.length, valid: valid.length, rejected: rejected.length }
 }
 
 const _argv1 = process.argv[1] ? `file:///${process.argv[1].replace(/\\/g, '/').replace(/^\//, '')}` : ''
