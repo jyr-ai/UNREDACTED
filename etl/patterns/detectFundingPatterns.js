@@ -29,7 +29,7 @@ const CYCLE = _cycleArg || process.env.PATTERN_CYCLE || '2024'
 const TOP_N_EDGES = 400
 const DEDUP_WINDOW_DAYS = 14
 const MODEL = 'claude-sonnet-4-6'
-const MAX_TOKENS = 5000
+const MAX_TOKENS = 8000
 
 const TOOL_SCHEMA = {
   name: 'extract_funding_patterns',
@@ -190,40 +190,153 @@ function validatePatterns(patterns, edges) {
   return { valid, rejected }
 }
 
+function normalizeTitle(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]+/g, '').replace(/\s+/g, ' ').trim()
+}
+
+function levenshtein(a, b) {
+  if (a === b) return 0
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  const v0 = new Array(b.length + 1).fill(0).map((_, i) => i)
+  const v1 = new Array(b.length + 1).fill(0)
+  for (let i = 0; i < a.length; i++) {
+    v1[0] = i + 1
+    for (let j = 0; j < b.length; j++) {
+      const cost = a[i] === b[j] ? 0 : 1
+      v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost)
+    }
+    for (let j = 0; j <= b.length; j++) v0[j] = v1[j]
+  }
+  return v1[b.length]
+}
+
+function dedupAgainstRecents(patterns, recents) {
+  const kept = []
+  const dropped = []
+  for (const p of patterns) {
+    const np = normalizeTitle(p.title)
+    const dup = recents.find(r => {
+      const nr = normalizeTitle(r.title)
+      if (nr === np) return true
+      if (Math.abs(nr.length - np.length) > 5) return false
+      return levenshtein(nr, np) <= 3
+    })
+    if (dup) dropped.push({ pattern: p, duplicateOf: dup.id })
+    else kept.push(p)
+  }
+  return { kept, dropped }
+}
+
+function enrichPatterns(patterns, edges) {
+  return patterns.map(p => {
+    const ids = new Set(p.node_ids)
+    const evidence = edges
+      .filter(e => ids.has(nodeId(e.source_type, e.source_id)) || ids.has(nodeId(e.target_type, e.target_id)))
+      .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+      .slice(0, 25)
+      .map(e => ({
+        source: nodeId(e.source_type, e.source_id),
+        source_label: e.source_label,
+        target: nodeId(e.target_type, e.target_id),
+        target_label: e.target_label,
+        amount: Number(e.amount) || 0
+      }))
+    return { ...p, evidence: { edges: evidence } }
+  })
+}
+
+async function upsertPatterns(patterns, cycle) {
+  if (!patterns.length) return { inserted: 0 }
+  const rows = patterns.map(p => ({
+    pattern_type:   p.pattern_type,
+    title:          p.title,
+    narrative:      p.narrative,
+    explanation:    p.explanation,
+    sector:         p.sector,
+    node_ids:       p.node_ids,
+    evidence:       p.evidence,
+    cycle,
+    severity_score: p.severity_score,
+    generated_by:   MODEL,
+    visible:        true
+  }))
+  const { data, error } = await supabase
+    .from('funding_flow_patterns')
+    .insert(rows)
+    .select('id')
+  if (error) throw error
+  return { inserted: data?.length ?? 0 }
+}
+
+async function writeLog(summary) {
+  const today = new Date().toISOString().slice(0, 10)
+  const logPath = path.join(__dirname, 'logs', `${today}.json`)
+  await fs.writeFile(logPath, JSON.stringify(summary, null, 2) + '\n', 'utf8')
+  console.log(`[patterns] wrote log to ${logPath}`)
+}
+
 async function main() {
-  console.log(`[patterns] starting detection for cycle=${CYCLE}`)
+  const startedAt = new Date().toISOString()
+  console.log(`[patterns] starting detection for cycle=${CYCLE} at ${startedAt}`)
+
   const edges = await fetchTopEdges(CYCLE)
   console.log(`[patterns] fetched ${edges.length} top edges`)
   if (edges.length < 20) {
-    console.log('[patterns] insufficient data; skipping')
-    return { ok: true, skipped: true, reason: 'insufficient_data' }
+    const summary = { ok: true, skipped: true, reason: 'insufficient_data', edges: edges.length }
+    await writeLog({ startedAt, finishedAt: new Date().toISOString(), ...summary })
+    return summary
   }
+
   let recents = []
   try {
     recents = await fetchRecentPatterns(CYCLE)
-  } catch (e) {
-    if (e && e.code === 'PGRST205') {
+  } catch (err) {
+    if (err?.code === 'PGRST205') {
       console.warn('[patterns] funding_flow_patterns table not yet migrated — dedup skipped')
     } else {
-      throw e
+      throw err
     }
   }
-  console.log(`[patterns] fetched ${recents.length} recent patterns`)
-
   const systemPrompt = await fs.readFile(path.join(__dirname, 'prompts', 'system.md'), 'utf8')
 
   console.log('[patterns] calling Claude…')
   const { patterns, usage } = await callClaude({ systemPrompt, edges, recents, cycle: CYCLE })
-  console.log(`[patterns] Claude returned ${patterns.length} candidate patterns (input: ${usage.input_tokens}, output: ${usage.output_tokens})`)
+  console.log(`[patterns] got ${patterns.length} candidate patterns (in: ${usage.input_tokens}, cached: ${usage.cache_read_input_tokens || 0}, out: ${usage.output_tokens})`)
 
   const { valid, rejected } = validatePatterns(patterns, edges)
-  if (rejected.length) {
-    console.warn(`[patterns] rejected ${rejected.length} patterns:`, rejected.map(r => `${r.pattern.title}: ${r.reasons.join(',')}`))
-  }
-  console.log(`[patterns] ${valid.length} patterns passed validation`)
+  const { kept, dropped } = dedupAgainstRecents(valid, recents)
+  const enriched = enrichPatterns(kept, edges)
 
-  // Steps 6-8 (dedup, upsert, log) added in Task 5
-  return { ok: true, edges: edges.length, recents: recents.length, candidates: patterns.length, valid: valid.length, rejected: rejected.length }
+  let inserted = 0
+  try {
+    const result = await upsertPatterns(enriched, CYCLE)
+    inserted = result.inserted
+  } catch (err) {
+    if (err?.code === 'PGRST205' || err?.message?.includes('does not exist')) {
+      console.warn('[patterns] funding_flow_patterns table not yet migrated — upsert skipped')
+    } else {
+      throw err
+    }
+  }
+
+  const summary = {
+    ok: true,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    cycle: CYCLE,
+    edges: edges.length,
+    recents: recents.length,
+    candidates: patterns.length,
+    validated: valid.length,
+    rejected: rejected.length,
+    deduped: dropped.length,
+    inserted,
+    usage
+  }
+  await writeLog(summary)
+  console.log('[patterns] summary:', JSON.stringify(summary, null, 2))
+  return summary
 }
 
 const _argv1 = process.argv[1] ? `file:///${process.argv[1].replace(/\\/g, '/').replace(/^\//, '')}` : ''
