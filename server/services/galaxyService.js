@@ -176,3 +176,148 @@ export async function getUniverse({ cycle = '2024', nodeCap = 500 } = {}) {
   }
   return envelope
 }
+
+/**
+ * Sector mode — all edges where either end's sector matches.
+ */
+export async function getSector({ cycle = '2024', sector, nodeCap = 80 } = {}) {
+  if (!sector) throw new Error('sector is required')
+  const db = ensure()
+
+  // Sector filter: employer sector OR committee sector
+  const { data: edges, error } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, source_sector, target_id, target_type, target_tier, target_label, target_sector, amount, txn_count, cycle')
+    .eq('cycle', cycle)
+    .or(`source_sector.eq.${sector},target_sector.eq.${sector}`)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(nodeCap * 3)
+  if (error) throw error
+
+  const committees = await loadCommittees(db, collectCommitteeIds(edges || []))
+  const envelope = buildEnvelope({ edges: edges || [], committees, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    const topNodeIds = new Set(
+      [...envelope.nodes].sort((a, b) => b.amount - a.amount).slice(0, nodeCap).map(n => n.id)
+    )
+    envelope.nodes = envelope.nodes.filter(n => topNodeIds.has(n.id))
+    envelope.edges = envelope.edges.filter(e => topNodeIds.has(e.source) && topNodeIds.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+  envelope.meta.scope = { mode: 'sector', sector }
+  return envelope
+}
+
+/**
+ * Employer mode — network around a single employer.
+ * Walks 2 hops: employer → committees → politicians.
+ */
+export async function getEmployer({ cycle = '2024', employerId, nodeCap = 40 } = {}) {
+  if (!employerId) throw new Error('employerId is required')
+  const db = ensure()
+
+  // Hop 1: employer → committee
+  const { data: hop1, error: e1 } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', cycle)
+    .eq('source_type', 'employer')
+    .eq('source_id', employerId)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(50)
+  if (e1) throw e1
+  const committeeIds = Array.from(new Set((hop1 || []).map(e => e.target_id)))
+
+  // Hop 2: committee → politician (only for committees the employer touches)
+  let hop2 = []
+  if (committeeIds.length) {
+    const { data, error } = await db
+      .from('money_flow_edges')
+      .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+      .eq('cycle', cycle)
+      .in('source_id', committeeIds)
+      .gt('amount', 0)
+      .order('amount', { ascending: false })
+      .limit(100)
+    if (error) throw error
+    hop2 = data || []
+  }
+
+  const edges = [...(hop1 || []), ...hop2]
+  const committees = await loadCommittees(db, collectCommitteeIds(edges))
+  const envelope = buildEnvelope({ edges, committees, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    // Keep the employer + its committees + top politicians; trim the rest
+    const keep = new Set()
+    keep.add(nodeId('employer', employerId))
+    for (const id of committeeIds) keep.add(nodeId('committee', id))
+    const sortedPols = envelope.nodes
+      .filter(n => n.kind === 'politician')
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, nodeCap - keep.size)
+    for (const p of sortedPols) keep.add(p.id)
+    envelope.nodes = envelope.nodes.filter(n => keep.has(n.id))
+    envelope.edges = envelope.edges.filter(e => keep.has(e.source) && keep.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+  envelope.meta.scope = { mode: 'employer', employerId }
+  return envelope
+}
+
+/**
+ * Pattern detail mode — returns the pattern + its fully expanded evidence
+ * nodes/edges by looking up each node_id in money_flow_edges.
+ */
+export async function getPatternDetail({ patternId } = {}) {
+  if (!patternId) throw new Error('patternId is required')
+  const db = ensure()
+
+  const { data: pattern, error: pe } = await db
+    .from('funding_flow_patterns')
+    .select('*')
+    .eq('id', patternId)
+    .eq('visible', true)
+    .maybeSingle()
+  if (pe) throw pe
+  if (!pattern) return null
+
+  // Parse node_ids into {type,id} then fetch matching edges
+  const parsed = (pattern.node_ids || []).map(nid => {
+    const [prefix, rawId] = nid.split(':', 2)
+    const type = prefix === 'emp' ? 'employer' : prefix === 'pol' ? 'candidate' : 'committee'
+    return { type, id: rawId, nid }
+  })
+  const employerIds   = parsed.filter(p => p.type === 'employer').map(p => p.id)
+  const committeeIds  = parsed.filter(p => p.type === 'committee').map(p => p.id)
+  const politicianIds = parsed.filter(p => p.type === 'candidate').map(p => p.id)
+
+  // Union query: edges touching any of the involved IDs (limited for safety)
+  const orFilters = [
+    employerIds.length   ? `and(source_type.eq.employer,source_id.in.(${employerIds.map(x => `"${x}"`).join(',')}))` : null,
+    committeeIds.length  ? `source_id.in.(${committeeIds.map(x => `"${x}"`).join(',')})` : null,
+    committeeIds.length  ? `target_id.in.(${committeeIds.map(x => `"${x}"`).join(',')})` : null,
+    politicianIds.length ? `and(target_type.in.("candidate","politician"),target_id.in.(${politicianIds.map(x => `"${x}"`).join(',')}))` : null
+  ].filter(Boolean)
+
+  if (!orFilters.length) return { pattern, evidence: { nodes: [], edges: [] } }
+
+  const { data: edges, error: ee } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, source_sector, target_id, target_type, target_tier, target_label, target_sector, amount, cycle')
+    .eq('cycle', pattern.cycle)
+    .or(orFilters.join(','))
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(200)
+  if (ee) throw ee
+
+  const committees = await loadCommittees(db, collectCommitteeIds(edges || []))
+  const envelope = buildEnvelope({ edges: edges || [], committees, cycle: pattern.cycle })
+  return { pattern, evidence: { nodes: envelope.nodes, edges: envelope.edges } }
+}
