@@ -52,15 +52,72 @@ export default function GalaxyGraph({
   envelope,
   surface = 'dark',
   width = 900,
-  height = 560
+  height = 560,
+  onNodeClick,
+  onPatternClick
 }) {
   const t = galaxyTokens[surface]
   const svgRef = useRef(null)
+
+  const reducedMotion = typeof window !== 'undefined' &&
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  const [view, setView] = useState({ x: 0, y: 0, k: 1 })
+  const dragRef = useRef(null)
+
+  function onWheel(e) {
+    e.preventDefault()
+    const rect = svgRef.current.getBoundingClientRect()
+    const mx = e.clientX - rect.left
+    const my = e.clientY - rect.top
+    const delta = -e.deltaY * 0.0015
+    setView(v => {
+      const k = Math.max(0.4, Math.min(4, v.k * (1 + delta)))
+      const scale = k / v.k
+      return {
+        k,
+        x: mx - (mx - v.x) * scale,
+        y: my - (my - v.y) * scale
+      }
+    })
+  }
+  function onMouseDown(e) { dragRef.current = { x: e.clientX, y: e.clientY, view } }
+  function onMouseMove(e) {
+    if (!dragRef.current) return
+    const dx = e.clientX - dragRef.current.x
+    const dy = e.clientY - dragRef.current.y
+    setView({ ...dragRef.current.view, x: dragRef.current.view.x + dx, y: dragRef.current.view.y + dy })
+  }
+  function onMouseUp() { dragRef.current = null }
+
+  const [hovered, setHovered] = useState(null)
 
   const graph = useMemo(
     () => buildGraph(envelope, { width, height }),
     [envelope, width, height]
   )
+
+  const connectedIds = useMemo(() => {
+    if (!hovered) return null
+    const s = new Set([hovered])
+    for (const l of (graph?.links || [])) {
+      if ((l.sourceId || l.source?.id) === hovered) s.add(l.targetId || l.target?.id)
+      if ((l.targetId || l.target?.id) === hovered) s.add(l.sourceId || l.source?.id)
+    }
+    return s
+  }, [hovered, graph?.links])
+
+  function nodeOpacity(n) {
+    if (!connectedIds) return 1
+    return connectedIds.has(n.id) ? 1 : 0.18
+  }
+  function linkOpacity(l) {
+    const op = Math.min(1, t.edgeBaseOpacity * (0.44 + (l.weight || 0)))
+    if (!connectedIds) return op
+    const sId = l.sourceId || l.source?.id
+    const tId = l.targetId || l.target?.id
+    return connectedIds.has(sId) && connectedIds.has(tId) ? op : 0.05
+  }
 
   // tick increments on each simulation tick, triggering re-render so SVG
   // reads the D3-mutated x/y positions on node objects.
@@ -77,9 +134,9 @@ export default function GalaxyGraph({
       height
     })
     simRef.current = sim
-    sim.on('tick', () => setTick(x => x + 1))
+    if (!reducedMotion) sim.on('tick', () => setTick(x => x + 1))
     return () => sim.stop()
-  }, [graph, width, height])
+  }, [graph, width, height, reducedMotion])
 
   if (!graph) {
     return (
@@ -94,57 +151,81 @@ export default function GalaxyGraph({
 
   return (
     <svg
-      ref={svgRef}
-      width={width}
-      height={height}
-      style={{ display: 'block', background: t.surface }}
+      ref={svgRef} width={width} height={height}
+      style={{ display: 'block', background: t.surface, cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none' }}
+      onWheel={onWheel}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
     >
-      {/* Edges */}
-      <g>
-        {graph.links.map((l, i) => {
-          const sw = 0.5 + (l.weight || 0) * 2.2
-          const op = t.edgeBaseOpacity * (0.44 + (l.weight || 0))
+      <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
+        {/* pattern flares (one per sector with ≥1 pattern tied to that sector) */}
+        {graph.sectors.map(s => {
+          const c = graph.centroids.get(s.name)
+          if (!c) return null
+          const pattern = (graph.patterns || []).find(p => p.sector === s.name)
+          if (!pattern) return null
           return (
+            <g key={`flare-${s.name}`} style={{ cursor: 'pointer' }} onClick={e => { e.stopPropagation(); onPatternClick?.(pattern) }}>
+              <circle cx={c.x} cy={c.y} r={18} fill="none" stroke={t.patternRing} strokeWidth="1.5" strokeOpacity="0.5">
+                <animate attributeName="r" values="14;22;14" dur="2.4s" repeatCount="indefinite" />
+                <animate attributeName="stroke-opacity" values="0.7;0.2;0.7" dur="2.4s" repeatCount="indefinite" />
+              </circle>
+              <circle cx={c.x} cy={c.y} r={4} fill={t.patternRing} />
+            </g>
+          )
+        })}
+
+        {/* edges */}
+        <g>
+          {graph.links.map((l, i) => (
             <line
               key={i}
               x1={l.source.x} y1={l.source.y}
               x2={l.target.x} y2={l.target.y}
               stroke={l.isBridge ? t.edgeBridgeColor : t.edgeBase}
-              strokeOpacity={Math.min(1, op)}
-              strokeWidth={sw}
+              strokeOpacity={linkOpacity(l)}
+              strokeWidth={0.5 + (l.weight || 0) * 2.2}
               strokeDasharray={l.isBridge ? '4,3' : undefined}
             />
-          )
-        })}
-      </g>
-
-      {/* Nodes */}
-      <g>
-        {graph.nodes.map(n => (
-          <NodeShape key={n.id} n={n} t={t} />
-        ))}
-      </g>
-
-      {/* Labels — only employer nodes and high-degree nodes */}
-      <g>
-        {graph.nodes
-          .filter(n => n.kind === 'employer' || (n.degree || 0) > 8)
-          .map(n => (
-            <text
-              key={`lbl-${n.id}`}
-              x={n.x}
-              y={n.y - nodeRadius(n) - 4}
-              textAnchor="middle"
-              fontFamily="Roboto, sans-serif"
-              fontSize={9}
-              fontWeight={600}
-              fill={t.textPrimary}
-            >
-              {String(n.label || '').length > 28
-                ? String(n.label).slice(0, 26) + '…'
-                : n.label}
-            </text>
           ))}
+        </g>
+
+        {/* nodes */}
+        <g>
+          {graph.nodes.map(n => (
+            <g
+              key={n.id}
+              opacity={nodeOpacity(n)}
+              onMouseEnter={() => setHovered(n.id)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={e => { e.stopPropagation(); onNodeClick?.(n) }}
+              style={{ cursor: 'pointer' }}
+            >
+              <NodeShape n={n} t={t} />
+            </g>
+          ))}
+        </g>
+
+        {/* labels */}
+        <g>
+          {graph.nodes
+            .filter(n => n.kind === 'employer' || (n.degree || 0) > 8 || hovered === n.id)
+            .map(n => (
+              <text
+                key={`lbl-${n.id}`}
+                x={n.x} y={n.y - nodeRadius(n) - 4}
+                textAnchor="middle"
+                fontFamily="Roboto, sans-serif" fontSize={9} fontWeight={600}
+                fill={t.textPrimary}
+                opacity={nodeOpacity(n)}
+                pointerEvents="none"
+              >
+                {String(n.label || '').length > 28 ? String(n.label).slice(0, 26) + '…' : n.label}
+              </text>
+            ))}
+        </g>
       </g>
     </svg>
   )
