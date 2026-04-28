@@ -34,7 +34,7 @@ export function nodeId(type, id) {
  * Given raw money_flow_edges rows, build the galaxy envelope.
  * is501c4 / isSuperPac are looked up from the accompanying committees map.
  */
-export function buildEnvelope({ edges, committees, cycle, source = 'supabase' }) {
+export function buildEnvelope({ edges, committees, politicians = new Map(), cycle, source = 'supabase' }) {
   const nodesMap = new Map()
   const degreeMap = new Map()
   const sectorTotals = new Map()
@@ -44,15 +44,20 @@ export function buildEnvelope({ edges, committees, cycle, source = 'supabase' })
     const nid = nodeId(type, id)
     if (!nodesMap.has(nid)) {
       const committee = committees.get(id)
+      const politician = (type === 'candidate' || type === 'politician') ? politicians.get(id) : null
       const kind =
         type === 'employer' ? 'employer' :
         type === 'politician' || type === 'candidate' ? 'politician' :
         committee?.is_super_pac ? 'super_pac' :
         committee?.is_501c4 ? 'dark_money' :
         'trad_pac'
+      const resolvedLabel = label || politician?.name || committee?.name || id
       nodesMap.set(nid, {
-        id: nid, kind, label: label || committee?.name || id,
+        id: nid, kind, label: resolvedLabel,
         sector: sector || null,
+        party: politician?.party || null,
+        state: politician?.state || null,
+        chamber: politician?.chamber || null,
         amount: 0, degree: 0,
         is_501c4:   !!committee?.is_501c4,
         is_super_pac: !!committee?.is_super_pac,
@@ -124,11 +129,32 @@ async function loadCommittees(db, committeeIds) {
   return map
 }
 
+async function loadPoliticians(db, candidateIds) {
+  if (!candidateIds.length) return new Map()
+  const { data, error } = await db
+    .from('politicians')
+    .select('fec_candidate_id, name, party, state, chamber, office')
+    .in('fec_candidate_id', candidateIds)
+  if (error) throw error
+  const map = new Map()
+  for (const p of data || []) map.set(p.fec_candidate_id, p)
+  return map
+}
+
 function collectCommitteeIds(edges) {
   const ids = new Set()
   for (const e of edges) {
     if (e.source_type !== 'employer' && e.source_type !== 'politician' && e.source_type !== 'candidate') ids.add(e.source_id)
     if (e.target_type !== 'employer' && e.target_type !== 'politician' && e.target_type !== 'candidate') ids.add(e.target_id)
+  }
+  return Array.from(ids)
+}
+
+function collectCandidateIds(edges) {
+  const ids = new Set()
+  for (const e of edges) {
+    if (e.source_type === 'candidate' || e.source_type === 'politician') ids.add(e.source_id)
+    if (e.target_type === 'candidate' || e.target_type === 'politician') ids.add(e.target_id)
   }
   return Array.from(ids)
 }
@@ -159,8 +185,11 @@ export async function getUniverse({ cycle = '2024', nodeCap = 500 } = {}) {
     .limit(nodeCap * 3)                                   // each edge = 2 nodes; oversample to hit node cap after dedup
   if (error) throw error
 
-  const committees = await loadCommittees(db, collectCommitteeIds(edges || []))
-  const envelope = buildEnvelope({ edges: edges || [], committees, cycle })
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(edges || [])),
+    loadPoliticians(db, collectCandidateIds(edges || []))
+  ])
+  const envelope = buildEnvelope({ edges: edges || [], committees, politicians, cycle })
 
   if (envelope.nodes.length > nodeCap) {
     const topNodeIds = new Set(
@@ -216,8 +245,11 @@ export async function getSector({ cycle = '2024', sector, nodeCap = 80 } = {}) {
   }
 
   const edges = [...hop1, ...hop2]
-  const committees = await loadCommittees(db, collectCommitteeIds(edges))
-  const envelope = buildEnvelope({ edges, committees, cycle })
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(edges)),
+    loadPoliticians(db, collectCandidateIds(edges))
+  ])
+  const envelope = buildEnvelope({ edges, committees, politicians, cycle })
 
   if (envelope.nodes.length > nodeCap) {
     const topNodeIds = new Set(
@@ -269,8 +301,11 @@ export async function getEmployer({ cycle = '2024', employerId, nodeCap = 40 } =
   }
 
   const edges = [...(hop1 || []), ...hop2]
-  const committees = await loadCommittees(db, collectCommitteeIds(edges))
-  const envelope = buildEnvelope({ edges, committees, cycle })
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(edges)),
+    loadPoliticians(db, collectCandidateIds(edges))
+  ])
+  const envelope = buildEnvelope({ edges, committees, politicians, cycle })
 
   if (envelope.nodes.length > nodeCap) {
     // Keep the employer + its committees + top politicians; trim the rest
@@ -338,7 +373,10 @@ export async function getPatternDetail({ patternId } = {}) {
     .limit(200)
   if (ee) throw ee
 
-  const committees = await loadCommittees(db, collectCommitteeIds(edges || []))
-  const envelope = buildEnvelope({ edges: edges || [], committees, cycle: pattern.cycle })
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(edges || [])),
+    loadPoliticians(db, collectCandidateIds(edges || []))
+  ])
+  const envelope = buildEnvelope({ edges: edges || [], committees, politicians, cycle: pattern.cycle })
   return { pattern, evidence: { nodes: envelope.nodes, edges: envelope.edges } }
 }
