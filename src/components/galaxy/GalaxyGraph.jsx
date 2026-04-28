@@ -130,7 +130,27 @@ export default function GalaxyGraph({
 
   // tick increments on each simulation tick, triggering re-render so SVG
   // reads the D3-mutated x/y positions on node objects.
-  const [, setTick] = useState(0)
+  const [tick, setTick] = useState(0)
+
+  // Recompute sector bounding circles from live node positions each tick
+  const sectorBounds = useMemo(() => {
+    if (!graph) return new Map()
+    const byName = new Map()
+    for (const n of graph.nodes) {
+      if (!n.sector || n.x == null || n.y == null) continue
+      if (!byName.has(n.sector)) byName.set(n.sector, [])
+      byName.get(n.sector).push(n)
+    }
+    const bounds = new Map()
+    for (const [name, nodes] of byName) {
+      const cx = nodes.reduce((a, n) => a + n.x, 0) / nodes.length
+      const cy = nodes.reduce((a, n) => a + n.y, 0) / nodes.length
+      const r = Math.max(32, Math.max(...nodes.map(n => Math.hypot(n.x - cx, n.y - cy))) + 30)
+      bounds.set(name, { cx, cy, r })
+    }
+    return bounds
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick, graph])
   const simRef = useRef(null)
 
   useEffect(() => {
@@ -177,27 +197,27 @@ export default function GalaxyGraph({
       onMouseLeave={onMouseUp}
     >
       <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
-        {/* sector halos — colored discs behind everything */}
+        {/* sector halos — live bounding circles around actual node positions */}
         {graph.sectors.map(s => {
-          const c = graph.centroids.get(s.name)
-          if (!c) return null
-          const r = Math.max(40, Math.min(120, Math.sqrt(s.node_count || 1) * 22))
+          const b = sectorBounds.get(s.name)
+          if (!b) return null
           return (
             <g key={`halo-${s.name}`} pointerEvents="none">
               <circle
-                cx={c.x} cy={c.y} r={r}
+                cx={b.cx} cy={b.cy} r={b.r}
                 fill={s.color}
-                fillOpacity={surface === 'dark' ? 0.07 : 0.10}
+                fillOpacity={surface === 'dark' ? 0.06 : 0.09}
                 stroke={s.color}
-                strokeOpacity={surface === 'dark' ? 0.18 : 0.22}
-                strokeWidth={1}
+                strokeOpacity={surface === 'dark' ? 0.20 : 0.26}
+                strokeWidth={1.2}
+                strokeDasharray="4,3"
               />
               <text
-                x={c.x} y={c.y}
-                textAnchor="middle" dominantBaseline="middle"
-                fontFamily="Roboto, sans-serif" fontSize={8} fontWeight={500}
-                fill={s.color} fillOpacity={0.55}
-                style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
+                x={b.cx} y={b.cy - b.r + 14}
+                textAnchor="middle"
+                fontFamily="Roboto, sans-serif" fontSize={8} fontWeight={600}
+                fill={s.color} fillOpacity={0.6}
+                style={{ letterSpacing: '1.5px' }}
               >
                 {s.name.toUpperCase()}
               </text>
