@@ -29,6 +29,34 @@ const CYCLE = _cycleArg || process.env.PATTERN_CYCLE || '2024'
 const TOP_N_EDGES = 400
 const DEDUP_WINDOW_DAYS = 14
 const MODEL = 'claude-sonnet-4-6'
+
+const CANONICAL_SECTORS = new Set([
+  'Finance', 'Technology', 'Healthcare', 'Energy', 'Legal', 'Real Estate',
+  'Defense', 'Media & Entertainment', 'Education', 'Labor / Unions',
+  'Consulting', 'Government / Politics', 'Retired / Inactive', 'Other'
+])
+
+const SECTOR_NORMALIZE = {
+  'finance & investment': 'Finance', 'financial': 'Finance', 'banking': 'Finance',
+  'technology & crypto': 'Technology', 'tech': 'Technology', 'crypto': 'Technology',
+  'aerospace & defense': 'Defense', 'aerospace': 'Defense', 'military': 'Defense',
+  'political operations': 'Government / Politics', 'politics': 'Government / Politics',
+  'manufacturing & distribution': 'Other', 'manufacturing': 'Other',
+  'gambling & hospitality': 'Other', 'gambling': 'Other', 'hospitality': 'Other',
+  'media': 'Media & Entertainment', 'entertainment': 'Media & Entertainment',
+  'labor': 'Labor / Unions', 'unions': 'Labor / Unions',
+  'health': 'Healthcare', 'pharma': 'Healthcare',
+  'real estate': 'Real Estate', 'realty': 'Real Estate',
+  'law': 'Legal', 'legal services': 'Legal',
+  'retired': 'Retired / Inactive', 'inactive': 'Retired / Inactive',
+  'government': 'Government / Politics', 'oil': 'Energy', 'oil & gas': 'Energy',
+}
+
+function normalizeSector(s) {
+  if (!s) return 'Other'
+  if (CANONICAL_SECTORS.has(s)) return s
+  return SECTOR_NORMALIZE[s.toLowerCase().trim()] || 'Other'
+}
 const MAX_TOKENS = 8000
 
 const TOOL_SCHEMA = {
@@ -301,8 +329,11 @@ async function main() {
   const systemPrompt = await fs.readFile(path.join(__dirname, 'prompts', 'system.md'), 'utf8')
 
   console.log('[patterns] calling Claude…')
-  const { patterns, usage } = await callClaude({ systemPrompt, edges, recents, cycle: CYCLE })
-  console.log(`[patterns] got ${patterns.length} candidate patterns (in: ${usage.input_tokens}, cached: ${usage.cache_read_input_tokens || 0}, out: ${usage.output_tokens})`)
+  const { patterns: rawPatterns, usage } = await callClaude({ systemPrompt, edges, recents, cycle: CYCLE })
+  console.log(`[patterns] got ${rawPatterns.length} candidate patterns (in: ${usage.input_tokens}, cached: ${usage.cache_read_input_tokens || 0}, out: ${usage.output_tokens})`)
+
+  // Normalize Claude's free-form sector labels to canonical classifier names
+  const patterns = rawPatterns.map(p => ({ ...p, sector: normalizeSector(p.sector) }))
 
   const { valid, rejected } = validatePatterns(patterns, edges)
   const { kept, dropped } = dedupAgainstRecents(valid, recents)

@@ -20,7 +20,9 @@ Your job: analyze aggregated money-flow edges between employers, PACs, 501(c)(4)
 - Do not speculate about political motivation. Stick to observed financial flows.
 - Severity (0-10) reflects financial weight + institutional overlap, not political judgment.
 - Narrative must be factual, specific, and grounded in the provided data.
-- A `sector` field is required. If the pattern spans multiple sectors, pick the dominant one.
+- A `sector` field is required. You MUST use EXACTLY one of these canonical sector names — no variations, abbreviations, or combinations:
+  Finance | Technology | Healthcare | Energy | Legal | Real Estate | Defense | Media & Entertainment | Education | Labor / Unions | Consulting | Government / Politics | Retired / Inactive | Other
+  If the pattern spans multiple sectors, pick the single dominant one from this list.
 - Do not create patterns whose `title` is a near-duplicate of any title in the "Recent patterns" block — only return patterns that add new information.
 
 # Output format
