@@ -274,26 +274,6 @@ router.get('/committees/:id/spending', async (req, res) => {
   }
 })
 
-// ─── Money-flow (Sankey) — Supabase-only, reads money_flow_edges MV ──────────
-
-router.get('/money-flow', async (req, res) => {
-  try {
-    const { cycle, sourceTier, targetTier, nodeId, nodeType, minAmount, limit } = req.query
-    const data = await sbDonors.getMoneyFlow({
-      cycle,
-      sourceTier,
-      targetTier,
-      nodeId,
-      nodeType,
-      minAmount: parseInt(minAmount) || 0,
-      limit: parseInt(limit) || 500,
-    })
-    res.json({ success: true, source: 'supabase', data })
-  } catch (e) {
-    console.error('donors/money-flow error:', e.message)
-    res.status(500).json({ success: false, error: e.message })
-  }
-})
 
 // ─── Story J: Cash Flood Anomalies — Supabase-only ───────────────────────────
 
@@ -331,22 +311,6 @@ router.get('/employers', async (req, res) => {
     res.json({ success: true, source: 'supabase', data: { results, pagination: { count: results.length, limit: requestedLimit, offset: 0 } } })
   } catch (e) {
     console.error('donors/employers error:', e.message)
-    res.status(500).json({ success: false, error: e.message })
-  }
-})
-
-router.get('/employers/:id/flow', async (req, res) => {
-  try {
-    const { cycle, limit } = req.query
-    const employerId = decodeURIComponent(req.params.id).toLowerCase().trim()
-    const data = await sbDonors.getEmployerFlow({
-      employerId,
-      cycle,
-      limit: parseInt(limit) || 50,
-    })
-    res.json({ success: true, source: 'supabase', data })
-  } catch (e) {
-    console.error('donors/employers/:id/flow error:', e.message)
     res.status(500).json({ success: false, error: e.message })
   }
 })

@@ -9,9 +9,8 @@
  * "Employer" = contributor_employer on FEC Schedule A — a self-reported
  * raw string (e.g. "GOLDMAN SACHS & CO") written by the donor at filing.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import FundingFlowGalaxy from './galaxy/FundingFlowGalaxy.jsx'
-import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from 'recharts'
 import { useTheme } from '../theme/index.js'
 import { ORANGE, FONT_MONO as MF } from '../theme/tokens.js'
 import { Band, Card, SourceFooter } from './ui/index.js'
@@ -39,8 +38,6 @@ const SECTOR_COLOR = {
   'Retired / Inactive':    '#666666',
   'Other':                 '#444444',
 }
-
-const TIER_COLOR = { 1: '#4A7FFF', 2: '#9966CC', 3: ORANGE, 4: '#FFB84D', 5: '#00AADD' }
 
 function fmt$(v) {
   if (v == null) return '—'
@@ -70,69 +67,6 @@ function SectorBadge({ sector }) {
   )
 }
 
-function SankeyNode({ x, y, width, height, payload, theme }) {
-  if (!payload || height < 2) return null
-  const color = TIER_COLOR[payload.tier] || ORANGE
-  const label = payload.label || payload.name || '—'
-  return (
-    <Layer>
-      <Rectangle x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.85} stroke={color} />
-      {height > 12 && (
-        <text x={x + width + 6} y={y + height / 2} textAnchor="start" dominantBaseline="middle"
-              fontFamily={MF} fontSize={9} fill={theme?.mid || "#BBB"}>
-          {label.length > 32 ? label.slice(0, 30) + '…' : label}
-        </text>
-      )}
-    </Layer>
-  )
-}
-
-function MiniSankey({ edges, t }) {
-  const chart = useMemo(() => {
-    if (!edges.length) return null
-    const idx = new Map()
-    const nodes = []
-    const register = (id, tier, label) => {
-      const k = `${tier}:${id}`
-      if (!idx.has(k)) { idx.set(k, nodes.length); nodes.push({ name: label || id, label: fmtName(label || id), tier }) }
-      return idx.get(k)
-    }
-    const links = []
-    for (const e of edges) {
-      const s   = register(e.source_id, Number(e.source_tier), e.source_label)
-      const tgt = register(e.target_id, Number(e.target_tier), e.target_label)
-      const v   = Number(e.amount) || 0
-      if (v > 0 && s !== tgt) links.push({ source: s, target: tgt, value: v })
-    }
-    return nodes.length > 1 && links.length ? { nodes, links } : null
-  }, [edges])
-
-  if (!chart) return (
-    <div style={{ padding: 24, textAlign: 'center', color: '#444', fontFamily: MF, fontSize: 10 }}>
-      No flow data for this employer in the selected cycle.
-    </div>
-  )
-
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <Sankey
-        data={chart}
-        nodePadding={10}
-        nodeWidth={10}
-        linkCurvature={0.5}
-        iterations={32}
-        node={<SankeyNode theme={t} />}
-        link={{ stroke: ORANGE, strokeOpacity: 0.25, fill: ORANGE, fillOpacity: 0.2 }}
-        margin={{ top: 8, right: 200, bottom: 8, left: 8 }}
-      >
-        <Tooltip
-          contentStyle={{ background: t.card, border: `1px solid ${t.border}`, fontFamily: MF, fontSize: 10, color: t.hi }}
-          formatter={v => [fmt$(v), 'amount']}
-        />
-      </Sankey>
-    </ResponsiveContainer>
-  )
-}
 
 export default function EmployerLeaderboard() {
   const t = useTheme()
@@ -142,9 +76,6 @@ export default function EmployerLeaderboard() {
   const [employers, setEmp]     = useState([])
   const [loadingEmp, setLdEmp]  = useState(false)
   const [selected, setSelected] = useState(null)   // { employer, employer_id, sector, total, txn_count }
-  const [flow, setFlow]         = useState([])
-  const [loadingFlow, setLdFlow] = useState(false)
-  const [flowErr, setFlowErr]   = useState(null)
 
   // Load leaderboard
   useEffect(() => {
@@ -163,18 +94,6 @@ export default function EmployerLeaderboard() {
       .finally(() => { if (!cancelled) setLdEmp(false) })
     return () => { cancelled = true }
   }, [cycle, minAmount, sector])
-
-  // Load flow for selected employer
-  useEffect(() => {
-    if (!selected) return
-    let cancelled = false
-    setLdFlow(true); setFlowErr(null); setFlow([])
-    donors.employerFlow(selected.employer_id, { cycle, limit: 50 })
-      .then(r => { if (!cancelled) setFlow(r?.data?.edges || []) })
-      .catch(e => { if (!cancelled) setFlowErr(e.message) })
-      .finally(() => { if (!cancelled) setLdFlow(false) })
-    return () => { cancelled = true }
-  }, [selected, cycle])
 
   const selectStyle = {
     background: t.card, color: t.hi, border: `1px solid ${t.border}`,
@@ -263,48 +182,13 @@ export default function EmployerLeaderboard() {
 
           {/* Right: galaxy (sector mode when no employer, employer mode when one selected) */}
           <div style={{ border: `1px solid ${t.border}`, borderRadius: 3, background: t.cardB, display: 'flex', flexDirection: 'column' }}>
-            {import.meta.env.VITE_GALAXY_ENABLED === 'true' ? (
-              <FundingFlowGalaxy
-                mode={selected ? 'employer' : 'sector'}
-                cycle={cycle}
-                sector={selected ? null : (sector !== 'All Sectors' ? sector : null)}
-                employerId={selected?.employer_id ?? null}
-                height={420}
-              />
-            ) : (
-              /* LEGACY: original Sankey right-panel (unchanged) */
-              !selected ? (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-                  <div style={{ textAlign: 'center', color: t.low, fontFamily: MF, fontSize: 10, lineHeight: 1.8 }}>
-                    ← Select an employer<br />to explore their money flow
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: '12px 12px 8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontFamily: MF, fontSize: 11, fontWeight: 700, color: t.hi }}>
-                      {fmtName(selected.employer)}
-                    </span>
-                    <SectorBadge sector={selected.sector} />
-                  </div>
-                  <div style={{ fontFamily: MF, fontSize: 8.5, color: t.mid, marginBottom: 10 }}>
-                    {fmt$(selected.total)} total · {selected.txn_count?.toLocaleString()} donors · {cycle} cycle
-                  </div>
-                  {loadingFlow && (
-                    <div style={{ padding: 20, textAlign: 'center', color: t.mid, fontFamily: MF, fontSize: 10 }}>Loading flow…</div>
-                  )}
-                  {flowErr && (
-                    <div style={{ padding: 12, color: t.warn, fontFamily: MF, fontSize: 9 }}>Flow unavailable: {flowErr}</div>
-                  )}
-                  {!loadingFlow && !flowErr && (
-                    <MiniSankey edges={flow} t={t} />
-                  )}
-                  <div style={{ fontFamily: MF, fontSize: 7.5, color: t.low, marginTop: 6 }}>
-                    Employer → Committee → Candidate · top 50 edges by volume
-                  </div>
-                </div>
-              )
-            )}
+            <FundingFlowGalaxy
+              mode={selected ? 'employer' : 'sector'}
+              cycle={cycle}
+              sector={selected ? null : (sector !== 'All Sectors' ? sector : null)}
+              employerId={selected?.employer_id ?? null}
+              height={420}
+            />
           </div>
         </div>
 

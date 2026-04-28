@@ -4,7 +4,6 @@ import { useMobile, useTablet } from "./hooks/useMediaQuery.js";
 import Settings from "./components/Settings.jsx";
 import DarkMoneyTracker from "./components/DarkMoneyTracker.jsx";
 import CandidatesBrowser from "./components/CandidatesBrowser.jsx";
-import MoneyFlowSankey from "./components/MoneyFlowSankey.jsx";
 import FundingFlowGalaxy from "./components/galaxy/FundingFlowGalaxy.jsx";
 import CompanyProfile from "./components/CompanyProfile.jsx";
 import Monitor from "./pages/Monitor.jsx";
@@ -92,12 +91,6 @@ const STOCK = [
   { q:"Q1'22",v:4 },{ q:"Q2'22",v:6 },{ q:"Q3'22",v:3 },{ q:"Q4'22",v:8 },
   { q:"Q1'23",v:5 },{ q:"Q2'23",v:11},{ q:"Q3'23",v:7 },{ q:"Q4'23",v:9 },
   { q:"Q1'24",v:14},{ q:"Q2'24",v:12},
-];
-const DONORS = [
-  { n:"Lockheed Martin",  pac:168, ind:42, s:"Defence" }, { n:"Northrop Grumman", pac:112, ind:28, s:"Defence" },
-  { n:"Raytheon Tech.",   pac:142, ind:31, s:"Defence" }, { n:"Boeing",           pac:95,  ind:22, s:"Defence" },
-  { n:"JPMorgan Chase",   pac:88,  ind:44, s:"Finance" }, { n:"PhRMA",            pac:89,  ind:19, s:"Pharma"  },
-  { n:"UnitedHealth",     pac:71,  ind:18, s:"Health"  }, { n:"Pfizer",           pac:64,  ind:14, s:"Pharma"  },
 ];
 const CORPS = [
   { n:"Lockheed Martin",   pac:168, con:7800, sc:28, s:"Defence" }, { n:"Northrop Grumman",  pac:112, con:6100, sc:29, s:"Defence" },
@@ -356,116 +349,17 @@ function Overview({ onNavigate }) {
 // ─── DONOR INTEL ─────────────────────────────────────────────────────────────
 function DonorIntel() {
   const t = useT();
-  const isMobile = useMobile();
-  const [sel, setSel] = useState(0);
-  const [polView, setPolView] = useState("list");
-  const POLS = [
-    { n:"Sen. Robert Hughes (R-TX)",  sc:28, raised:"$4.2m", flags:3 },
-    { n:"Rep. Diana Marsh (D-CA)",    sc:71, raised:"$1.8m", flags:0 },
-    { n:"Sen. Craig Whitfield (R-FL)",sc:19, raised:"$6.1m", flags:7 },
-    { n:"Rep. Sandra Torres (D-NY)",  sc:84, raised:"$920k", flags:0 },
-    { n:"Sen. Michael Pratt (I-VT)",  sc:91, raised:"$340k", flags:0 },
-  ];
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>DONOR INTELLIGENCE · FEC · OPENSECRETS</div>
-        <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Who is funding American politics?</h2>
-        <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>A systematic analysis of PAC contributions, individual donations and independent expenditures across the 2023–24 federal election cycle.</p>
+        <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Money Flow Galaxy: Who is influenceing American politics?</h2>
+        <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>A systematic analysis of PAC contributions, individual donations and independent expenditures across the 2024–26 federal election cycle.</p>
       </div>
 
-      {import.meta.env.VITE_GALAXY_ENABLED === 'true' ? (
-        <Card style={{ padding: 0 }}>
-          <FundingFlowGalaxy mode="universe" cycle="2024" height={640} />
-        </Card>
-      ) : (
-        <>
-          {/* legacy charts — kept until flag retired */}
-          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.15fr 1fr", gap: isMobile ? 14 : 20 }}>
-            <div>
-              <Band label="Top corporate donors — PAC + individual ($m)" right="FEC · FY2024"/>
-              <Card>
-                <CT h="Defence contractors collectively outspend every other sector. Lockheed Martin led at $210m total." sub="Combined PAC and individual contributions · top 8 entities · $m"/>
-                <ResponsiveContainer width="100%" height={270}>
-                  <BarChart data={DONORS} layout="vertical" margin={{ left:4, right:52, top:0, bottom:0 }} barCategoryGap="22%">
-                    <CartesianGrid horizontal={false} stroke={t.grid}/>
-                    <XAxis type="number" {...ap(t)} tickFormatter={v=>`$${v}m`}/>
-                    <YAxis type="category" dataKey="n" {...ap(t)} width={114}/>
-                    <Tooltip content={<ETip fmt={v=>`$${v}m`}/>}/>
-                    <Bar dataKey="pac" name="PAC"        stackId="a" radius={0} barSize={13} fill={ORANGE}/>
-                    <Bar dataKey="ind" name="Individual" stackId="a" radius={0} barSize={13} fill={t.blue}/>
-                  </BarChart>
-                </ResponsiveContainer>
-                <div style={{ display:"flex", gap:16, marginTop:8 }}>
-                  {[["PAC contributions",ORANGE],["Individual donations",t.blue]].map(([l,c]) => (
-                    <div key={l} style={{ display:"flex", alignItems:"center", gap:5 }}>
-                      <div style={{ width:10, height:10, background:c }}/>
-                      <span style={{ fontFamily:MF, fontSize:9, color:t.mid }}>{l}</span>
-                    </div>
-                  ))}
-                </div>
-                <Src s="FEC schedule B; FPDS; 2024 election cycle"/>
-              </Card>
-            </div>
-
-            <div>
-              <Band label="Politician donor profiles" right="CLICK TO EXPLORE"/>
-              <Card p="0">
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr" }}>
-                  <div style={{ borderRight:`1px solid ${t.border}` }}>
-                    {POLS.map((p,i) => {
-                      const c = p.sc<35?ORANGE:p.sc<55?t.warn:t.ok;
-                      return (
-                        <div key={i} onClick={() => setSel(i)} style={{ padding:"11px 14px", borderBottom:`1px solid ${t.border}`, borderLeft:`3px solid ${sel===i?c:"transparent"}`, background:sel===i?c+"12":"transparent", cursor:"pointer", transition:"all .13s" }}>
-                          <div style={{ fontFamily:MF, fontSize:10.5, color:sel===i?t.hi:t.mid, marginBottom:3 }}>{p.n}</div>
-                          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                            <span style={{ fontFamily:MF, fontSize:9, color:t.low }}>{p.raised} raised</span>
-                            {p.flags>0 && <span style={{ fontFamily:MF, fontSize:8, color:ORANGE, border:`1px solid ${ORANGE}55`, padding:"1px 5px" }}>{p.flags} FLAG{p.flags>1?"S":""}</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ padding:"14px 16px" }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                      <div>
-                        <div style={{ fontFamily:SF, fontSize:13, color:t.hi, lineHeight:1.3, marginBottom:3 }}>{POLS[sel].n}</div>
-                        <div style={{ fontFamily:MF, fontSize:8.5, color:t.low, letterSpacing:1 }}>U.S. CONGRESS</div>
-                      </div>
-                      <Score v={POLS[sel].sc}/>
-                    </div>
-                    <div style={{ fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:2, marginBottom:8 }}>TOP DONOR INDUSTRIES</div>
-                    {[["Defence",72],[	"Finance",51],["Health",38],["Pharma",29]].map(([l,pct],i) => (
-                      <div key={l} style={{ marginBottom:7 }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-                          <span style={{ fontFamily:MF, fontSize:9, color:t.mid }}>{l}</span>
-                          <span style={{ fontFamily:MF, fontSize:9, color:ORANGE }}>{Math.round(pct*(1-sel*0.07))}%</span>
-                        </div>
-                        <div style={{ background:t.border, height:4 }}>
-                          <div style={{ width:`${pct*(1-sel*0.07)}%`, height:"100%", background:[ORANGE,t.blue,t.warn,t.ok][i%4] }}/>
-                        </div>
-                      </div>
-                    ))}
-                    {POLS[sel].flags>0 && (
-                      <div style={{ marginTop:12, background:t.sigBg, border:`1px solid ${ORANGE}33`, padding:"10px 12px" }}>
-                        <div style={{ fontFamily:MF, fontSize:8.5, color:ORANGE, letterSpacing:1.5, marginBottom:6 }}>⚠ CONFLICT SIGNALS</div>
-                        <div style={{ fontFamily:SF, fontSize:11, fontStyle:"italic", color:t.mid, lineHeight:1.6 }}>
-                          {POLS[sel].flags} potential conflict{POLS[sel].flags>1?"s":""} detected: stock trades near committee hearings; PAC donors receiving sole-source contracts from overseen agencies.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div style={{ padding:"6px 14px", borderTop:`1px solid ${t.border}`, fontFamily:MF, fontSize:8.5, color:t.low }}>
-                  Sources: FEC · OpenSecrets · Senate/House financial disclosures
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          <MoneyFlowSankey />
-        </>
-      )}
+      <Card style={{ padding: 0 }}>
+        <FundingFlowGalaxy mode="universe" cycle="2024" height={640} />
+      </Card>
 
       <CandidatesBrowser />
     </div>

@@ -80,18 +80,6 @@ export const donors = {
     request(`/api/donors/contributions/by-industry?keywords=${encodeURIComponent(keywords.join(','))}&limit=${limit}`),
   compare:       (ids) => request(`/api/donors/candidates/compare?ids=${ids.join(',')}`),
   pacSpending:   (id, limit = 20) => request(`/api/donors/committees/${id}/spending?limit=${limit}`),
-  moneyFlow:     ({ cycle, sourceTier, targetTier, nodeId, nodeType, minAmount, limit = 500 } = {}) => {
-    const qs = new URLSearchParams({
-      ...(cycle && { cycle }),
-      ...(sourceTier && { sourceTier }),
-      ...(targetTier && { targetTier }),
-      ...(nodeId && { nodeId }),
-      ...(nodeType && { nodeType }),
-      ...(minAmount && { minAmount }),
-      limit,
-    }).toString()
-    return request(`/api/donors/money-flow?${qs}`)
-  },
   employers: ({ cycle, minAmount, limit = 100, sector } = {}) => {
     const qs = new URLSearchParams({
       ...(cycle     && { cycle }),
@@ -100,13 +88,6 @@ export const donors = {
       limit,
     }).toString()
     return request(`/api/donors/employers?${qs}`)
-  },
-  employerFlow: (employerId, { cycle, limit = 50 } = {}) => {
-    const qs = new URLSearchParams({
-      ...(cycle && { cycle }),
-      limit,
-    }).toString()
-    return request(`/api/donors/employers/${encodeURIComponent(employerId)}/flow?${qs}`)
   },
   corporatePACs: ({ cycle, limit = 20, minAmount = 0 } = {}) => {
     const qs = new URLSearchParams({ ...(cycle && { cycle }), limit, minAmount }).toString()
