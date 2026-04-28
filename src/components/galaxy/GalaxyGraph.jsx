@@ -177,6 +177,34 @@ export default function GalaxyGraph({
       onMouseLeave={onMouseUp}
     >
       <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
+        {/* sector halos — colored discs behind everything */}
+        {graph.sectors.map(s => {
+          const c = graph.centroids.get(s.name)
+          if (!c) return null
+          const r = Math.max(40, Math.min(120, Math.sqrt(s.node_count || 1) * 22))
+          return (
+            <g key={`halo-${s.name}`} pointerEvents="none">
+              <circle
+                cx={c.x} cy={c.y} r={r}
+                fill={s.color}
+                fillOpacity={surface === 'dark' ? 0.07 : 0.10}
+                stroke={s.color}
+                strokeOpacity={surface === 'dark' ? 0.18 : 0.22}
+                strokeWidth={1}
+              />
+              <text
+                x={c.x} y={c.y}
+                textAnchor="middle" dominantBaseline="middle"
+                fontFamily="Roboto, sans-serif" fontSize={8} fontWeight={500}
+                fill={s.color} fillOpacity={0.55}
+                style={{ textTransform: 'uppercase', letterSpacing: '1.5px' }}
+              >
+                {s.name.toUpperCase()}
+              </text>
+            </g>
+          )
+        })}
+
         {/* pattern flares (one per sector with ≥1 pattern tied to that sector) */}
         {graph.sectors.map(s => {
           const c = graph.centroids.get(s.name)

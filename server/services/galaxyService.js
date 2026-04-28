@@ -7,6 +7,14 @@
 import { ensure } from '../lib/supabase.js'
 import { classifySector } from '../lib/sectorClassifier.js'
 
+function enrichEdgesWithSector(edges) {
+  return edges.map(e => ({
+    ...e,
+    source_sector: e.source_type === 'employer' ? classifySector(e.source_label) : (e.source_sector || null),
+    target_sector: e.target_type === 'employer' ? classifySector(e.target_label) : (e.target_sector || null),
+  }))
+}
+
 const SECTOR_COLORS = {
   'Finance':               '#4A7FFF',
   'Technology':            '#00AADD',
@@ -89,6 +97,25 @@ export function buildEnvelope({ edges, committees, politicians = new Map(), cycl
 
   for (const edge of builtEdges) edge.weight = maxAmount > 0 ? edge.amount / maxAmount : 0
   for (const node of nodesMap.values()) node.degree = degreeMap.get(node.id) || 0
+
+  // Propagate sector from employer nodes to connected committees/politicians (highest-flow wins)
+  const inheritMap = new Map() // nid → { sector, amount }
+  for (const e of edges) {
+    const srcNode = nodesMap.get(nodeId(e.source_type, e.source_id))
+    const tgtNode = nodesMap.get(nodeId(e.target_type, e.target_id))
+    const amt = Number(e.amount) || 0
+    if (srcNode?.sector && tgtNode && !tgtNode.sector) {
+      const prev = inheritMap.get(tgtNode.id)
+      if (!prev || amt > prev.amount) inheritMap.set(tgtNode.id, { sector: srcNode.sector, amount: amt })
+    }
+  }
+  for (const [nid, { sector }] of inheritMap) {
+    const node = nodesMap.get(nid)
+    if (node && !node.sector) {
+      node.sector = sector
+      sectorTotals.set(sector, (sectorTotals.get(sector) || 0) + (node.amount || 0))
+    }
+  }
 
   const sectors = Array.from(sectorTotals.entries())
     .map(([name, total_amount]) => ({
@@ -185,11 +212,12 @@ export async function getUniverse({ cycle = '2024', nodeCap = 500 } = {}) {
     .limit(nodeCap * 3)                                   // each edge = 2 nodes; oversample to hit node cap after dedup
   if (error) throw error
 
+  const enriched = enrichEdgesWithSector(edges || [])
   const [committees, politicians] = await Promise.all([
-    loadCommittees(db, collectCommitteeIds(edges || [])),
-    loadPoliticians(db, collectCandidateIds(edges || []))
+    loadCommittees(db, collectCommitteeIds(enriched)),
+    loadPoliticians(db, collectCandidateIds(enriched))
   ])
-  const envelope = buildEnvelope({ edges: edges || [], committees, politicians, cycle })
+  const envelope = buildEnvelope({ edges: enriched, committees, politicians, cycle })
 
   if (envelope.nodes.length > nodeCap) {
     const topNodeIds = new Set(
