@@ -30,7 +30,7 @@ function PatternView({ patternSeed, t }) {
   useEffect(() => {
     if (!patternSeed?.id) return
     galaxy.pattern(patternSeed.id)
-      .then(r => setDetail(r?.data || null))
+      .then(r => setDetail(r || null))
       .catch(e => setErr(e.message))
   }, [patternSeed?.id])
 

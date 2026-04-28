@@ -21,7 +21,7 @@ export default function useGalaxyData({ mode, cycle, sector, employerId }) {
       else if (mode === 'employer') res = await galaxy.employer(employerId, { cycle })
       else throw new Error(`unknown galaxy mode: ${mode}`)
       if (id !== reqId.current) return                 // stale response
-      setData(res?.data || null)
+      setData(res || null)
     } catch (e) {
       if (id !== reqId.current) return
       setError(e.message || String(e))
