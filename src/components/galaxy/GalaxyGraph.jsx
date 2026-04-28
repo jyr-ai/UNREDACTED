@@ -65,6 +65,15 @@ export default function GalaxyGraph({
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
   const dragRef = useRef(null)
 
+  function zoomBy(factor) {
+    setView(v => {
+      const k = Math.max(0.4, Math.min(4, v.k * factor))
+      const cx = width / 2, cy = height / 2
+      const scale = k / v.k
+      return { k, x: cx - (cx - v.x) * scale, y: cy - (cy - v.y) * scale }
+    })
+  }
+
   function onWheel(e) {
     e.preventDefault()
     const rect = svgRef.current.getBoundingClientRect()
@@ -149,7 +158,15 @@ export default function GalaxyGraph({
     )
   }
 
+  const btnStyle = {
+    width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: t.surface, border: `1px solid ${t.panelBorder}`, color: t.textMuted,
+    fontFamily: 'Roboto, sans-serif', fontSize: 16, fontWeight: 300,
+    cursor: 'pointer', lineHeight: 1, userSelect: 'none'
+  }
+
   return (
+    <div style={{ position: 'relative', width, height }}>
     <svg
       ref={svgRef} width={width} height={height}
       style={{ display: 'block', background: t.surface, cursor: dragRef.current ? 'grabbing' : 'grab', touchAction: 'none' }}
@@ -228,5 +245,10 @@ export default function GalaxyGraph({
         </g>
       </g>
     </svg>
+    <div style={{ position: 'absolute', bottom: 10, right: 10, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <button type="button" aria-label="Zoom in" style={btnStyle} onClick={() => zoomBy(1.3)}>+</button>
+      <button type="button" aria-label="Zoom out" style={btnStyle} onClick={() => zoomBy(1 / 1.3)}>−</button>
+    </div>
+    </div>
   )
 }
