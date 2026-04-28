@@ -375,12 +375,9 @@ function DonorIntel() {
       </div>
 
       {import.meta.env.VITE_GALAXY_ENABLED === 'true' ? (
-        <div>
-          <Band label="Funding flow galaxy — 2024 cycle" right="AI PATTERN DETECTION · LIVE" />
-          <Card style={{ padding: 0 }}>
-            <FundingFlowGalaxy mode="universe" cycle="2024" height={640} />
-          </Card>
-        </div>
+        <Card style={{ padding: 0 }}>
+          <FundingFlowGalaxy mode="universe" cycle="2024" height={640} />
+        </Card>
       ) : (
         <>
           {/* legacy charts — kept until flag retired */}
