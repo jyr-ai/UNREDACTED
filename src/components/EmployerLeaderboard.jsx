@@ -82,7 +82,6 @@ export default function EmployerLeaderboard() {
     let cancelled = false
     setLdEmp(true)
     setSelected(null)
-    setFlow([])
     donors.employers({
       cycle,
       minAmount,
