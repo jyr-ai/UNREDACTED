@@ -1,0 +1,38 @@
+<h2>Three implementation approaches</h2>
+<p class="subtitle">All three deliver the same user experience. They differ in how much new infrastructure we add vs. reuse existing Supabase assets.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a1" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Maximalist — new MVs + new routes</h3>
+      <p>New <code>funding_galaxy_nodes</code> and <code>funding_galaxy_edges</code> materialized views purpose-built for the galaxy. New <code>signal_patterns</code> table modeled after FOIA Fluent. Six new API routes under <code>/api/galaxy/*</code>.</p>
+      <p style="margin-top:6px;font-size:10px;color:#888"><strong>Pros:</strong> Cleanest separation. Fastest queries. <strong>Cons:</strong> Two new MVs to maintain/refresh. Duplicates work the existing <code>money_flow_edges</code> MV already does. ETL complexity increases.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="a2" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Minimalist — client-side transform, no new tables</h3>
+      <p>Reuse <code>money_flow_edges</code> MV unchanged. Transform to galaxy node/edge format on the client. Store AI patterns in localStorage (hacky) or a tiny <code>funding_flow_patterns</code> table.</p>
+      <p style="margin-top:6px;font-size:10px;color:#888"><strong>Pros:</strong> No backend changes for galaxy data. <strong>Cons:</strong> Ships 10-50k raw edges to browser on every visit (bandwidth). Client-side aggregation blocks the render thread. No server-side filtering. Doesn't scale.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="a3" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Hybrid — reuse MV, add thin pattern layer <span style="color:#FF8000;font-size:10px">★ recommended</span></h3>
+      <p>Keep <code>money_flow_edges</code> as source of truth. Add one new table: <code>funding_flow_patterns</code> (mirrors FOIA Fluent's <code>signal_patterns</code> schema). Add three new routes: <code>/api/galaxy/universe</code>, <code>/api/galaxy/sector/:name</code>, <code>/api/galaxy/employer/:id</code>, plus <code>/api/galaxy/patterns</code>. Each route queries the existing MV + joins patterns where relevant.</p>
+      <p style="margin-top:6px;font-size:10px;color:#888"><strong>Pros:</strong> Minimal new infra. Server does aggregation/filtering (fast). Patterns live next to their evidence. Clear API contract. Easy to extend. <strong>Cons:</strong> Slight query duplication with existing donor routes — acceptable because shapes differ (galaxy needs node/edge, Sankey needs source/target/amount tuples).</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;padding:14px;background:rgba(255,128,0,0.08);border-left:3px solid #FF8000">
+  <p class="label">Recommendation: Approach 3</p>
+  <p>One new table, four new routes, no new MVs. Reuses your already-indexed <code>money_flow_edges</code> (with its pre-aggregated 5-tier structure). Matches the pattern from FOIA Fluent closely enough that research carries over, but doesn't duplicate your existing ETL. The weekly pattern cron writes to <code>funding_flow_patterns</code>; the frontend queries one endpoint per view mode and gets exactly the nodes/edges it needs.</p>
+</div>

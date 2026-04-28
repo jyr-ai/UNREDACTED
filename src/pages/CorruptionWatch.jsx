@@ -18,7 +18,7 @@ export default function CorruptionWatch({ onSignInRequest }) {
   const [sub, setSub] = useState("accountability");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* ── Editorial header ─────────────────────────────────── */}
       <div style={{ borderTop: `3px solid ${ORANGE}`, paddingTop: 16 }}>
         <div style={{ fontFamily: MF, fontSize: 9, color: ORANGE, letterSpacing: 3, marginBottom: 8 }}>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 import { useTheme } from '../theme/index.js';
 import { Card, Band, CardTitle } from './ui/index.js';
 import { campaignWatch as cwApi } from '../api/client.js';
@@ -54,7 +55,7 @@ export default function FindYourRep() {
             style={{
               flex: 1, padding: '10px 14px',
               background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4,
-              color: t.hi, fontFamily: "'IBM Plex Mono',monospace", fontSize: 12, outline: 'none',
+              color: t.hi, fontFamily: FONT_MONO, fontSize: 12, outline: 'none',
             }}
           />
           <button
@@ -65,7 +66,7 @@ export default function FindYourRep() {
               background: (repsLoading || addressInput.trim().length < 2) ? t.cardB : t.accent,
               border: `1px solid ${t.border}`, borderRadius: 4,
               color: (repsLoading || addressInput.trim().length < 2) ? t.mid : '#fff',
-              fontFamily: "'IBM Plex Mono',monospace", fontSize: 11,
+              fontFamily: FONT_MONO, fontSize: 11,
               cursor: repsLoading ? 'wait' : 'pointer', letterSpacing: '1px',
             }}
           >
@@ -74,20 +75,20 @@ export default function FindYourRep() {
         </div>
 
         {repsNote && (
-          <div style={{ padding: '8px 14px', background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4, fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.low, marginBottom: 14 }}>
+          <div style={{ padding: '8px 14px', background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4, fontFamily: FONT_MONO, fontSize: 10, color: t.low, marginBottom: 14 }}>
             ℹ {repsNote}
           </div>
         )}
 
         {repsError && (
-          <div style={{ padding: '10px 14px', background: t.cardB, border: `1px solid ${t.warn}`, borderRadius: 4, fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.warn, marginBottom: 16 }}>
+          <div style={{ padding: '10px 14px', background: t.cardB, border: `1px solid ${t.warn}`, borderRadius: 4, fontFamily: FONT_MONO, fontSize: 11, color: t.warn, marginBottom: 16 }}>
             ⚠ {repsError}
           </div>
         )}
 
         {repsData && (
           <div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.low, marginBottom: 14, letterSpacing: '1px' }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low, marginBottom: 14, letterSpacing: '1px' }}>
               {repsData.source === 'congress.gov'
                 ? `FEDERAL REPRESENTATIVES — ${repsData.normalizedInput?.line1 || addressInput}`
                 : `RESULTS FOR: ${repsData.normalizedInput?.line1 || ''}${repsData.normalizedInput?.city ? `, ${repsData.normalizedInput.city}` : ''}${repsData.normalizedInput?.state ? ` ${repsData.normalizedInput.state}` : ''}`
@@ -95,7 +96,7 @@ export default function FindYourRep() {
             </div>
 
             {(repsData.officials || []).length === 0 ? (
-              <div style={{ padding: '12px 14px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.mid }}>
+              <div style={{ padding: '12px 14px', fontFamily: FONT_MONO, fontSize: 11, color: t.mid }}>
                 No officials found for this location.
               </div>
             ) : (
@@ -120,12 +121,12 @@ export default function FindYourRep() {
                           />
                         )}
                         <div>
-                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.hi, fontWeight: 700 }}>{rep.name}</div>
-                          {rep.office && <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.mid, marginTop: 2 }}>{rep.office}</div>}
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, fontWeight: 700 }}>{rep.name}</div>
+                          {rep.office && <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.mid, marginTop: 2 }}>{rep.office}</div>}
                         </div>
                       </div>
                       {party && (
-                        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: partyColor, marginBottom: 6 }}>{party}</div>
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: partyColor, marginBottom: 6 }}>{party}</div>
                       )}
                       {rep.channels?.length > 0 && (
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
@@ -133,20 +134,20 @@ export default function FindYourRep() {
                             <a key={j}
                               href={`https://${ch.type.toLowerCase()}.com/${ch.id}`}
                               target="_blank" rel="noopener noreferrer"
-                              style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '2px 6px', borderRadius: 3 }}>
+                              style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.blue, textDecoration: 'none', border: `1px solid ${t.border}`, padding: '2px 6px', borderRadius: 3 }}>
                               {ch.type}
                             </a>
                           ))}
                         </div>
                       )}
                       {rep.phones?.length > 0 && (
-                        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.mid, marginTop: 4 }}>
+                        <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.mid, marginTop: 4 }}>
                           📞 {rep.phones[0]}
                         </div>
                       )}
                       {rep.urls?.length > 0 && (
                         <a href={rep.urls[0]} target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'block', marginTop: 4, fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none' }}>
+                          style={{ display: 'block', marginTop: 4, fontFamily: FONT_MONO, fontSize: 8, color: t.blue, textDecoration: 'none' }}>
                           🌐 Official website
                         </a>
                       )}
@@ -165,8 +166,8 @@ export default function FindYourRep() {
                 padding: 16, background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 4,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minHeight: 80,
               }}>
-                <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.accent, letterSpacing: '1px' }}>{role.toUpperCase()}</div>
-                <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 11, fontStyle: 'italic', color: t.low }}>Enter address, zip, or state</div>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.accent, letterSpacing: '1px' }}>{role.toUpperCase()}</div>
+                <div style={{ fontFamily: "FONT_SERIF", fontSize: 11, fontStyle: 'italic', color: t.low }}>Enter address, zip, or state</div>
               </div>
             ))}
           </div>

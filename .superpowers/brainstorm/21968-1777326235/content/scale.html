@@ -1,0 +1,39 @@
+<h2>How large is the "entire universe"?</h2>
+<p class="subtitle">Trade-off: more nodes = more complete picture, but slower renders and visual noise. Rendering tech depends on this number.</p>
+
+<div class="options">
+
+  <div class="option" data-choice="curated" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Curated · 300-500 nodes <span style="color:#FF8000;font-size:10px">★ recommended for MVP</span></h3>
+      <p>Top ~150 employers (by cycle $ volume) + their top ~200 PACs/501c4s + top ~150 politicians. Threshold: entities accounting for &gt;$50k/cycle. SVG (D3-force) renders smoothly at 60fps.</p>
+      <p style="margin-top:6px;font-size:10px;color:#888"><strong>Pros:</strong> Fast. Readable labels. Patterns stand out. Matches FOIA Fluent's density. <strong>Cons:</strong> Long-tail donors excluded — but they'd be pixels anyway.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="medium" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Medium · 1,500-2,500 nodes</h3>
+      <p>All entities with &gt;$10k/cycle. SVG with level-of-detail tricks (hide labels on zoom out, virtual scrolling). Still interactive but noticeable lag on lower-end laptops during force simulation.</p>
+      <p style="margin-top:6px;font-size:10px;color:#888"><strong>Pros:</strong> More complete. <strong>Cons:</strong> Visual noise. Tick rate drops. Need aggressive clustering/decimation.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="full" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Full · 10k+ nodes (Canvas/WebGL)</h3>
+      <p>Every FEC-registered entity. Must switch from SVG to Canvas (regl/deck.gl) to keep usable frame rates. Deck.gl is already a dependency per CLAUDE.md.</p>
+      <p style="margin-top:6px;font-size:10px;color:#888"><strong>Pros:</strong> "Complete" picture. <strong>Cons:</strong> Significant eng. cost. Label rendering hard. Most nodes are single pixels — no signal, just noise. Users can't see trees for the forest.</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;padding:14px;background:rgba(255,128,0,0.08);border-left:3px solid #FF8000">
+  <p class="label">Recommendation</p>
+  <p><strong>A — Curated 300-500 nodes.</strong> Matches FOIA Fluent's density (they cap around 400). The galaxy's job is to tell money-flow stories; a $500 donor to a state assembly race isn't a story. Users who want full FEC detail already have the existing leaderboard + Sankey. Galaxy is for <em>signal</em>. Plus: A is the only option we can confidently ship fast on SVG/D3.</p>
+  <p style="margin-top:8px;font-size:11px;color:#888">The "sector cluster" and "employer cluster" views on the Money Flow tab would be smaller still (20-80 nodes each) — always SVG.</p>
+</div>

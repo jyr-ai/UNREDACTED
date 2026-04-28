@@ -11,6 +11,7 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { FONT_MONO } from '../theme/tokens.js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './DeckGLMap.css';
 import Supercluster from 'supercluster';
@@ -461,7 +462,7 @@ export default function DeckGLMap({
           getPosition: (c) => [c.lon ?? c.lng ?? 0, c.lat ?? 0],
           getText: (c) => c.name ?? c.city ?? '',
           getSize: 11, getColor: [190,205,230,200], getPixelOffset: [0,14],
-          fontFamily: "'IBM Plex Mono', system-ui, sans-serif", fontWeight: 500,
+          fontFamily: FONT_MONO, fontWeight: 500,
           background: true, getBackgroundColor: [8,12,28,160], backgroundPadding: [3,1,3,1], pickable: false,
         }));
       }
@@ -517,7 +518,7 @@ export default function DeckGLMap({
           getPosition: (r) => [r.lon, r.lat],
           getText: (r) => String(r.count),
           getSize: 11, getColor: [255,255,255,230],
-          fontFamily: "'IBM Plex Mono', sans-serif", fontWeight: 700,
+          fontFamily: FONT_MONO, fontWeight: 700,
           getTextAnchor: 'middle', getAlignmentBaseline: 'center', pickable: false,
         }));
       }
@@ -585,7 +586,7 @@ export default function DeckGLMap({
           getPosition: (t) => [t.lon, t.lat],
           getText: (t) => String(t.count),
           getSize: 10, getColor: [10,20,40,230],
-          fontFamily: "'IBM Plex Mono', sans-serif", fontWeight: 700,
+          fontFamily: FONT_MONO, fontWeight: 700,
           getTextAnchor: 'middle', getAlignmentBaseline: 'center', pickable: false,
         }));
       }

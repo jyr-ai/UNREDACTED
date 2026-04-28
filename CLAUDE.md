@@ -108,3 +108,20 @@ FEC_API_KEY                                 # live FEC API fallback
 ```
 
 `VITE_*` variables are exposed to the browser. Keep all secrets in unprefixed server-side vars.
+
+---
+
+## Deferred / hidden features
+
+### Follow the Money — hidden sub-tabs (not ready for users)
+
+The following sub-tabs exist in `src/pages/FollowTheMoney.jsx` in the `TABS` array but are commented out until fully developed. When development is complete, uncomment the relevant entries to restore them:
+
+| Tab id | Label | File/Component |
+|---|---|---|
+| `anomalies` | Cash Flood | not yet wired to a complete component |
+| `web` | Donor Web | DonorWeb prop passed from App.jsx — graph not complete |
+| `bundlers` | Lobbyist Bundlers | `lobbyist_bundles` table exists; UI incomplete |
+| `ie` | Indep. Expenditures | `independent_expenditures` table exists; UI incomplete |
+
+To restore a tab: find the commented-out line in the `TABS` array at the top of `src/pages/FollowTheMoney.jsx` and uncomment it.

@@ -1,10 +1,11 @@
 import { useTheme } from '../../theme/index.js';
+import { FONT_MONO } from '../../theme/tokens.js';
 
 function ChartTooltip({ active, payload, label, fmt }) {
   const t = useTheme();
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: t.ink, border: `1px solid ${t.border}`, borderLeft: `3px solid ${t.accent}`, padding: "8px 12px", fontFamily: "'Roboto', sans-serif" }}>
+    <div style={{ background: t.ink, border: `1px solid ${t.border}`, borderLeft: `3px solid ${t.accent}`, padding: "8px 12px", fontFamily: FONT_MONO }}>
       <div style={{ fontSize: 9, color: t.mid, letterSpacing: 1, marginBottom: 5 }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ fontSize: 11, color: t.hi, marginBottom: 2 }}>

@@ -8,6 +8,7 @@
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 import * as d3 from 'd3'
 import { feature } from 'topojson-client'
 import OIL_PIPELINES   from '../data/pipelines'
@@ -200,7 +201,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         .attr('fill', theme.cardB || '#1e2330').attr('rx', 6)
       g.append('text').attr('x', width / 2).attr('y', height / 2)
         .attr('text-anchor', 'middle').attr('fill', theme.mid)
-        .style('font-family', "'IBM Plex Mono', monospace").style('font-size', '13px')
+        .style('font-family', "FONT_MONO").style('font-size', '13px')
         .text('Loading US map…')
     }
 
@@ -359,7 +360,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
             .attr('x', badgeW / 2).attr('y', badgeH - 3)
             .attr('text-anchor', 'middle')
             .attr('fill', '#000')
-            .style('font-family', "'IBM Plex Mono', monospace")
+            .style('font-family', "FONT_MONO")
             .style('font-size', '7px')
             .style('font-weight', '700')
             .style('pointer-events', 'none')
@@ -381,7 +382,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
           .attr('y', labelY)
           .attr('text-anchor', 'middle')
           .attr('fill', isCapital ? '#facc15' : (theme.mid))
-          .style('font-family', "'IBM Plex Mono', monospace")
+          .style('font-family', "FONT_MONO")
           .style('font-size', isCapital ? '8px' : isTier1 ? '7px' : '6.5px')
           .style('font-weight', isCapital ? '600' : '400')
           .style('pointer-events', 'none')
@@ -406,7 +407,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         .style('cursor', 'pointer').on('click', btn.action)
       ctrl.append('text').attr('x', 14).attr('y', btn.y + 18)
         .attr('text-anchor', 'middle').attr('fill', theme.hi)
-        .style('font-family', "'IBM Plex Mono', monospace").style('font-size', '14px')
+        .style('font-family', "FONT_MONO").style('font-size', '14px')
         .style('pointer-events', 'none').text(btn.label)
     })
 
@@ -417,7 +418,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
     leg.append('rect').attr('width', LW).attr('height', LH)
       .attr('fill', theme.card).attr('stroke', theme.border).attr('rx', 4).attr('opacity', 0.95)
     leg.append('text').attr('x', 8).attr('y', 18)
-      .attr('fill', theme.accent).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
+      .attr('fill', theme.accent).style('font-family', "FONT_MONO").style('font-size', '9px')
       .style('letter-spacing', '1.5px').text('LEGEND')
 
     if (activeLayers.gasPrices && gasData?.prices) {
@@ -437,14 +438,14 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
       })
 
       leg.append('text').attr('x', 8).attr('y', 32)
-        .attr('fill', '#fb923c').style('font-family', "'IBM Plex Mono',monospace").style('font-size', '8px')
+        .attr('fill', '#fb923c').style('font-family', "FONT_MONO").style('font-size', '8px')
         .style('letter-spacing', '1px').text('⛽ GAS PRICES $/GAL')
       leg.append('rect').attr('x', 8).attr('y', 38).attr('width', LW - 16).attr('height', 10)
         .attr('rx', 2).attr('fill', `url(#${gradId})`)
       ;[minP, midP, maxP].forEach((v, i) => {
         leg.append('text').attr('x', i === 0 ? 8 : i === 1 ? LW / 2 : LW - 8).attr('y', 60)
           .attr('text-anchor', i === 0 ? 'start' : i === 1 ? 'middle' : 'end')
-          .attr('fill', theme.low).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '7.5px')
+          .attr('fill', theme.low).style('font-family', "FONT_MONO").style('font-size', '7.5px')
           .text(`$${v}`)
       })
 
@@ -459,7 +460,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
       ].forEach(item => {
         leg.append('circle').attr('cx', 12).attr('cy', item.y - 4).attr('r', 4).attr('fill', item.color)
         leg.append('text').attr('x', 22).attr('y', item.y)
-          .attr('fill', theme.mid).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
+          .attr('fill', theme.mid).style('font-family', "FONT_MONO").style('font-size', '9px')
           .text(item.label)
       })
 
@@ -473,8 +474,8 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         grad.append('stop').attr('offset', `${t2 * 100}%`).attr('stop-color', d3.interpolateRdYlGn(t2))
       })
       leg.append('rect').attr('x', 8).attr('y', 26).attr('width', LW - 16).attr('height', 12).attr('rx', 2).attr('fill', `url(#${gradId})`)
-      leg.append('text').attr('x', 8).attr('y', 50).attr('fill', theme.low).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '7.5px').text('High Risk')
-      leg.append('text').attr('x', LW - 8).attr('y', 50).attr('text-anchor', 'end').attr('fill', theme.low).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '7.5px').text('Low Risk')
+      leg.append('text').attr('x', 8).attr('y', 50).attr('fill', theme.low).style('font-family', "FONT_MONO").style('font-size', '7.5px').text('High Risk')
+      leg.append('text').attr('x', LW - 8).attr('y', 50).attr('text-anchor', 'end').attr('fill', theme.low).style('font-family', "FONT_MONO").style('font-size', '7.5px').text('Low Risk')
       leg.append('line').attr('x1', 8).attr('y1', 56).attr('x2', LW - 8).attr('y2', 56).attr('stroke', theme.border).attr('stroke-width', 0.5)
       ;[
         { label: '🛢️ Oil Pipelines', color: theme.accent,           y: 72 },
@@ -483,7 +484,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         { label: '⚡ Power Grid',    color: theme.warn || '#FF8000', y: 120 },
       ].forEach(item => {
         leg.append('circle').attr('cx', 12).attr('cy', item.y - 4).attr('r', 4).attr('fill', item.color)
-        leg.append('text').attr('x', 22).attr('y', item.y).attr('fill', theme.mid).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px').text(item.label)
+        leg.append('text').attr('x', 22).attr('y', item.y).attr('fill', theme.mid).style('font-family', "FONT_MONO").style('font-size', '9px').text(item.label)
       })
     } else {
       ;[
@@ -494,7 +495,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         { label: '⚡ Power Grid',    color: theme.warn || '#FF8000', y: 98 },
       ].forEach(item => {
         leg.append('circle').attr('cx', 12).attr('cy', item.y - 4).attr('r', 4).attr('fill', item.color)
-        leg.append('text').attr('x', 22).attr('y', item.y).attr('fill', theme.mid).style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px').text(item.label)
+        leg.append('text').attr('x', 22).attr('y', item.y).attr('fill', theme.mid).style('font-family', "FONT_MONO").style('font-size', '9px').text(item.label)
       })
     }
 
@@ -504,7 +505,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
     tr.append('rect').attr('width', TR_W).attr('height', TR_H)
       .attr('fill', theme.card).attr('stroke', theme.border).attr('rx', 4).attr('opacity', 0.95)
     tr.append('text').attr('x', 8).attr('y', 16).attr('fill', theme.accent)
-      .style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px').style('letter-spacing', '1.5px').text('TIME RANGE')
+      .style('font-family', "FONT_MONO").style('font-size', '9px').style('letter-spacing', '1.5px').text('TIME RANGE')
     ;['1Y', '2Y', '5Y', 'ALL'].forEach((range, i) => {
       const bx = 4 + i * 38
       const active = timeRange === range
@@ -514,7 +515,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         .on('click', () => setTimeRange(range))
       tr.append('text').attr('x', bx + 17).attr('y', 36).attr('text-anchor', 'middle')
         .attr('fill', active ? '#fff' : theme.hi)
-        .style('font-family', "'IBM Plex Mono',monospace").style('font-size', '9px')
+        .style('font-family', "FONT_MONO").style('font-size', '9px')
         .style('pointer-events', 'none').text(range)
     })
 
@@ -543,7 +544,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
           <div style={{
             position: 'absolute', top: 8, right: 8,
             background: 'rgba(0,0,0,0.7)', borderRadius: 6, padding: '6px 12px',
-            fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+            fontFamily: FONT_MONO, fontSize: 10,
             color: '#fb923c', border: '1px solid rgba(251,146,60,0.3)',
           }}>
             ⛽ Loading gas prices…
@@ -553,7 +554,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
         {/* Zoom hint */}
         <div style={{
           position: 'absolute', bottom: 8, right: 8,
-          fontFamily: "'IBM Plex Mono', monospace", fontSize: 9,
+          fontFamily: FONT_MONO, fontSize: 9,
           color: theme.low, pointerEvents: 'none',
         }}>
           Zoom {zoomScale.toFixed(1)}x · Scroll to zoom · Click to drill down
@@ -566,7 +567,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
           borderRadius: 4, padding: '10px 14px', opacity: 0.95, minWidth: 170,
         }}>
           <div style={{
-            fontFamily: "'IBM Plex Mono',monospace", fontSize: 9,
+            fontFamily: FONT_MONO, fontSize: 9,
             color: theme.accent, letterSpacing: '1.5px', marginBottom: 8,
           }}>LAYER TOGGLES</div>
           {LAYER_DEFS.map(layer => (
@@ -577,7 +578,7 @@ const USPoliticalMap = ({ onStateClick, theme, corruptionScores = {} }) => {
                 onChange={e => toggleLayer(layer.id, e.target.checked)}
                 style={{ cursor: 'pointer', accentColor: theme.accent }}
               />
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: theme.mid }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: theme.mid }}>
                 {layer.name}
               </span>
             </label>

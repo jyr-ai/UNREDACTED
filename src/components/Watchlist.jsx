@@ -4,12 +4,13 @@
  * Supports real-time updates via Supabase subscriptions.
  */
 import { useState, useEffect, useCallback } from 'react'
+import { FONT_MONO } from '../theme/tokens.js';
 import { useAuth } from '../contexts/AuthContext.jsx'
 import { supabase, subscribeToWatchlist } from '../lib/supabase.js'
 
 const ORANGE = '#FF8000'
-const MF     = "'Roboto', sans-serif"
-const SF     = "'Roboto', sans-serif"
+const MF     = FONT_MONO
+const SF     = FONT_MONO
 
 // Tier badge colors
 const TIER_COLORS = {

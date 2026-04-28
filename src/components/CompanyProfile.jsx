@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
+import { FONT_MONO } from '../theme/tokens.js';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getCompanyProfile, getCompanyPoliticalFootprint, getCompanyConflicts } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
 const GREEN  = '#2DC653'
-const MF     = "'Roboto', sans-serif"
-const SF     = "'Roboto', sans-serif"
+const MF     = FONT_MONO
+const SF     = FONT_MONO
 
 function RiskMeter({ score, level, T }) {
   const color = level === 'CRITICAL' ? RED : level === 'HIGH' ? ORANGE : level === 'MEDIUM' ? '#FFB84D' : level === 'LOW' ? GREEN : T.mid

@@ -15,6 +15,8 @@
 import { useState } from "react";
 import { useTheme } from "../theme/index.js";
 import { ORANGE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
+import { useMobile } from "../hooks/useMediaQuery.js";
+import PageSidebar from "../components/ui/PageSidebar.jsx";
 import CompanyProfile from "../components/CompanyProfile.jsx";
 import EnergyIntelligence from "../components/EnergyIntelligence.jsx";
 import SelfDealing from "../components/SelfDealing.jsx";
@@ -50,30 +52,7 @@ import {
 } from "recharts";
 
 // ─── Shared helpers ────────────────────────────────────────────────────────────
-function SubTabBar({ tabs, active, onChange }) {
-  const t = useTheme();
-  return (
-    <div style={{ display: "flex", borderBottom: `1px solid ${t.border}`, flexWrap: "wrap" }}>
-      {tabs.map(st => (
-        <button key={st.id} onClick={() => onChange(st.id)} style={{
-          background: "none", border: "none", cursor: "pointer",
-          padding: "10px 18px", fontFamily: MF, fontSize: 10.5, letterSpacing: 0.5,
-          color: active === st.id ? ORANGE : t.mid,
-          borderBottom: `3px solid ${active === st.id ? ORANGE : "transparent"}`,
-          marginBottom: -1, transition: "all .14s", whiteSpace: "nowrap",
-          display: "flex", alignItems: "center", gap: 6,
-        }}>
-          {st.label}
-          {st.badge && (
-            <span style={{ background: "#00CC6622", border: "1px solid #00CC6644", color: "#00CC66", fontSize: 7, padding: "1px 4px", borderRadius: 2, fontWeight: 700 }}>
-              {st.badge}
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
+
 
 // ─── Agency Spending ──────────────────────────────────────────────────────────
 function AgencySpending() {
@@ -239,7 +218,7 @@ function CorporateIndex() {
               return (
                 <tr key={i} style={{ borderBottom:`1px solid ${t.border}`, background:i%2===0?t.card:t.tableAlt }}>
                   <td style={{ padding:"10px 14px", borderRight:`1px solid ${t.border}`, fontFamily:MF, fontSize:11, color:t.hi }}>{d.n}</td>
-                  <td style={{ padding:"10px 14px", fontFamily:MF, fontSize:9.5, color:t.mid, borderRight:`1px solid ${t.border}` }}>{d.s}</td>
+                  <td style={{ padding:"10px 14px", fontFamily:MF, fontSize: 11, color:t.mid, borderRight:`1px solid ${t.border}` }}>{d.s}</td>
                   <td style={{ padding:"10px 14px", fontFamily:MF, fontSize:11, color:ORANGE, fontWeight:700, textAlign:"right", borderRight:`1px solid ${t.border}` }}>${d.pac}m</td>
                   <td style={{ padding:"10px 14px", textAlign:"right", fontFamily:MF, fontSize:11, color:ORANGE, fontWeight:700, borderRight:`1px solid ${t.border}` }}>${(d.con/1000).toFixed(1)}bn</td>
                   <td style={{ padding:"10px 14px", fontFamily:MF, fontSize:11, color:t.hi, textAlign:"right", borderRight:`1px solid ${t.border}` }}>{roi}×</td>
@@ -269,18 +248,23 @@ function CorporateIndex() {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function BudgetContracts({ theme }) {
+  const isMobile = useMobile();
   const [sub, setSub] = useState("spending");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-      <SubTabBar tabs={SUBTABS} active={sub} onChange={setSub} />
-      {sub === "spending"    && <AgencySpending />}
-      {sub === "contracts"   && <ContractAwards theme={theme} />}
-      {sub === "selfdealing" && <SelfDealing />}
-      {sub === "paytoplay"   && <PayToPlay />}
-      {sub === "index"       && <CorporateIndex />}
-      {sub === "profile"     && <CompanyProfile theme={theme} />}
-      {sub === "energy"      && <EnergyIntelligence />}
+    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", minHeight: 0, height: "100%" }}>
+      <PageSidebar tabs={SUBTABS} active={sub} onChange={setSub} isMobile={isMobile} />
+      <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: 14 }}>
+          {sub === "spending"    && <AgencySpending />}
+          {sub === "contracts"   && <ContractAwards theme={theme} />}
+          {sub === "selfdealing" && <SelfDealing />}
+          {sub === "paytoplay"   && <PayToPlay />}
+          {sub === "index"       && <CorporateIndex />}
+          {sub === "profile"     && <CompanyProfile theme={theme} />}
+          {sub === "energy"      && <EnergyIntelligence />}
+        </div>
+      </div>
     </div>
   );
 }

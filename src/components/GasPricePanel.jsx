@@ -6,10 +6,11 @@
  */
 
 import { useState, useCallback } from 'react'
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 import { gasPrices } from '../api/client.js'
 import { useTheme } from '../theme/index.js'
 
-const FONT_MONO = "'IBM Plex Mono', monospace"
+const FONT_MONO = "FONT_MONO"
 
 const PRICE_COLOR = {
   regular:  '#fb923c',

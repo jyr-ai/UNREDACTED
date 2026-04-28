@@ -346,7 +346,24 @@ export async function getMoneyFlow({ cycle, sourceTier, targetTier, nodeId, node
   }
   const { data, error } = await q
   if (error) throw new Error(`getMoneyFlow: ${error.message}`)
-  return { edges: data || [] }
+
+  const edges = data || []
+
+  // Enrich candidate target_label with real names from politicians table
+  const candidateIds = [...new Set(
+    edges.filter(e => e.target_type === 'candidate' && !e.target_label).map(e => e.target_id)
+  )]
+  if (candidateIds.length > 0) {
+    const { data: pols } = await db.from('politicians').select('fec_candidate_id, name').in('fec_candidate_id', candidateIds)
+    const polMap = new Map((pols || []).map(p => [p.fec_candidate_id, p.name]))
+    for (const e of edges) {
+      if (e.target_type === 'candidate' && !e.target_label && polMap.has(e.target_id)) {
+        e.target_label = polMap.get(e.target_id)
+      }
+    }
+  }
+
+  return { edges }
 }
 
 // ─── Committee receipts ───────────────────────────────────────────────────────

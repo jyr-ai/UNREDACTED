@@ -64,8 +64,8 @@ export default function WarStats() {
   if (loading && !data) {
     return (
       <div style={pad}>
-        <div style={{ fontFamily: SF, fontSize: numSz, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>—</div>
-        <div style={{ fontFamily: MF, fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
+        <div style={{ fontFamily: SF, fontSize: numSz, color: t.hi, lineHeight: 1, marginBottom: 4 }}>—</div>
+        <div style={{ fontFamily: MF, fontSize: 11, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
         <div style={{ fontFamily: MF, fontSize: 8, color: t.low }}>Loading…</div>
       </div>
     );
@@ -74,8 +74,8 @@ export default function WarStats() {
   if (error && !data) {
     return (
       <div style={pad}>
-        <div style={{ fontFamily: SF, fontSize: numSz, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>—</div>
-        <div style={{ fontFamily: MF, fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
+        <div style={{ fontFamily: SF, fontSize: numSz, color: t.hi, lineHeight: 1, marginBottom: 4 }}>—</div>
+        <div style={{ fontFamily: MF, fontSize: 11, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
         <div style={{ fontFamily: MF, fontSize: 8, color: t.low }}>Unavailable</div>
       </div>
     );
@@ -85,10 +85,10 @@ export default function WarStats() {
 
   return (
     <div style={pad}>
-      <div style={{ fontFamily: SF, fontSize: numSz, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>
+      <div style={{ fontFamily: SF, fontSize: numSz, color: t.hi, lineHeight: 1, marginBottom: 4 }}>
         {formatSpending(spendingData?.value)}
       </div>
-      <div style={{ fontFamily: MF, fontSize: 9.5, color: t.hi, marginBottom: 2 }}>
+      <div style={{ fontFamily: MF, fontSize: 11, color: t.hi, marginBottom: 2 }}>
         US-Iran War spending
       </div>
       <div style={{ fontFamily: MF, fontSize: 8, color: t.low }}>
