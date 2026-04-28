@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useGalaxyData from './hooks/useGalaxyData.js'
 import useGalaxySurface from './hooks/useGalaxySurface.js'
 import GalaxyGraph from './GalaxyGraph.jsx'
@@ -7,9 +7,11 @@ import GalaxyLegend from './GalaxyLegend.jsx'
 import GalaxySurfaceToggle from './GalaxySurfaceToggle.jsx'
 import { galaxyTokens } from './lib/galaxyTokens.js'
 
+const CYCLES = ['2024', '2026']
+
 export default function FundingFlowGalaxy({
-  mode = 'universe',                            // "universe" | "sector" | "employer"
-  cycle = '2024',
+  mode = 'universe',
+  cycle: cycleProp = '2024',
   sector = null,
   employerId = null,
   height = 560,
@@ -17,6 +19,23 @@ export default function FundingFlowGalaxy({
 }) {
   const [surface, toggleSurface] = useGalaxySurface()
   const t = galaxyTokens[surface]
+
+  // Local cycle state so the filter is self-contained
+  const [cycle, setCycle] = useState(cycleProp)
+
+  // Measure container width to fill the full panel — no white space
+  const containerRef = useRef(null)
+  const [containerWidth, setContainerWidth] = useState(900)
+  useEffect(() => {
+    if (!containerRef.current) return
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect?.width
+      if (w && w > 0) setContainerWidth(Math.floor(w))
+    })
+    ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
   const { data, loading, error } = useGalaxyData({ mode, cycle, sector, employerId })
   const [drawerPayload, setDrawer] = useState(null)
 
@@ -37,15 +56,36 @@ export default function FundingFlowGalaxy({
   }
 
   return (
-    <div style={{ position: 'relative', background: t.surface, border: `1px solid ${t.panelBorder}`, overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ position: 'relative', background: t.surface, border: `1px solid ${t.panelBorder}`, overflow: 'hidden' }}>
       <div style={{
         background: t.band, color: t.bandText,
         padding: '7px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 9, letterSpacing: 2, fontWeight: 500, textTransform: 'uppercase' }}>
-          Funding flow galaxy · {cycle}
+          Funding flow galaxy
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          {/* Cycle filter — only shown in universe mode */}
+          {mode === 'universe' && (
+            <span style={{ display: 'inline-flex', gap: 2 }}>
+              {CYCLES.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCycle(c)}
+                  style={{
+                    fontFamily: 'Roboto, sans-serif', fontSize: 8, letterSpacing: 1,
+                    padding: '2px 7px', cursor: 'pointer',
+                    background: cycle === c ? '#FF8000' : 'transparent',
+                    color: cycle === c ? '#000' : `${t.bandText}99`,
+                    border: `1px solid ${cycle === c ? '#FF8000' : `${t.bandText}44`}`,
+                    fontWeight: cycle === c ? 700 : 400
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </span>
+          )}
           <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 8, opacity: 0.55 }}>{rightMeta}</span>
           <GalaxySurfaceToggle surface={surface} onToggle={toggleSurface} />
         </span>
@@ -72,7 +112,7 @@ export default function FundingFlowGalaxy({
           <GalaxyGraph
             envelope={data}
             surface={surface}
-            width={900}
+            width={containerWidth}
             height={height}
             onNodeClick={handleNodeClick}
             onPatternClick={handlePatternClick}
