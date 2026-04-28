@@ -5,6 +5,7 @@
  * Returns { nodes, edges, sectors, patterns, meta } envelopes per the API contract.
  */
 import { ensure } from '../lib/supabase.js'
+import { classifySector } from '../lib/sectorClassifier.js'
 
 const SECTOR_COLORS = {
   'Finance':               '#4A7FFF',
@@ -50,7 +51,7 @@ export function buildEnvelope({ edges, committees, cycle, source = 'supabase' })
         committee?.is_501c4 ? 'dark_money' :
         'trad_pac'
       nodesMap.set(nid, {
-        id: nid, kind, label: label || id,
+        id: nid, kind, label: label || committee?.name || id,
         sector: sector || null,
         amount: 0, degree: 0,
         is_501c4:   !!committee?.is_501c4,
@@ -184,19 +185,39 @@ export async function getSector({ cycle = '2024', sector, nodeCap = 80 } = {}) {
   if (!sector) throw new Error('sector is required')
   const db = ensure()
 
-  // Sector filter: employer sector OR committee sector
-  const { data: edges, error } = await db
+  // money_flow_edges has no sector columns — classify employer nodes server-side
+  const { data: allEdges, error } = await db
     .from('money_flow_edges')
-    .select('source_id, source_type, source_tier, source_label, source_sector, target_id, target_type, target_tier, target_label, target_sector, amount, txn_count, cycle')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
     .eq('cycle', cycle)
-    .or(`source_sector.eq.${sector},target_sector.eq.${sector}`)
+    .eq('source_type', 'employer')
     .gt('amount', 0)
     .order('amount', { ascending: false })
-    .limit(nodeCap * 3)
+    .limit(1000)
   if (error) throw error
 
-  const committees = await loadCommittees(db, collectCommitteeIds(edges || []))
-  const envelope = buildEnvelope({ edges: edges || [], committees, cycle })
+  // Filter to employers whose classified sector matches
+  const hop1 = (allEdges || []).filter(e => classifySector(e.source_label) === sector)
+
+  // Hop 2: committee → candidate for matched employer committees
+  const committeeIds = Array.from(new Set(hop1.map(e => e.target_id).filter(Boolean)))
+  let hop2 = []
+  if (committeeIds.length) {
+    const { data, error: e2 } = await db
+      .from('money_flow_edges')
+      .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+      .eq('cycle', cycle)
+      .in('source_id', committeeIds)
+      .gt('amount', 0)
+      .order('amount', { ascending: false })
+      .limit(200)
+    if (e2) throw e2
+    hop2 = data || []
+  }
+
+  const edges = [...hop1, ...hop2]
+  const committees = await loadCommittees(db, collectCommitteeIds(edges))
+  const envelope = buildEnvelope({ edges, committees, cycle })
 
   if (envelope.nodes.length > nodeCap) {
     const topNodeIds = new Set(
