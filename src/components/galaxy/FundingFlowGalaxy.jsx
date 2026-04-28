@@ -122,6 +122,14 @@ export default function FundingFlowGalaxy({
       </div>
 
       <GalaxyLegend surface={surface} />
+      <div style={{
+        padding: '5px 12px',
+        fontFamily: 'Roboto, sans-serif', fontSize: 8.5,
+        color: t.textLow, borderTop: `1px solid ${t.panelBorder}`,
+        background: t.surface, lineHeight: 1.5
+      }}>
+        * "Employer" nodes represent clusters of <em>individual donors</em> who self-reported their employer on FEC Schedule A filings — not direct corporate contributions. Corporate treasury money enters through Super PACs and 501(c)(4) dark money conduits shown above.
+      </div>
     </div>
   )
 }
