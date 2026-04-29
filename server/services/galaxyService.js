@@ -66,6 +66,7 @@ export function buildEnvelope({ edges, committees, politicians = new Map(), cycl
         party: politician?.party || null,
         state: politician?.state || null,
         chamber: politician?.chamber || null,
+        bioguide_id: politician?.bioguide_id || null,
         amount: 0, degree: 0,
         is_501c4:   !!committee?.is_501c4,
         is_super_pac: !!committee?.is_super_pac,
@@ -160,7 +161,7 @@ async function loadPoliticians(db, candidateIds) {
   if (!candidateIds.length) return new Map()
   const { data, error } = await db
     .from('politicians')
-    .select('fec_candidate_id, name, party, state, chamber, office')
+    .select('fec_candidate_id, name, party, state, chamber, office, bioguide_id')
     .in('fec_candidate_id', candidateIds)
   if (error) throw error
   const map = new Map()
