@@ -3,7 +3,12 @@ import { classifySector } from '../lib/sectorClassifier.js'
 
 function parseNodeId(nodeId) {
   const i = nodeId.indexOf(':')
-  return { kind: nodeId.slice(0, i), rawId: nodeId.slice(i + 1) }
+  if (i === -1) throw new Error(`Invalid node ID — expected 'prefix:rawId', got: ${nodeId}`)
+  const kind = nodeId.slice(0, i)
+  const rawId = nodeId.slice(i + 1)
+  if (!['emp', 'cmt', 'pol'].includes(kind)) throw new Error(`Invalid node prefix: ${kind}`)
+  if (kind !== 'emp' && !/^[A-Z0-9]{1,30}$/i.test(rawId)) throw new Error(`Invalid rawId for ${kind}: ${rawId}`)
+  return { kind, rawId }
 }
 
 function cycleRange(cycle) {
@@ -30,8 +35,8 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
   const committeeIds = new Set()
   const candidateIds = new Set()
   for (const e of edges) {
-    if (e.source_type !== 'employer' && e.source_type !== 'candidate') committeeIds.add(e.source_id)
-    if (e.target_type !== 'employer' && e.target_type !== 'candidate') committeeIds.add(e.target_id)
+    if (e.source_type !== 'employer' && e.source_type !== 'candidate' && e.source_type !== 'politician') committeeIds.add(e.source_id)
+    if (e.target_type !== 'employer' && e.target_type !== 'candidate' && e.target_type !== 'politician') committeeIds.add(e.target_id)
     if (e.source_type === 'candidate') candidateIds.add(e.source_id)
     if (e.target_type === 'candidate') candidateIds.add(e.target_id)
   }
@@ -105,12 +110,13 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
   const timeline = []
 
   if (kind === 'emp') {
-    const { data: receipts } = await db
+    const { data: receipts, error: empErr } = await db
       .from('contributions')
       .select('contributor_employer,committee_id,amount,date')
       .ilike('contributor_employer', rawId)
       .gte('date', start).lte('date', end)
       .order('date', { ascending: true }).limit(50)
+    if (empErr) throw empErr
     for (const r of receipts || []) {
       timeline.push({
         date: r.date, kind: 'receipt',
@@ -122,7 +128,7 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
       })
     }
   } else if (kind === 'cmt') {
-    const [{ data: receipts }, { data: transfers }] = await Promise.all([
+    const [{ data: receipts, error: rcptErr }, { data: transfers, error: trfErr }] = await Promise.all([
       db.from('contributions').select('contributor_employer,committee_id,amount,date')
         .eq('committee_id', rawId).gte('date', start).lte('date', end)
         .order('date', { ascending: true }).limit(25),
@@ -130,6 +136,8 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
         .or(`from_committee_id.eq.${rawId},to_committee_id.eq.${rawId}`)
         .eq('cycle', year).order('transfer_date', { ascending: true }).limit(25),
     ])
+    if (rcptErr) throw rcptErr
+    if (trfErr) throw trfErr
     for (const r of receipts || []) {
       timeline.push({
         date: r.date, kind: 'receipt',
@@ -156,10 +164,11 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
       .filter(n => n.kind !== 'politician' && n.kind !== 'employer')
       .map(n => n.id.slice(4))   // strip 'cmt:'
     if (cmtIds.length) {
-      const { data: transfers } = await db
+      const { data: transfers, error: polTrfErr } = await db
         .from('committee_transfers').select('from_committee_id,to_committee_id,transfer_amount,transfer_date')
-        .in('to_committee_id', cmtIds)
+        .or(`from_committee_id.in.(${cmtIds.join(',')}),to_committee_id.in.(${cmtIds.join(',')})`)
         .eq('cycle', year).order('transfer_date', { ascending: true }).limit(50)
+      if (polTrfErr) throw polTrfErr
       for (const t of transfers || []) {
         if (!t.transfer_date) continue
         timeline.push({
@@ -177,12 +186,13 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
   timeline.sort((a, b) => new Date(a.date) - new Date(b.date))
 
   // ── 6. Patterns ──────────────────────────────────────────────────────────
-  const { data: patternRows } = await db
+  const { data: patternRows, error: patErr } = await db
     .from('funding_flow_patterns')
     .select('id,pattern_type,title,narrative,explanation,sector,severity_score,generated_at')
     .contains('node_ids', [nodeId])
     .eq('visible', true)
     .order('severity_score', { ascending: false })
+  if (patErr) throw patErr
 
   return {
     node:     focalNode,
