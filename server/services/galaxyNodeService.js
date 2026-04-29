@@ -30,8 +30,8 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
   const committeeIds = new Set()
   const candidateIds = new Set()
   for (const e of edges) {
-    if (e.source_type !== 'employer') committeeIds.add(e.source_id)
-    if (e.target_type !== 'employer') committeeIds.add(e.target_id)
+    if (e.source_type !== 'employer' && e.source_type !== 'candidate') committeeIds.add(e.source_id)
+    if (e.target_type !== 'employer' && e.target_type !== 'candidate') committeeIds.add(e.target_id)
     if (e.source_type === 'candidate') candidateIds.add(e.source_id)
     if (e.target_type === 'candidate') candidateIds.add(e.target_id)
   }
@@ -95,8 +95,8 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
 
   // Ensure focal node exists even if it has no edges in MV
   if (!nodesMap.has(nodeId)) {
-    const typeMap = { emp: 'employer', cmt: 'committee', pol: 'candidate' }
-    upsertNode(typeMap[kind] || 'committee', rawId, rawId)
+    const typeMap = { emp: 'employer', cmt: 'trad_pac', pol: 'candidate' }
+    upsertNode(typeMap[kind] || 'trad_pac', rawId, rawId)
   }
   const focalNode = nodesMap.get(nodeId)
 
