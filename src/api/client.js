@@ -112,6 +112,7 @@ export const congress = {
   bills:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/bills${qs ? `?${qs}` : ''}`) },
   votes:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/votes${qs ? `?${qs}` : ''}`) },
   members: (state)       => request(`/api/congress/members?state=${state}`),
+  member:  (bioguideId)  => request(`/api/congress/member/${encodeURIComponent(bioguideId)}`),
 }
 
 // ── News Feed ─────────────────────────────────────────────────────────────────
@@ -239,6 +240,10 @@ export const galaxy = {
     return request(`/api/galaxy/employer/${encodeURIComponent(employerId)}${qs ? '?' + qs : ''}`)
   },
   pattern: (id) => request(`/api/galaxy/patterns/${encodeURIComponent(id)}`),
+  node: (nodeId, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/node/${encodeURIComponent(nodeId)}${qs ? '?' + qs : ''}`)
+  },
 }
 
 // ── Version ──────────────────────────────────────────────────────────────────
