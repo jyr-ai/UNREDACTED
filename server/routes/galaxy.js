@@ -54,9 +54,12 @@ router.get('/employer/:employerId', wrap(req => getEmployer({
 
 router.get('/patterns/:id', wrap(req => getPatternDetail({ patternId: req.params.id })))
 
-router.get('/node/:nodeId', wrap(req => getNodeDetail({
-  nodeId: decodeURIComponent(req.params.nodeId),
-  cycle:  req.query.cycle || '2024',
-})))
+router.get('/node/:nodeId', wrap(async req => {
+  const result = await getNodeDetail({
+    nodeId: decodeURIComponent(req.params.nodeId),
+    cycle:  req.query.cycle || '2024',
+  })
+  return { success: true, source: 'supabase', data: result }
+}))
 
 export default router
