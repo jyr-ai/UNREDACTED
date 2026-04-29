@@ -11,6 +11,7 @@ import {
   getEmployer,
   getPatternDetail
 } from '../services/galaxyService.js'
+import { getNodeDetail } from '../services/galaxyNodeService.js'
 
 const router = express.Router()
 
@@ -52,5 +53,10 @@ router.get('/employer/:employerId', wrap(req => getEmployer({
 })))
 
 router.get('/patterns/:id', wrap(req => getPatternDetail({ patternId: req.params.id })))
+
+router.get('/node/:nodeId', wrap(req => getNodeDetail({
+  nodeId: decodeURIComponent(req.params.nodeId),
+  cycle:  req.query.cycle || '2024',
+})))
 
 export default router
