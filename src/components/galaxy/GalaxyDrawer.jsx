@@ -90,9 +90,11 @@ function DetailView({ payload, cycle, t, surface }) {
 
       {/* Section 2: Metadata */}
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${t.panelBorder}` }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 6, fontFamily: 'Roboto, sans-serif', lineHeight: 1.3 }}>
-          {detail?.node?.label || node.label}
-        </div>
+        {node.kind !== 'politician' && (
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 6, fontFamily: 'Roboto, sans-serif', lineHeight: 1.3 }}>
+            {detail?.node?.label || node.label}
+          </div>
+        )}
 
         {/* Politician photo block */}
         {node.kind === 'politician' && detail?.node && (
@@ -212,18 +214,22 @@ function PatternView({ payload, cycle, t, surface }) {
         focusNodeId={topNodeId}
       />
       <PatternNarrative patterns={patterns} />
-      {topNodeId && <ConnectedTimeline nodeId={topNodeId} cycle={cycle} />}
+      {topNodeId && <ConnectedTimeline nodeId={topNodeId} cycle={cycle} t={t} />}
     </>
   )
 }
 
-function ConnectedTimeline({ nodeId, cycle }) {
+function ConnectedTimeline({ nodeId, cycle, t }) {
   const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
   useEffect(() => {
+    setLoading(true)
     galaxy.node(nodeId, { cycle })
       .then(r => setEvents(r?.data?.timeline || []))
       .catch(() => setEvents([]))
+      .finally(() => setLoading(false))
   }, [nodeId, cycle])
+  if (loading) return <div style={{ padding: '16px 14px', fontSize: 9, color: t.textMuted, fontFamily: FONT_MONO }}>Loading transactions…</div>
   return <ContributionTimeline events={events} />
 }
 
