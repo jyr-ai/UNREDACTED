@@ -26,10 +26,15 @@ export default function PoliticianProfile({ node }) {
 
   if (!node) return null
 
-  const party      = node.party || member?.party
+  const rawParty = node.party || member?.party
+  const party = rawParty === 'Republican' ? 'R'
+              : rawParty === 'Democratic' ? 'D'
+              : rawParty
   const partyColor = PARTY_COLOR[party] || '#666'
   const photoUrl   = member?.depiction
-  const cgUrl      = member?.url
+  const cgUrl = node.bioguide_id
+    ? `https://www.congress.gov/member/${node.bioguide_id}`
+    : member?.url || null
 
   return (
     <div style={{ marginBottom: 8 }}>

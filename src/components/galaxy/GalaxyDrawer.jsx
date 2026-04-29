@@ -207,8 +207,8 @@ function PatternView({ payload, cycle, t, surface }) {
     <>
       <Band label={p.pattern_type?.replace(/_/g, ' ') || 'pattern'} right={p.sector || ''} t={t} />
       <MiniGalaxy
-        nodes={detail?.nodes || []}
-        edges={detail?.edges || []}
+        nodes={detail?.evidence?.nodes || []}
+        edges={detail?.evidence?.edges || []}
         height={220}
         surface={surface}
         focusNodeId={topNodeId}
