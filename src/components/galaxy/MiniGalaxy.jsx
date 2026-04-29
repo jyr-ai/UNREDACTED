@@ -48,7 +48,7 @@ export default function MiniGalaxy({ nodes = [], edges = [], height = 220, surfa
     // Animate remaining
     sim.on('tick', () => setTick(t => t + 1))
     return () => sim.stop()
-  }, [nodes, edges])  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [simNodes, simLinks])
 
   function onWheel(e) {
     e.preventDefault()
