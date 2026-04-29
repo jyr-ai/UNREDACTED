@@ -111,6 +111,20 @@ FEC_API_KEY                                 # live FEC API fallback
 
 ---
 
+## Source Attribution Rule
+
+Every data point displayed to users must be credited to a checkable source. This applies to all components — cards, drawers, tables, charts, and any panel that shows a number, name, or date.
+
+- **Always render a `SourceFooter`** (or equivalent inline link) at the bottom of every section that presents facts from an external data source.
+- **FEC data** → link to `https://www.fec.gov/data/` with the specific entity URL when available (e.g. `https://www.fec.gov/data/committee/{id}/` for a committee, `https://www.fec.gov/data/candidate/{id}/` for a candidate, `https://www.fec.gov/data/receipts/individual-contributions/` for Schedule A contributions).
+- **Congress.gov data** → link to the member's `congress.gov` page (returned as `url` by `getMemberDetails`).
+- **AI-generated analysis** → label as "AI analysis of FEC bulk data · generated {date}" with a link to the underlying FEC source.
+- **Self-reported fields** (e.g. `contributor_employer`) → note they are self-reported and link to the filing source.
+- Never present a dollar amount, date, or entity name as a fact without a URL the user can follow to verify it.
+- The `SourceFooter` component (`src/components/ui/SourceFooter.jsx`) accepts an `href` prop — use it to make the source text a clickable link.
+
+---
+
 ## Deferred / hidden features
 
 ### Follow the Money — hidden sub-tabs (not ready for users)

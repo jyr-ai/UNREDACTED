@@ -279,6 +279,49 @@ member: (bioguideId) => request(`/api/congress/member/${encodeURIComponent(biogu
 
 ---
 
+## Source Attribution
+
+Every drawer section that presents data must show a checkable source link. The existing `SourceFooter` component renders plain text only — extend it to accept an `href` prop so it renders a clickable link.
+
+**Extended `SourceFooter` signature** (update `src/components/ui/SourceFooter.jsx`):
+```jsx
+<SourceFooter s="FEC Individual Contributions · self-reported employer field" href="https://www.fec.gov/data/receipts/individual-contributions/" />
+```
+Renders: `Sources: FEC Individual Contributions · self-reported employer field ↗` — the entire text is an `<a>` when `href` is provided.
+
+**Source URL per drawer section:**
+
+| Section | Source label | URL |
+|---|---|---|
+| Employer metadata | FEC Individual Contributions (Schedule A) · employer field is self-reported by donor | `https://www.fec.gov/data/receipts/individual-contributions/` |
+| Committee/PAC metadata | FEC Committee Database | `https://www.fec.gov/data/committee/{committee_id}/` — use the actual committee ID from node data |
+| Politician metadata | FEC Candidate Profile | `https://www.fec.gov/data/candidate/{fec_candidate_id}/` — use the actual candidate ID |
+| Congress.gov block | Congress.gov · Biographical Directory | `member.url` returned by `/api/congress/member/:bioguideId` |
+| Timeline — receipts | FEC Schedule A · Individual Contributions | `https://www.fec.gov/data/receipts/individual-contributions/?committee_id={id}` |
+| Timeline — transfers | FEC Committee-to-Committee Transfers | `https://www.fec.gov/campaign-finance-data/any-transaction-from-one-committee-to-another-data/` |
+| Timeline — mixed | Both sources combined | Show two `SourceFooter` links stacked, or combine: "FEC Contributions + Transfers ↗" linking to `https://www.fec.gov/campaign-finance-data/` |
+| AI pattern narrative | AI analysis of FEC bulk data · generated {generated_at date} | `https://www.fec.gov/data/receipts/` |
+| Sector halo | FEC Bulk Data · cycle {cycle} | `https://www.fec.gov/campaign-finance-data/` |
+| Dark money / 501c4 | FEC Committee Filing · donor disclosure not required for 501(c)(4) | `https://www.fec.gov/data/committee/{committee_id}/` |
+
+**Rule:** `SourceFooter` is required at the bottom of **every** section that presents a number, name, or date. No data point is presented without a URL the user can follow to verify it.
+
+---
+
+## Scope — Which Galaxy Instances This Applies To
+
+`GalaxyDrawer` is a **shared component** consumed by `FundingFlowGalaxy`, which is rendered in three places:
+
+| Location | Galaxy mode | After this refactor |
+|---|---|---|
+| `src/App.jsx` — Donor Intelligence tab | `mode="universe"` | ✅ New panel applies |
+| `src/pages/FollowTheMoney.jsx` — Money Flow tab | `mode="sector"` + `mode="employer"` | ✅ New panel applies |
+| `src/components/EmployerLeaderboard.jsx` — right panel | `mode="employer"` | ✅ New panel applies |
+
+Refactoring `GalaxyDrawer` once automatically upgrades all three instances. No per-location changes needed.
+
+---
+
 ## Graceful Degradation
 
 - **No bioguide_id** (presidential candidates, retired members): `PoliticianProfile` renders name + party badge only. No photo fetch attempted.
