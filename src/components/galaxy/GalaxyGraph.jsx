@@ -54,7 +54,8 @@ export default function GalaxyGraph({
   width = 900,
   height = 560,
   onNodeClick,
-  onPatternClick
+  onPatternClick,
+  onSectorClick
 }) {
   const t = galaxyTokens[surface]
   const svgRef = useRef(null)
@@ -202,7 +203,7 @@ export default function GalaxyGraph({
           const b = sectorBounds.get(s.name)
           if (!b) return null
           return (
-            <g key={`halo-${s.name}`} pointerEvents="none">
+            <g key={`halo-${s.name}`}>
               <circle
                 cx={b.cx} cy={b.cy} r={b.r}
                 fill={s.color}
@@ -211,6 +212,8 @@ export default function GalaxyGraph({
                 strokeOpacity={surface === 'dark' ? 0.20 : 0.26}
                 strokeWidth={1.2}
                 strokeDasharray="4,3"
+                style={{ cursor: onSectorClick ? 'pointer' : 'default' }}
+                onClick={() => onSectorClick?.(s)}
               />
               <text
                 x={b.cx} y={b.cy - b.r + 14}
@@ -218,6 +221,7 @@ export default function GalaxyGraph({
                 fontFamily="Roboto, sans-serif" fontSize={8} fontWeight={600}
                 fill={s.color} fillOpacity={0.6}
                 style={{ letterSpacing: '1.5px' }}
+                pointerEvents="none"
               >
                 {s.name.toUpperCase()}
               </text>

@@ -116,9 +116,10 @@ export default function FundingFlowGalaxy({
             height={height}
             onNodeClick={handleNodeClick}
             onPatternClick={handlePatternClick}
+            onSectorClick={s => setDrawer({ kind: 'sector', sector: s })}
           />
         )}
-        {drawerPayload && <GalaxyDrawer payload={drawerPayload} onClose={() => setDrawer(null)} surface={surface} />}
+        {drawerPayload && <GalaxyDrawer payload={drawerPayload} onClose={() => setDrawer(null)} surface={surface} cycle={cycle} />}
       </div>
 
       <GalaxyLegend surface={surface} />
