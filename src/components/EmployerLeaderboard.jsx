@@ -100,45 +100,45 @@ export default function EmployerLeaderboard() {
   }
 
   return (
-    <div>
-      <Band label="Employer Money Flow — ranked by donation volume" right={`${employers.length} EMPLOYERS`} />
-      <Card>
-        {/* Controls */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
-            CYCLE
-            <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
-              {CYCLES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </label>
-          <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
-            SECTOR
-            <select value={sector} onChange={e => setSector(e.target.value)} style={selectStyle}>
-              {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
-            MIN $
-            <select value={minAmount} onChange={e => setMin(Number(e.target.value))} style={selectStyle}>
-              {MIN_OPTIONS.map(v => <option key={v} value={v}>{fmt$(v)}</option>)}
-            </select>
-          </label>
-          <span style={{ fontFamily: MF, fontSize: 8, color: t.low, marginLeft: 'auto' }}>
-            Employer = self-reported field on FEC Schedule A (≥ ${minAmount.toLocaleString()} contributions only)
-          </span>
-        </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
 
-        {/* Split panel */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, minHeight: 360 }}>
+      {/* LEFT column: leaderboard band + card */}
+      <div>
+        <Band label="Employer Money Flow — ranked by donation volume" right={`${employers.length} EMPLOYERS`} />
+        <Card>
+          {/* Controls */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+            <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
+              CYCLE
+              <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
+                {CYCLES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
+              SECTOR
+              <select value={sector} onChange={e => setSector(e.target.value)} style={selectStyle}>
+                {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
+              MIN $
+              <select value={minAmount} onChange={e => setMin(Number(e.target.value))} style={selectStyle}>
+                {MIN_OPTIONS.map(v => <option key={v} value={v}>{fmt$(v)}</option>)}
+              </select>
+            </label>
+            <span style={{ fontFamily: MF, fontSize: 8, color: t.low, marginLeft: 'auto' }}>
+              Employer = self-reported field on FEC Schedule A (≥ ${minAmount.toLocaleString()} contributions only)
+            </span>
+          </div>
 
-          {/* Left: leaderboard */}
+          {/* Leaderboard table */}
           <div style={{ border: `1px solid ${t.border}`, borderRadius: 3, overflow: 'hidden' }}>
             {loadingEmp ? (
               <div style={{ padding: 32, textAlign: 'center', color: t.mid, fontFamily: MF, fontSize: 10 }}>Loading employers…</div>
             ) : employers.length === 0 ? (
               <div style={{ padding: 32, textAlign: 'center', color: t.low, fontFamily: MF, fontSize: 10 }}>No employers found for these filters.</div>
             ) : (
-              <div style={{ overflowY: 'auto', maxHeight: 420 }}>
+              <div style={{ overflowY: 'auto', maxHeight: 480 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
                     <tr style={{ background: t.cardB, position: 'sticky', top: 0 }}>
@@ -179,20 +179,19 @@ export default function EmployerLeaderboard() {
             )}
           </div>
 
-          {/* Right: galaxy (sector mode when no employer, employer mode when one selected) */}
-          <div style={{ border: `1px solid ${t.border}`, borderRadius: 3, background: t.cardB, display: 'flex', flexDirection: 'column' }}>
-            <FundingFlowGalaxy
-              mode={selected ? 'employer' : 'sector'}
-              cycle={cycle}
-              sector={selected ? null : (sector !== 'All Sectors' ? sector : null)}
-              employerId={selected?.employer_id ?? null}
-              height={420}
-            />
-          </div>
-        </div>
+          <SourceFooter s="FEC bulk data — individual contributions (Schedule A ≥ $200) · employer field is self-reported by donor · sector classification via keyword matching" href="https://www.fec.gov/data/receipts/individual-contributions/" />
+        </Card>
+      </div>
 
-        <SourceFooter s="FEC bulk data — individual contributions (Schedule A ≥ $200) · employer field is self-reported by donor · sector classification via keyword matching" />
-      </Card>
+      {/* RIGHT column: galaxy — peer panel, equal width */}
+      <FundingFlowGalaxy
+        mode={selected ? 'employer' : 'sector'}
+        cycle={cycle}
+        sector={selected ? null : (sector !== 'All Sectors' ? sector : null)}
+        employerId={selected?.employer_id ?? null}
+        height={560}
+      />
+
     </div>
   )
 }
