@@ -93,7 +93,8 @@ export default function GalaxyGraph({
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
-  const dragRef = useRef(null)
+  const dragRef = useRef(null)        // viewport pan
+  const nodeDragRef = useRef(null)    // individual node drag (physics)
 
   function zoomBy(factor) {
     setView(v => {
@@ -121,13 +122,35 @@ export default function GalaxyGraph({
     })
   }
   function onMouseDown(e) { dragRef.current = { x: e.clientX, y: e.clientY, view } }
+  function onNodeMouseDown(e, node) {
+    e.stopPropagation()  // prevent viewport pan
+    const rect = svgRef.current.getBoundingClientRect()
+    nodeDragRef.current = { node }
+    node.fx = node.x
+    node.fy = node.y
+    simRef.current?.alphaTarget(0.3).restart()
+  }
   function onMouseMove(e) {
+    if (nodeDragRef.current) {
+      const rect = svgRef.current.getBoundingClientRect()
+      nodeDragRef.current.node.fx = (e.clientX - rect.left - view.x) / view.k
+      nodeDragRef.current.node.fy = (e.clientY - rect.top  - view.y) / view.k
+      return
+    }
     if (!dragRef.current) return
     const dx = e.clientX - dragRef.current.x
     const dy = e.clientY - dragRef.current.y
     setView({ ...dragRef.current.view, x: dragRef.current.view.x + dx, y: dragRef.current.view.y + dy })
   }
-  function onMouseUp() { dragRef.current = null }
+  function onMouseUp() {
+    if (nodeDragRef.current) {
+      nodeDragRef.current.node.fx = null
+      nodeDragRef.current.node.fy = null
+      simRef.current?.alphaTarget(0)
+      nodeDragRef.current = null
+    }
+    dragRef.current = null
+  }
 
   const [hovered, setHovered] = useState(null)
 
@@ -298,8 +321,9 @@ export default function GalaxyGraph({
               opacity={nodeOpacity(n)}
               onMouseEnter={() => setHovered(n.id)}
               onMouseLeave={() => setHovered(null)}
+              onMouseDown={e => onNodeMouseDown(e, n)}
               onClick={e => { e.stopPropagation(); onNodeClick?.(n) }}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'grab' }}
             >
               <NodeShape n={n} t={t} />
             </g>
