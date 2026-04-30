@@ -3,48 +3,77 @@ import { buildGraph } from './lib/galaxyBuild.js'
 import { buildSimulation, nodeRadius } from './lib/galaxyForces.js'
 import { galaxyTokens } from './lib/galaxyTokens.js'
 
-function strokeFor(kind, t) {
-  if (kind === 'employer')   return t.employerStroke
-  if (kind === 'trad_pac')   return t.pacStroke
-  if (kind === 'dark_money') return t.darkMoneyStroke
-  if (kind === 'super_pac')  return t.superPacStroke
-  return null
+// Hex points: pointy-top hexagon centered at (cx,cy) with radius r
+function hexPoints(cx, cy, r) {
+  return Array.from({ length: 6 }, (_, i) => {
+    const θ = (i * Math.PI) / 3 + Math.PI / 6
+    return `${cx + r * Math.cos(θ)},${cy + r * Math.sin(θ)}`
+  }).join(' ')
+}
+
+// Party-based politician color
+function polColor(party) {
+  if (party === 'REP' || party === 'R') return '#FF4466'
+  if (party === 'DEM' || party === 'D') return '#4A7FFF'
+  return '#888888'
 }
 
 function NodeShape({ n, t }) {
   const r = nodeRadius(n)
+  const cx = n.x, cy = n.y
 
+  // Politician: solid party-colored circle with subtle outer ring
   if (n.kind === 'politician') {
-    return <circle cx={n.x} cy={n.y} r={r} fill={t.politicianFill} />
+    const c = polColor(n.party)
+    return (
+      <g>
+        <circle cx={cx} cy={cy} r={r + 2} fill="none" stroke={c} strokeWidth={0.8} opacity={0.35} />
+        <circle cx={cx} cy={cy} r={r} fill={c} />
+      </g>
+    )
   }
 
+  // Dark money 501c4: dashed purple rect — ominous, hollow
   if (n.kind === 'dark_money') {
-    const s = r * 2
+    const c = t.darkMoneyStroke
     return (
       <rect
-        x={n.x - r} y={n.y - r} width={s} height={s}
-        fill={t.nodeFill} stroke={t.darkMoneyStroke}
-        strokeWidth={1.7} strokeDasharray="4,2"
+        x={cx - r} y={cy - r} width={r * 2} height={r * 2}
+        fill={`${c}20`} stroke={c}
+        strokeWidth={1.5} strokeDasharray="3,2"
       />
     )
   }
 
+  // Super PAC: orange-red diamond with faint fill
   if (n.kind === 'super_pac') {
+    const c = t.superPacStroke
     return (
       <polygon
-        points={`${n.x},${n.y - r} ${n.x + r},${n.y} ${n.x},${n.y + r} ${n.x - r},${n.y}`}
-        fill={t.nodeFill} stroke={t.superPacStroke} strokeWidth={1.7}
+        points={`${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`}
+        fill={`${c}25`} stroke={c} strokeWidth={1.7}
       />
     )
   }
 
-  // employer + trad_pac
+  // Traditional PAC: teal hexagon — geometric conduit
+  if (n.kind === 'trad_pac') {
+    const c = t.pacStroke
+    return (
+      <polygon
+        points={hexPoints(cx, cy, r)}
+        fill={`${c}22`} stroke={c} strokeWidth={1.5}
+      />
+    )
+  }
+
+  // Employer: solid warm amber circle — the source/sun
+  const c = t.employerStroke
   return (
-    <circle
-      cx={n.x} cy={n.y} r={r}
-      fill={t.nodeFill} stroke={strokeFor(n.kind, t)}
-      strokeWidth={n.kind === 'employer' ? 2 : 1.7}
-    />
+    <g>
+      <circle cx={cx} cy={cy} r={r + 3} fill={`${c}12`} />
+      <circle cx={cx} cy={cy} r={r} fill={c} />
+    </g>
   )
 }
 

@@ -3,12 +3,26 @@ import { forceSimulation, forceLink, forceManyBody, forceCollide, forceX, forceY
 import { nodeRadius } from './lib/galaxyForces.js'
 import { galaxyTokens } from './lib/galaxyTokens.js'
 
+// Matches GalaxyGraph node palette — keep in sync with galaxyTokens
 const KIND_COLOR = {
-  employer:   '#FFB84D',
-  super_pac:  '#4A7FFF',
-  dark_money: '#CC88FF',
-  trad_pac:   '#4A7FFF',
-  politician: '#FF4466',
+  employer:   '#FFB84D',  // amber solid circle
+  trad_pac:   '#00CCAA',  // teal hexagon
+  super_pac:  '#FF6B35',  // orange-red diamond
+  dark_money: '#CC88FF',  // purple dashed rect
+  politician: '#FF4466',  // party-colored (default red; overridden per-node below)
+}
+
+function polColor(party) {
+  if (party === 'REP' || party === 'R') return '#FF4466'
+  if (party === 'DEM' || party === 'D') return '#4A7FFF'
+  return '#888888'
+}
+
+function hexPoints(cx, cy, r) {
+  return Array.from({ length: 6 }, (_, i) => {
+    const θ = (i * Math.PI) / 3 + Math.PI / 6
+    return `${cx + r * Math.cos(θ)},${cy + r * Math.sin(θ)}`
+  }).join(' ')
 }
 
 function buildMiniSim({ nodes, links, width, height }) {
@@ -128,16 +142,28 @@ export default function MiniGalaxy({ nodes = [], edges = [], height = 220, surfa
                 {isFocus && (
                   <circle r={r + 4} fill="none" stroke="#FF8000" strokeWidth={1.5} opacity={0.7} />
                 )}
-                {n.kind === 'dark_money'
+                {n.kind === 'politician'
+                  ? (() => { const c = polColor(n.party); return (
+                      <>
+                        <circle r={r + 2} fill="none" stroke={c} strokeWidth={0.7} opacity={0.35} />
+                        <circle r={r} fill={c} />
+                      </>
+                    ) })()
+                  : n.kind === 'dark_money'
                   ? <rect x={-r} y={-r} width={r * 2} height={r * 2}
-                          fill={`${color}28`} stroke={color} strokeWidth={1.5} strokeDasharray="4,2" />
+                          fill={`${color}20`} stroke={color} strokeWidth={1.4} strokeDasharray="3,2" />
                   : n.kind === 'super_pac'
                   ? <polygon points={`0,${-r} ${r},0 0,${r} ${-r},0`}
-                             fill={`${color}28`} stroke={color} strokeWidth={1.5} />
-                  : <circle r={r}
-                            fill={`${color}${n.kind === 'employer' ? '' : '28'}`}
-                            stroke={color}
-                            strokeWidth={n.kind === 'employer' ? 0 : 1.5} />
+                             fill={`${color}25`} stroke={color} strokeWidth={1.5} />
+                  : n.kind === 'trad_pac'
+                  ? <polygon points={hexPoints(0, 0, r)}
+                             fill={`${color}22`} stroke={color} strokeWidth={1.4} />
+                  : /* employer — solid amber circle with soft glow */ (
+                    <>
+                      <circle r={r + 3} fill={`${color}12`} />
+                      <circle r={r} fill={color} />
+                    </>
+                  )
                 }
                 <text
                   y={r + 10}
