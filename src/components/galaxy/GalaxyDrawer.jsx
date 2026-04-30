@@ -12,7 +12,7 @@ function Band({ label, right, t }) {
   return (
     <div style={{
       background: t.band, color: t.bandText,
-      padding: '7px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '7px 36px 7px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       fontFamily: FONT_MONO, flexShrink: 0,
     }}>
       <span style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 500 }}>{label}</span>
