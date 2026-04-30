@@ -328,6 +328,31 @@ export default function GalaxyGraph({
           })}
         </g>
 
+        {/* flow particles — animated dots traveling source→target on significant edges */}
+        {!reducedMotion && (
+          <g pointerEvents="none">
+            {graph.links.map((l, i) => {
+              if ((l.weight || 0) < 0.25) return null
+              const color = l.isBridge ? '#8888aa' : '#FF8000'
+              const dur   = (2 + (1 - (l.weight || 0)) * 3).toFixed(1)
+              const r     = 1.5 + (l.weight || 0) * 1.5
+              const begin = `${((i * 0.4) % 3).toFixed(1)}s`
+              return (
+                <circle key={`fp-${i}`} r={r} fill={color} opacity={0.75}>
+                  <animateMotion
+                    dur={`${dur}s`}
+                    begin={begin}
+                    repeatCount="indefinite"
+                    rotate="auto"
+                  >
+                    <mpath href={`#ge-${i}`} />
+                  </animateMotion>
+                </circle>
+              )
+            })}
+          </g>
+        )}
+
         {/* nodes */}
         <g>
           {graph.nodes.map(n => (
