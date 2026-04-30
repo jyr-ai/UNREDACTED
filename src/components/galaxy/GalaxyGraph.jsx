@@ -249,6 +249,14 @@ export default function GalaxyGraph({
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
     >
+      <defs>
+        <marker id="fa-orange" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
+          <path d="M 0 0 L 5 2 L 0 4 z" fill="#FF8000" opacity="0.7" />
+        </marker>
+        <marker id="fa-grey" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
+          <path d="M 0 0 L 5 2 L 0 4 z" fill="#555566" opacity="0.5" />
+        </marker>
+      </defs>
       <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
         {/* sector halos — live bounding circles around actual node positions */}
         {graph.sectors.map(s => {
@@ -298,19 +306,26 @@ export default function GalaxyGraph({
           )
         })}
 
-        {/* edges */}
+        {/* edges — <path> instead of <line> so animateMotion mpath can reference by id */}
         <g>
-          {graph.links.map((l, i) => (
-            <line
-              key={i}
-              x1={l.source.x} y1={l.source.y}
-              x2={l.target.x} y2={l.target.y}
-              stroke={l.isBridge ? t.edgeBridgeColor : t.edgeBase}
-              strokeOpacity={linkOpacity(l)}
-              strokeWidth={0.5 + (l.weight || 0) * 2.2}
-              strokeDasharray={l.isBridge ? '4,3' : undefined}
-            />
-          ))}
+          {graph.links.map((l, i) => {
+            const x1 = l.source.x, y1 = l.source.y
+            const x2 = l.target.x, y2 = l.target.y
+            const markerId = l.isBridge ? 'fa-grey' : 'fa-orange'
+            return (
+              <path
+                key={i}
+                id={`ge-${i}`}
+                d={`M ${x1} ${y1} L ${x2} ${y2}`}
+                fill="none"
+                stroke={l.isBridge ? t.edgeBridgeColor : t.edgeBase}
+                strokeOpacity={linkOpacity(l)}
+                strokeWidth={0.5 + (l.weight || 0) * 2.2}
+                strokeDasharray={l.isBridge ? '4,3' : undefined}
+                markerEnd={`url(#${markerId})`}
+              />
+            )
+          })}
         </g>
 
         {/* nodes */}
