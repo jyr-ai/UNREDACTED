@@ -273,9 +273,43 @@ export function getCongressStatus() {
   }
 }
 
+/**
+ * Search for a member by last name + state (current AND historical).
+ * Used when bioguide_id is not populated in the politicians table.
+ * Returns the first matching member's bioguideId, depiction, url.
+ */
+export async function searchMemberByName(lastName, state) {
+  const key = cacheKey('memberByName', { ln: lastName.toLowerCase(), s: (state || '').toUpperCase() })
+  const cached = getCached(key)
+  if (cached !== undefined && cached !== null) return cached
+
+  try {
+    const data = await cgGet('/member', { name: lastName.toLowerCase(), limit: 20 }, CACHE_TTL.members)
+    const members = data?.members || []
+    const stateFullName = state ? STATE_FULL_NAMES[state.toUpperCase()] : null
+    const filtered = stateFullName ? members.filter(m => m.state === stateFullName) : members
+    if (!filtered.length) { setCached(key, null, CACHE_TTL.members); return null }
+    const m = filtered[0]
+    const result = {
+      bioguideId: m.bioguideId,
+      name: m.name,
+      party: m.partyName,
+      state: state?.toUpperCase(),
+      depiction: m.depiction?.imageUrl || null,
+      url: `https://www.congress.gov/member/${m.bioguideId}`,
+    }
+    setCached(key, result, CACHE_TTL.members)
+    return result
+  } catch (err) {
+    console.error('[Congress.gov] searchMemberByName error:', err.message)
+    return null
+  }
+}
+
 export default {
   getMembersByState,
   getMemberDetails,
+  searchMemberByName,
   getBillsByState,
   getBillDetails,
   getRecentVotes,

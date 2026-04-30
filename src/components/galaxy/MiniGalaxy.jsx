@@ -130,14 +130,14 @@ export default function MiniGalaxy({ nodes = [], edges = [], height = 220, surfa
                 )}
                 {n.kind === 'dark_money'
                   ? <rect x={-r} y={-r} width={r * 2} height={r * 2}
-                          fill={t.nodeFill} stroke={color} strokeWidth={1.5} strokeDasharray="4,2" />
+                          fill={`${color}28`} stroke={color} strokeWidth={1.5} strokeDasharray="4,2" />
                   : n.kind === 'super_pac'
                   ? <polygon points={`0,${-r} ${r},0 0,${r} ${-r},0`}
-                             fill={t.nodeFill} stroke={color} strokeWidth={1.5} />
+                             fill={`${color}28`} stroke={color} strokeWidth={1.5} />
                   : <circle r={r}
-                            fill={n.kind === 'employer' ? color : t.nodeFill}
-                            stroke={n.kind !== 'employer' ? color : 'none'}
-                            strokeWidth={1.5} />
+                            fill={`${color}${n.kind === 'employer' ? '' : '28'}`}
+                            stroke={color}
+                            strokeWidth={n.kind === 'employer' ? 0 : 1.5} />
                 }
                 <text
                   y={r + 10}
@@ -154,6 +154,25 @@ export default function MiniGalaxy({ nodes = [], edges = [], height = 220, surfa
           })}
         </g>
       </svg>
+      {/* Zoom buttons */}
+      <div style={{ position: 'absolute', top: 6, right: 8, display: 'flex', gap: 3 }}>
+        {['+', '−'].map((lbl, i) => (
+          <button key={lbl} onClick={() => setView(v => {
+            const factor = i === 0 ? 1.25 : 0.8
+            const k = Math.max(0.3, Math.min(5, v.k * factor))
+            const cx = (svgRef.current?.clientWidth || 380) / 2
+            const cy = height / 2
+            const scale = k / v.k
+            return { k, x: cx - (cx - v.x) * scale, y: cy - (cy - v.y) * scale }
+          })} style={{
+            width: 20, height: 20, background: 'rgba(255,255,255,0.08)',
+            border: `1px solid rgba(255,255,255,0.15)`, borderRadius: 2,
+            color: t.textMuted, fontSize: 13, lineHeight: 1, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'monospace', padding: 0,
+          }}>{lbl}</button>
+        ))}
+      </div>
       <div style={{
         position: 'absolute', bottom: 5, right: 8,
         fontSize: 7, color: t.textMuted, opacity: 0.4, pointerEvents: 'none',

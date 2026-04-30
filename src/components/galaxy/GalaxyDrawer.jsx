@@ -129,12 +129,7 @@ function DetailView({ payload, cycle, t, surface }) {
             href={`https://www.fec.gov/data/committee/${node.id.replace('cmt:', '')}/`}
           />
         )}
-        {node.kind === 'politician' && (
-          <SourceFooter
-            s="FEC Candidate Profile"
-            href={`https://www.fec.gov/data/candidate/${node.id.replace('pol:', '')}/`}
-          />
-        )}
+        {/* Politician SourceFooter is rendered inside PoliticianProfile — skip it here */}
       </div>
 
       {/* Section 3: Pattern narrative (only if this node has patterns) */}

@@ -112,7 +112,11 @@ export const congress = {
   bills:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/bills${qs ? `?${qs}` : ''}`) },
   votes:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/votes${qs ? `?${qs}` : ''}`) },
   members: (state)       => request(`/api/congress/members?state=${state}`),
-  member:  (bioguideId)  => request(`/api/congress/member/${encodeURIComponent(bioguideId)}`),
+  member:       (bioguideId) => request(`/api/congress/member/${encodeURIComponent(bioguideId)}`),
+  memberSearch: (name, state) => {
+    const qs = new URLSearchParams({ name, ...(state && { state }) }).toString()
+    return request(`/api/congress/member-search?${qs}`)
+  },
 }
 
 // ── News Feed ─────────────────────────────────────────────────────────────────

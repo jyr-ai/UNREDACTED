@@ -138,6 +138,18 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
     ])
     if (rcptErr) throw rcptErr
     if (trfErr) throw trfErr
+    // Second-pass: resolve committee IDs in transfers not in cmtMap
+    const cmtUnresolved = new Set()
+    for (const t of transfers || []) {
+      if (!cmtMap.has(t.from_committee_id)) cmtUnresolved.add(t.from_committee_id)
+      if (!cmtMap.has(t.to_committee_id))   cmtUnresolved.add(t.to_committee_id)
+    }
+    if (cmtUnresolved.size) {
+      const { data: extraCmts } = await db
+        .from('pac_committees').select('committee_id,name,is_super_pac,is_501c4')
+        .in('committee_id', [...cmtUnresolved])
+      for (const c of extraCmts || []) cmtMap.set(c.committee_id, c)
+    }
     for (const r of receipts || []) {
       timeline.push({
         date: r.date, kind: 'receipt',
@@ -169,6 +181,20 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
         .or(`from_committee_id.in.(${cmtIds.join(',')}),to_committee_id.in.(${cmtIds.join(',')})`)
         .eq('cycle', year).order('transfer_date', { ascending: true }).limit(50)
       if (polTrfErr) throw polTrfErr
+
+      // Collect committee IDs from transfer rows that aren't already in cmtMap (second-pass resolution)
+      const unresolvedIds = new Set()
+      for (const t of transfers || []) {
+        if (!cmtMap.has(t.from_committee_id)) unresolvedIds.add(t.from_committee_id)
+        if (!cmtMap.has(t.to_committee_id))   unresolvedIds.add(t.to_committee_id)
+      }
+      if (unresolvedIds.size) {
+        const { data: extraCmts } = await db
+          .from('pac_committees').select('committee_id,name,is_super_pac,is_501c4')
+          .in('committee_id', [...unresolvedIds])
+        for (const c of extraCmts || []) cmtMap.set(c.committee_id, c)
+      }
+
       for (const t of transfers || []) {
         if (!t.transfer_date) continue
         timeline.push({

@@ -18,11 +18,18 @@ export default function PoliticianProfile({ node }) {
   const [member, setMember] = useState(null)
 
   useEffect(() => {
-    if (!node?.bioguide_id) return
-    congress.member(node.bioguide_id)
-      .then(r => setMember(r?.data || null))
-      .catch(() => setMember(null))
-  }, [node?.bioguide_id])
+    if (!node) return
+    if (node.bioguide_id) {
+      congress.member(node.bioguide_id)
+        .then(r => setMember(r?.data || null))
+        .catch(() => setMember(null))
+    } else if (node.label && node.state) {
+      // bioguide_id column not populated in DB — fall back to name+state search
+      congress.memberSearch(node.label, node.state)
+        .then(r => setMember(r?.data || null))
+        .catch(() => setMember(null))
+    }
+  }, [node?.bioguide_id, node?.label, node?.state])
 
   if (!node) return null
 
