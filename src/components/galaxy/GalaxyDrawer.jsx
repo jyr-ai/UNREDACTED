@@ -242,18 +242,18 @@ export default function GalaxyDrawer({ payload, onClose, surface = 'dark', cycle
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — fixed to full viewport */}
       <div onClick={onClose} style={{
-        position: 'absolute', inset: 0,
+        position: 'fixed', inset: 0,
         background: t.drawerBackdrop, backdropFilter: 'blur(4px)',
-        zIndex: 30,
+        zIndex: 1000,
       }} />
 
-      {/* Panel */}
+      {/* Panel — fixed full viewport height, right edge */}
       <aside style={{
-        position: 'absolute', top: 0, right: 0, bottom: 0,
+        position: 'fixed', top: 0, right: 0, bottom: 0,
         width: 420, background: t.surface, borderLeft: `1px solid ${t.panelBorder}`,
-        zIndex: 31, display: 'flex', flexDirection: 'column',
+        zIndex: 1001, display: 'flex', flexDirection: 'column',
         overflowY: 'auto',
       }}>
         {/* Close button */}
