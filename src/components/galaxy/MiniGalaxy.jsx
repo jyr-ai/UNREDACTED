@@ -114,21 +114,53 @@ export default function MiniGalaxy({ nodes = [], edges = [], height = 220, surfa
         onWheel={onWheel}
         style={{ display: 'block', cursor: 'grab' }}
       >
+        <defs>
+          <marker id="mfa-orange" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
+            <path d="M 0 0 L 5 2 L 0 4 z" fill="#FF8000" opacity="0.7" />
+          </marker>
+        </defs>
         <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
-          {/* Edges */}
+          {/* Edges — <path> for animateMotion + arrowhead markers */}
           {simLinks.map((e, i) => {
             const s = nodeById.get(typeof e.source === 'object' ? e.source.id : e.source)
             const tgt = nodeById.get(typeof e.target === 'object' ? e.target.id : e.target)
             if (!s || !tgt) return null
             return (
-              <line key={i}
-                x1={s.x ?? 0} y1={s.y ?? 0} x2={tgt.x ?? 0} y2={tgt.y ?? 0}
+              <path
+                key={i}
+                id={`me-${i}`}
+                d={`M ${s.x ?? 0} ${s.y ?? 0} L ${tgt.x ?? 0} ${tgt.y ?? 0}`}
+                fill="none"
                 stroke="#FF8000"
                 strokeWidth={Math.max(0.5, Math.min(3, (e.weight || 0.2) * 3))}
                 opacity={0.35 + (e.weight || 0) * 0.3}
+                markerEnd="url(#mfa-orange)"
               />
             )
           })}
+          {/* Flow particles */}
+          <g pointerEvents="none">
+            {simLinks.map((e, i) => {
+              const s = nodeById.get(typeof e.source === 'object' ? e.source.id : e.source)
+              const tgt = nodeById.get(typeof e.target === 'object' ? e.target.id : e.target)
+              if (!s || !tgt) return null
+              const dur   = (1.8 + (1 - (e.weight || 0.2)) * 2.5).toFixed(1)
+              const r     = 1.2 + (e.weight || 0.2) * 1.8
+              const begin = `${((i * 0.35) % 2.5).toFixed(1)}s`
+              return (
+                <circle key={`mp-${i}`} r={r} fill="#FF8000" opacity={0.7}>
+                  <animateMotion
+                    dur={`${dur}s`}
+                    begin={begin}
+                    repeatCount="indefinite"
+                    rotate="auto"
+                  >
+                    <mpath href={`#me-${i}`} />
+                  </animateMotion>
+                </circle>
+              )
+            })}
+          </g>
           {/* Nodes */}
           {simNodes.map(n => {
             const r = nodeRadius(n)
