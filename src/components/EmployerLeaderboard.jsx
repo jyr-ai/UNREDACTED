@@ -100,14 +100,14 @@ export default function EmployerLeaderboard() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'stretch' }}>
 
-      {/* LEFT column: leaderboard band + card */}
-      <div>
+      {/* LEFT column: leaderboard band + card — flex column fills same height as galaxy */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         <Band label="Employer Money Flow — ranked by donation volume" right={`${employers.length} EMPLOYERS`} />
-        <Card>
+        <Card style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Controls */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
             <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
               CYCLE
               <select value={cycle} onChange={e => setCycle(e.target.value)} style={selectStyle}>
@@ -131,14 +131,14 @@ export default function EmployerLeaderboard() {
             </span>
           </div>
 
-          {/* Leaderboard table */}
-          <div style={{ border: `1px solid ${t.border}`, borderRadius: 3, overflow: 'hidden' }}>
+          {/* Leaderboard table — flex: 1 so it fills remaining card height */}
+          <div style={{ flex: 1, border: `1px solid ${t.border}`, borderRadius: 3, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             {loadingEmp ? (
               <div style={{ padding: 32, textAlign: 'center', color: t.mid, fontFamily: MF, fontSize: 10 }}>Loading employers…</div>
             ) : employers.length === 0 ? (
               <div style={{ padding: 32, textAlign: 'center', color: t.low, fontFamily: MF, fontSize: 10 }}>No employers found for these filters.</div>
             ) : (
-              <div style={{ overflowY: 'auto', maxHeight: 480 }}>
+              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                   <thead>
                     <tr style={{ background: t.cardB, position: 'sticky', top: 0 }}>

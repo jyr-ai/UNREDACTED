@@ -59,9 +59,9 @@ export default function FundingFlowGalaxy({
     <div ref={containerRef} style={{ position: 'relative', background: t.surface, border: `1px solid ${t.panelBorder}`, overflow: 'hidden' }}>
       <div style={{
         background: t.band, color: t.bandText,
-        padding: '7px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+        padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
-        <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: 9, letterSpacing: 2, fontWeight: 500, textTransform: 'uppercase' }}>
+        <span style={{ fontFamily: 'Roboto Mono, monospace', fontSize: 11, letterSpacing: 2, fontWeight: 500, textTransform: 'uppercase' }}>
           Funding flow galaxy
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
