@@ -14,7 +14,7 @@ colors:
   border-steel: "#272727"
   text-primary: "#FFFFFF"
   text-secondary: "#888888"
-  text-muted: "#484848"
+  text-muted: "#888888"
   ink-black: "#080808"
   nav-black: "#0A0A0A"
 typography:

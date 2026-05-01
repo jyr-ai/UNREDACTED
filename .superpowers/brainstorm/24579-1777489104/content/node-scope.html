@@ -1,0 +1,159 @@
+<h2>Who gets the detail panel?</h2>
+<p class="subtitle">The galaxy renders ~500 nodes. 68 of them have AI pattern flares. Here's what clicking each type would show.</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+
+  <!-- Left: galaxy scope diagram -->
+  <div class="mockup">
+    <div class="mockup-header">Galaxy node breakdown — Universe 2024</div>
+    <div class="mockup-body" style="padding:16px">
+      <svg width="100%" height="200" viewBox="0 0 300 200">
+        <!-- background circle = all 500 nodes -->
+        <circle cx="150" cy="105" r="90" fill="#1a1a2e" stroke="#333" stroke-width="1"/>
+        <text x="150" y="210" text-anchor="middle" font-size="9" fill="#555" font-family="monospace">~500 rendered nodes</text>
+
+        <!-- scatter of dim nodes -->
+        <circle cx="90" cy="80" r="3" fill="#444"/>
+        <circle cx="110" cy="60" r="2.5" fill="#444"/>
+        <circle cx="130" cy="90" r="3" fill="#444"/>
+        <circle cx="160" cy="70" r="2.5" fill="#444"/>
+        <circle cx="185" cy="85" r="3" fill="#444"/>
+        <circle cx="200" cy="65" r="2.5" fill="#444"/>
+        <circle cx="175" cy="110" r="3" fill="#444"/>
+        <circle cx="145" cy="125" r="2.5" fill="#444"/>
+        <circle cx="120" cy="115" r="3" fill="#444"/>
+        <circle cx="210" cy="100" r="2" fill="#444"/>
+        <circle cx="95" cy="105" r="2.5" fill="#444"/>
+        <circle cx="215" cy="130" r="2.5" fill="#444"/>
+        <circle cx="170" cy="140" r="2" fill="#444"/>
+        <circle cx="105" cy="130" r="2.5" fill="#444"/>
+        <circle cx="135" cy="145" r="2" fill="#444"/>
+        <circle cx="80" cy="120" r="2" fill="#444"/>
+        <circle cx="220" cy="110" r="2" fill="#444"/>
+        <circle cx="190" cy="145" r="2" fill="#444"/>
+        <circle cx="75" cy="95" r="2.5" fill="#444"/>
+
+        <!-- 68 flare nodes — highlighted -->
+        <circle cx="130" cy="90" r="7" fill="#FF8000" opacity="0.15"/>
+        <circle cx="130" cy="90" r="3.5" fill="#FF8000" opacity="0.9"/>
+        <circle cx="160" cy="70" r="6" fill="#FF8000" opacity="0.12"/>
+        <circle cx="160" cy="70" r="3" fill="#FF8000" opacity="0.9"/>
+        <circle cx="185" cy="85" r="7" fill="#FF8000" opacity="0.15"/>
+        <circle cx="185" cy="85" r="3.5" fill="#FF8000" opacity="0.9"/>
+        <circle cx="175" cy="110" r="6" fill="#FF8000" opacity="0.12"/>
+        <circle cx="175" cy="110" r="3" fill="#FF8000" opacity="0.9"/>
+        <circle cx="145" cy="125" r="5" fill="#FF8000" opacity="0.12"/>
+        <circle cx="145" cy="125" r="2.5" fill="#FF8000" opacity="0.9"/>
+        <circle cx="110" cy="115" r="6" fill="#FF8000" opacity="0.12"/>
+        <circle cx="110" cy="115" r="3" fill="#FF8000" opacity="0.9"/>
+
+        <!-- legend -->
+        <circle cx="90" cy="160" r="3" fill="#444"/>
+        <text x="98" y="164" font-size="8" fill="#666" font-family="monospace">Regular node (432)</text>
+        <circle cx="90" cy="178" r="7" fill="#FF8000" opacity="0.15"/>
+        <circle cx="90" cy="178" r="3.5" fill="#FF8000" opacity="0.9"/>
+        <text x="98" y="182" font-size="8" fill="#FF8000" font-family="monospace">Pattern flare node (68)</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Right: two-tier click behavior -->
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div style="background:#0d1a0d;border:1px solid #2a442a;border-radius:4px;padding:12px">
+      <div style="font-size:8px;letter-spacing:2px;color:#FF8000;margin-bottom:6px">ANY NODE — 500 nodes clickable</div>
+      <div style="font-size:11px;color:#ccc;line-height:1.6;margin-bottom:8px">Click any node → detail panel opens with:</div>
+      <ul style="font-size:10px;color:#aaa;line-height:1.8;margin:0;padding-left:16px">
+        <li>Node name, type, total $, connections</li>
+        <li>Mini D3 galaxy — its immediate network (1-hop neighbors)</li>
+        <li>Contribution timeline — dated receipts involving this node</li>
+      </ul>
+    </div>
+
+    <div style="background:#1a130d;border:1px solid #443320;border-radius:4px;padding:12px">
+      <div style="font-size:8px;letter-spacing:2px;color:#FF8000;margin-bottom:6px">PATTERN FLARE NODE — 68 nodes, extra section</div>
+      <div style="font-size:11px;color:#ccc;line-height:1.6;margin-bottom:8px">Same as above, <em>plus</em>:</div>
+      <ul style="font-size:10px;color:#FFB84D;line-height:1.8;margin:0;padding-left:16px">
+        <li>AI narrative paragraph (why this is significant)</li>
+        <li>Pattern type badge (dark_money_pathway, sector_concentration…)</li>
+        <li>Severity score indicator</li>
+        <li>Other patterns this node appears in</li>
+      </ul>
+    </div>
+
+    <div style="background:#0d0d1a;border:1px solid #2a2a44;border-radius:4px;padding:12px">
+      <div style="font-size:8px;letter-spacing:2px;color:#4A7FFF;margin-bottom:6px">SECTOR HALO CLICK — 13 sectors</div>
+      <div style="font-size:11px;color:#ccc;line-height:1.6;margin-bottom:8px">Click the "Finance" or "Defense" ring:</div>
+      <ul style="font-size:10px;color:#88AAFF;line-height:1.8;margin:0;padding-left:16px">
+        <li>Top pattern for that sector as default view</li>
+        <li>Mini-galaxy scoped to sector nodes</li>
+        <li>Aggregate sector timeline</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- What the panel looks like for a regular (non-flare) node -->
+<div class="mockup">
+  <div class="mockup-header">Example: clicking a regular committee node (no pattern flare)</div>
+  <div class="mockup-body" style="padding:0">
+    <div style="display:grid;grid-template-columns:200px 1fr;background:#0d0d1a">
+      <div style="padding:12px;border-right:1px solid #1e1e2e">
+        <div style="font-size:8px;letter-spacing:2px;color:#4A7FFF;margin-bottom:4px">COMMITTEE</div>
+        <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:4px">SENATE LEADERSHIP FUND</div>
+        <div style="font-size:8px;color:#555;margin-bottom:8px">2024 CYCLE · SUPER PAC</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+          <div><div style="font-size:7px;color:#555">TOTAL $</div><div style="font-size:14px;font-weight:700;color:#FF8000">$294M</div></div>
+          <div><div style="font-size:7px;color:#555">CONNECTIONS</div><div style="font-size:14px;font-weight:700;color:#FF8000">14</div></div>
+        </div>
+        <div style="font-size:8px;letter-spacing:1px;color:#555;margin-bottom:4px">CONNECTED NODES</div>
+        <div style="display:flex;flex-wrap:wrap;gap:2px">
+          <span style="padding:1px 4px;background:#FFB84D22;border:1px solid #FFB84D44;border-radius:2px;font-size:7px;color:#FFB84D">Citadel</span>
+          <span style="padding:1px 4px;background:#FFB84D22;border:1px solid #FFB84D44;border-radius:2px;font-size:7px;color:#FFB84D">Blackstone</span>
+          <span style="padding:1px 4px;background:#FF446622;border:1px solid #FF446644;border-radius:2px;font-size:7px;color:#FF4466">+12 more</span>
+        </div>
+      </div>
+      <div style="background:#090914;height:120px;display:flex;align-items:center;justify-content:center;position:relative">
+        <svg width="100%" height="120">
+          <!-- mini force layout placeholder -->
+          <circle cx="160" cy="60" r="10" fill="#4A7FFF" opacity="0.9"/>
+          <circle cx="60" cy="35" r="8" fill="#FFB84D" opacity="0.8"/>
+          <circle cx="60" cy="85" r="8" fill="#FFB84D" opacity="0.8"/>
+          <circle cx="270" cy="25" r="7" fill="#FF4466" opacity="0.8"/>
+          <circle cx="270" cy="55" r="7" fill="#FF4466" opacity="0.8"/>
+          <circle cx="270" cy="85" r="7" fill="#FF4466" opacity="0.8"/>
+          <line x1="69" y1="38" x2="150" y2="57" stroke="#FF8000" stroke-width="2" opacity="0.4"/>
+          <line x1="69" y1="82" x2="150" y2="63" stroke="#FF8000" stroke-width="2.5" opacity="0.5"/>
+          <line x1="170" y1="58" x2="263" y2="28" stroke="#FF8000" stroke-width="1.5" opacity="0.35"/>
+          <line x1="170" y1="60" x2="263" y2="55" stroke="#FF8000" stroke-width="2" opacity="0.4"/>
+          <line x1="170" y1="62" x2="263" y2="83" stroke="#FF8000" stroke-width="1.5" opacity="0.35"/>
+        </svg>
+        <div style="position:absolute;bottom:4px;right:8px;font-size:7px;color:#333">D3 force · 1-hop neighbors</div>
+      </div>
+    </div>
+    <div style="padding:8px 12px;border-top:1px solid #1e1e2e">
+      <div style="font-size:7px;letter-spacing:1.5px;color:#555;margin-bottom:6px">TRANSFER TIMELINE</div>
+      <div style="display:grid;grid-template-columns:55px 8px 1fr;gap:3px 6px;align-items:center">
+        <div style="font-size:8px;color:#555;text-align:right">Mar 14 '24</div>
+        <div style="width:7px;height:7px;background:#4A7FFF;border-radius:50%"></div>
+        <div style="font-size:9px;color:#ccc">Citadel → Senate Leadership Fund · <b style="color:#FF8000">$27.5M</b> · committee transfer</div>
+        <div style="font-size:8px;color:#555;text-align:right">Jun 3 '24</div>
+        <div style="width:7px;height:7px;background:#FFB84D;border-radius:50%"></div>
+        <div style="font-size:9px;color:#ccc">EMC → Senate Leadership Fund · <b style="color:#FF8000">$25.0M</b> · individual receipt</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px;padding:12px;background:#111;border:1px solid #333;border-radius:4px">
+  <div style="font-size:10px;color:#aaa;margin-bottom:6px">Does this scope feel right? The panel works for every node — pattern flare nodes just get the extra AI narrative section on top.</div>
+  <div class="options" style="margin-top:8px">
+    <div class="option" data-choice="yes" onclick="toggleSelect(this)">
+      <div class="letter">✓</div>
+      <div class="content"><h3>Yes — every node gets the panel</h3><p>Richer experience, more surface area for the timeline feature</p></div>
+    </div>
+    <div class="option" data-choice="pattern-only" onclick="toggleSelect(this)">
+      <div class="letter">↓</div>
+      <div class="content"><h3>Scope it to pattern flare nodes only for now</h3><p>68 nodes, tighter MVP, ship faster</p></div>
+    </div>
+  </div>
+</div>

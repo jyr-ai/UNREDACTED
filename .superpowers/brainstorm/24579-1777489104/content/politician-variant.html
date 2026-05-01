@@ -1,0 +1,184 @@
+<h2>Politician Node — Panel Variant</h2>
+<p class="subtitle">When a candidate node is clicked, the metadata section gains a profile photo + Congress.gov data. Everything else stays the same.</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+  <!-- Regular node panel for comparison -->
+  <div class="mockup">
+    <div class="mockup-header">Regular node (employer / committee)</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="font-family:monospace;background:#0b0b14;overflow:hidden">
+        <!-- mini galaxy -->
+        <div style="background:#090912;height:120px;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;justify-content:center;position:relative">
+          <svg width="95%" height="110">
+            <circle cx="70" cy="55" r="11" fill="#4A7FFF" opacity="0.9"/>
+            <circle cx="170" cy="30" r="8" fill="#FFB84D" opacity="0.8"/>
+            <circle cx="170" cy="80" r="8" fill="#FFB84D" opacity="0.8"/>
+            <circle cx="260" cy="20" r="7" fill="#FF4466" opacity="0.8"/>
+            <circle cx="260" cy="55" r="7" fill="#FF4466" opacity="0.8"/>
+            <line x1="81" y1="50" x2="162" y2="34" stroke="#FF8000" stroke-width="2" opacity="0.5"/>
+            <line x1="81" y1="59" x2="162" y2="77" stroke="#FF8000" stroke-width="2.5" opacity="0.5"/>
+            <line x1="178" y1="28" x2="253" y2="22" stroke="#FF8000" stroke-width="1.5" opacity="0.4"/>
+            <line x1="178" y1="32" x2="253" y2="53" stroke="#FF8000" stroke-width="1.5" opacity="0.4"/>
+            <text x="70" y="72" text-anchor="middle" font-size="6.5" fill="#888">Senate Ldrshp</text>
+          </svg>
+        </div>
+        <!-- metadata -->
+        <div style="padding:8px 10px;border-bottom:1px solid #1a1a2e">
+          <div style="font-size:10px;font-weight:700;color:#fff;margin-bottom:3px">SENATE LEADERSHIP FUND</div>
+          <div style="display:flex;gap:4px;margin-bottom:6px">
+            <span style="padding:1px 5px;background:#4A7FFF18;border:1px solid #4A7FFF44;border-radius:2px;font-size:6.5px;color:#4A7FFF">SUPER PAC</span>
+            <span style="padding:1px 5px;background:#FF800018;border:1px solid #FF800044;border-radius:2px;font-size:6.5px;color:#FF8000">$294M</span>
+          </div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap">
+            <span style="padding:1px 4px;background:#111;border:1px solid #333;border-radius:2px;font-size:6px;color:#666">Citadel</span>
+            <span style="padding:1px 4px;background:#111;border:1px solid #333;border-radius:2px;font-size:6px;color:#666">Blackstone</span>
+            <span style="padding:1px 4px;background:#111;border:1px solid #333;border-radius:2px;font-size:6px;color:#666">+12 more</span>
+          </div>
+        </div>
+        <!-- timeline stub -->
+        <div style="padding:8px 10px">
+          <div style="font-size:6px;letter-spacing:1px;color:#444;margin-bottom:4px">MONEY TRAIL</div>
+          <div style="font-size:8px;color:#555">Mar 14 · Citadel → <span style="color:#FF8000">$27.5M</span></div>
+          <div style="font-size:8px;color:#555;margin-top:2px">Jun 3 · EMC → <span style="color:#FF8000">$25M</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Politician variant -->
+  <div class="mockup">
+    <div class="mockup-header">Politician node — adds photo + Congress.gov profile</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="font-family:monospace;background:#0b0b14;overflow:hidden">
+        <!-- mini galaxy — same -->
+        <div style="background:#090912;height:120px;border-bottom:1px solid #1a1a2e;display:flex;align-items:center;justify-content:center;position:relative">
+          <svg width="95%" height="110">
+            <circle cx="70" cy="55" r="11" fill="#FF4466" opacity="0.9"/>
+            <circle cx="190" cy="30" r="8" fill="#4A7FFF" opacity="0.8"/>
+            <circle cx="190" cy="80" r="8" fill="#4A7FFF" opacity="0.8"/>
+            <circle cx="270" cy="20" r="7" fill="#FFB84D" opacity="0.8"/>
+            <line x1="81" y1="52" x2="182" y2="33" stroke="#FF8000" stroke-width="2" opacity="0.5"/>
+            <line x1="81" y1="59" x2="182" y2="77" stroke="#FF8000" stroke-width="2.5" opacity="0.5"/>
+            <text x="70" y="72" text-anchor="middle" font-size="6.5" fill="#888">Trump</text>
+            <text x="190" y="47" text-anchor="middle" font-size="6" fill="#777">AMERICA PAC</text>
+            <text x="190" y="96" text-anchor="middle" font-size="6" fill="#777">Make America...</text>
+          </svg>
+        </div>
+        <!-- metadata WITH photo -->
+        <div style="padding:8px 10px;border-bottom:1px solid #1a1a2e">
+          <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px">
+            <!-- photo placeholder -->
+            <div style="width:42px;height:52px;border-radius:3px;background:linear-gradient(135deg,#1a1a2e,#2a2a3e);border:1px solid #333;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden">
+              <!-- Simulated photo placeholder -->
+              <div style="width:100%;height:100%;background:linear-gradient(180deg,#2a2a3e 60%,#1e1e2e);display:flex;align-items:flex-end;justify-content:center">
+                <div style="width:22px;height:22px;background:#444;border-radius:50%;margin-bottom:2px"></div>
+              </div>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:10px;font-weight:700;color:#fff;margin-bottom:2px">TRUMP, DONALD J.</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px">
+                <span style="padding:1px 5px;background:#FF446618;border:1px solid #FF446644;border-radius:2px;font-size:6.5px;color:#FF4466">REPUBLICAN</span>
+                <span style="padding:1px 5px;background:#22222a;border:1px solid #333;border-radius:2px;font-size:6.5px;color:#888">PRESIDENTIAL</span>
+                <span style="padding:1px 5px;background:#22222a;border:1px solid #333;border-radius:2px;font-size:6.5px;color:#888">FL</span>
+              </div>
+              <div style="font-size:7px;color:#444">Raised <span style="color:#FF8000">$1.1B</span> · Cycle 2024</div>
+            </div>
+          </div>
+          <!-- Congress.gov data -->
+          <div style="background:#0d0d1a;border-radius:2px;padding:5px 7px;margin-bottom:5px">
+            <div style="font-size:6.5px;letter-spacing:1px;color:#555;margin-bottom:3px">CONGRESS.GOV</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px">
+              <div style="font-size:7.5px;color:#888">Chamber: <span style="color:#ccc">Presidential</span></div>
+              <div style="font-size:7.5px;color:#888">Party: <span style="color:#ccc">R</span></div>
+              <div style="font-size:7.5px;color:#888">State: <span style="color:#ccc">Florida</span></div>
+              <div style="font-size:7.5px;color:#888">Bioguide: <span style="color:#555">T000483</span></div>
+            </div>
+          </div>
+          <!-- Committees -->
+          <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:3px">TOP FUNDERS</div>
+          <div style="display:flex;gap:2px;flex-wrap:wrap">
+            <span style="padding:1px 4px;background:#111;border:1px solid #333;border-radius:2px;font-size:6px;color:#666">AMERICA PAC</span>
+            <span style="padding:1px 4px;background:#111;border:1px solid #333;border-radius:2px;font-size:6px;color:#666">Adelson Clinic</span>
+            <span style="padding:1px 4px;background:#111;border:1px solid #333;border-radius:2px;font-size:6px;color:#666">+8 more</span>
+          </div>
+        </div>
+        <!-- timeline stub -->
+        <div style="padding:8px 10px">
+          <div style="font-size:6px;letter-spacing:1px;color:#444;margin-bottom:4px">MONEY TRAIL</div>
+          <div style="font-size:8px;color:#555">Oct 15 · AMERICA PAC → <span style="color:#FF8000">$54.4M</span></div>
+          <div style="font-size:8px;color:#555;margin-top:2px">Oct 22 · Make America Great → <span style="color:#FF8000">$88M</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data flow diagram -->
+<div class="mockup">
+  <div class="mockup-header">Data flow — what happens when a politician node is clicked</div>
+  <div class="mockup-body" style="padding:16px">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:center;font-family:monospace;font-size:9px">
+
+      <div style="background:#0d0d1a;border:1px solid #333;border-radius:3px;padding:8px;text-align:center">
+        <div style="color:#FF4466;margin-bottom:4px">🖱 Click politician node</div>
+        <div style="color:#555;font-size:8px">node.kind = 'candidate'<br/>node.id = 'pol:P00009423'<br/>node.bioguide_id = 'T000483'</div>
+      </div>
+
+      <div style="color:#FF8000;font-size:14px">→</div>
+
+      <div style="background:#0d0d1a;border:1px solid #333;border-radius:3px;padding:8px;text-align:center">
+        <div style="color:#4A7FFF;margin-bottom:4px">2 parallel fetches</div>
+        <div style="color:#555;font-size:8px">
+          <span style="color:#FF8000">①</span> GET /api/galaxy/node/pol:P00009423<br/>
+          <span style="color:#aaa">→ subgraph + timeline</span><br/><br/>
+          <span style="color:#FF8000">②</span> GET /api/congress/member/T000483<br/>
+          <span style="color:#aaa">→ photo URL + metadata</span>
+        </div>
+      </div>
+
+      <div style="color:#FF8000;font-size:14px">→</div>
+
+      <div style="background:#0d0d1a;border:1px solid #333;border-radius:3px;padding:8px;text-align:center">
+        <div style="color:#44CC88;margin-bottom:4px">Panel renders</div>
+        <div style="color:#555;font-size:8px">
+          MiniGalaxy (subgraph)<br/>
+          <span style="color:#aaa">+ photo from depiction.imageUrl</span><br/>
+          <span style="color:#aaa">+ party / state / chamber</span><br/>
+          ContributionTimeline (receipts)
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:12px;padding:8px;background:#0a1a0a;border:1px solid #1e3a1e;border-radius:3px">
+      <div style="font-size:8px;color:#666;margin-bottom:4px">KEY FACTS — no extra DB work needed</div>
+      <ul style="font-size:9px;color:#888;line-height:1.8;margin:0;padding-left:14px">
+        <li><b style="color:#ccc">politicians.bioguide_id</b> already populated — direct key into Congress.gov API</li>
+        <li><b style="color:#ccc">getMemberDetails(bioguideId)</b> already exists in <code style="color:#FF8000">congressGov.js</code> — returns photo URL + committees</li>
+        <li><b style="color:#ccc">Photo URL</b> comes from <code style="color:#aaa">depiction.imageUrl</code> on the Congress.gov member object</li>
+        <li><b style="color:#ccc">Non-Congress politicians</b> (presidential candidates, retired) may have no bioguide_id — panel gracefully degrades to name + party only</li>
+        <li><b style="color:#ccc">New route needed:</b> GET /api/congress/member/:bioguideId — one-liner wrapping existing <code>getMemberDetails</code></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px">
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">✓</div>
+      <div class="content">
+        <h3>Looks good — write the design doc</h3>
+        <p>Both the base panel (all nodes) and politician profile enhancement (congress.gov photo + metadata) are in scope</p>
+      </div>
+    </div>
+    <div class="option" data-choice="tweak" onclick="toggleSelect(this)">
+      <div class="letter">✎</div>
+      <div class="content">
+        <h3>Needs a tweak first</h3>
+        <p>Let me know what to change in the terminal</p>
+      </div>
+    </div>
+  </div>
+</div>

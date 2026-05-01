@@ -1,0 +1,91 @@
+<h2>Mini-Galaxy — Rendering Style</h2>
+<p class="subtitle">The small network diagram in the top-right of the panel. How should it behave?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d0d1a;border-radius:4px;padding:8px;position:relative;overflow:hidden;height:180px">
+        <div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:4px">SOURCES ● employer &nbsp; ● committee &nbsp; ● candidate</div>
+        <!-- Animated-looking static with glow -->
+        <svg width="100%" height="150" style="position:absolute;left:0;top:22px">
+          <!-- glow halos -->
+          <circle cx="80" cy="75" r="22" fill="#FFB84D" opacity="0.08"/>
+          <circle cx="200" cy="50" r="18" fill="#4A7FFF" opacity="0.08"/>
+          <circle cx="310" cy="30" r="14" fill="#FF4466" opacity="0.06"/>
+          <circle cx="310" cy="90" r="14" fill="#44AAFF" opacity="0.06"/>
+          <!-- edges with animated dash suggestion -->
+          <line x1="95" y1="70" x2="185" y2="55" stroke="#FF8000" stroke-width="2.5" opacity="0.55" stroke-dasharray="0"/>
+          <line x1="215" y1="48" x2="298" y2="33" stroke="#FF8000" stroke-width="1.8" opacity="0.4"/>
+          <line x1="215" y1="53" x2="298" y2="87" stroke="#FF8000" stroke-width="1.4" opacity="0.35"/>
+          <!-- nodes -->
+          <circle cx="80" cy="75" r="12" fill="#FFB84D" opacity="0.95"/>
+          <circle cx="200" cy="50" r="9" fill="#4A7FFF" opacity="0.95"/>
+          <circle cx="310" cy="30" r="8" fill="#FF4466" opacity="0.95"/>
+          <circle cx="310" cy="90" r="8" fill="#44AAFF" opacity="0.95"/>
+          <!-- labels -->
+          <text x="80" y="95" text-anchor="middle" font-size="7.5" fill="#aaa" font-family="monospace">SpaceX</text>
+          <text x="200" y="67" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">AMERICA PAC</text>
+          <text x="310" y="45" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">Trump</text>
+          <text x="310" y="105" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">Kennedy</text>
+          <!-- amount labels -->
+          <text x="138" y="53" text-anchor="middle" font-size="7" fill="#FF8000" opacity="0.8" font-family="monospace">$238M</text>
+          <text x="255" y="30" text-anchor="middle" font-size="7" fill="#FF8000" opacity="0.6" font-family="monospace">$88M</text>
+          <text x="255" y="82" text-anchor="middle" font-size="7" fill="#FF8000" opacity="0.6" font-family="monospace">$54M</text>
+        </svg>
+        <div style="position:absolute;bottom:4px;right:8px;font-size:7px;color:#444">Drag to pan · scroll to zoom · hover to focus</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Live D3 force simulation (animated)</h3>
+      <p>Nodes animate into position on open, repel each other, settle naturally. Same engine as the main galaxy — just scoped to pattern nodes. Interactive: drag, zoom, hover to highlight. Feels alive.</p>
+      <div class="pros-cons" style="font-size:11px">
+        <div class="pros"><h4>Pros</h4><ul><li>Consistent with main galaxy UX</li><li>Handles any number of nodes gracefully</li><li>Reuses existing galaxyBuild / galaxyForces</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>~100ms simulation settle time on open</li><li>More complex — needs own simulation lifecycle</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#0d0d1a;border-radius:4px;padding:8px;position:relative;overflow:hidden;height:180px">
+        <div style="font-size:8px;color:#555;letter-spacing:1px;margin-bottom:4px">SOURCES ● employer &nbsp; ● committee &nbsp; ● candidate</div>
+        <!-- Layered left-to-right hierarchy: tier columns -->
+        <svg width="100%" height="150" style="position:absolute;left:0;top:22px">
+          <!-- tier column guides (subtle) -->
+          <line x1="90" y1="10" x2="90" y2="140" stroke="#1e1e2e" stroke-width="1"/>
+          <line x1="195" y1="10" x2="195" y2="140" stroke="#1e1e2e" stroke-width="1"/>
+          <text x="45" y="15" text-anchor="middle" font-size="6" fill="#333" font-family="monospace">EMPLOYER</text>
+          <text x="143" y="15" text-anchor="middle" font-size="6" fill="#333" font-family="monospace">COMMITTEE</text>
+          <text x="265" y="15" text-anchor="middle" font-size="6" fill="#333" font-family="monospace">CANDIDATE</text>
+          <!-- edges -->
+          <line x1="62" y1="75" x2="115" y2="60" stroke="#FF8000" stroke-width="2.5" opacity="0.55"/>
+          <line x1="155" y1="57" x2="220" y2="40" stroke="#FF8000" stroke-width="1.8" opacity="0.4"/>
+          <line x1="155" y1="63" x2="220" y2="95" stroke="#FF8000" stroke-width="1.4" opacity="0.35"/>
+          <!-- nodes -->
+          <circle cx="45" cy="75" r="12" fill="#FFB84D" opacity="0.95"/>
+          <circle cx="135" cy="60" r="9" fill="#4A7FFF" opacity="0.95"/>
+          <circle cx="235" cy="38" r="8" fill="#FF4466" opacity="0.95"/>
+          <circle cx="235" cy="98" r="8" fill="#44AAFF" opacity="0.95"/>
+          <!-- labels -->
+          <text x="45" y="95" text-anchor="middle" font-size="7.5" fill="#aaa" font-family="monospace">SpaceX</text>
+          <text x="135" y="77" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">AMERICA PAC</text>
+          <text x="235" y="52" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">Trump</text>
+          <text x="235" y="114" text-anchor="middle" font-size="7" fill="#888" font-family="monospace">Kennedy</text>
+          <!-- amounts -->
+          <text x="88" y="52" text-anchor="middle" font-size="7" fill="#FF8000" opacity="0.8" font-family="monospace">$238M</text>
+        </svg>
+        <div style="position:absolute;bottom:4px;right:8px;font-size:7px;color:#444">Static · hover to highlight node</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Static hierarchical layout (tier columns)</h3>
+      <p>Nodes pre-positioned in tier columns: Employer | Committee | Candidate. No animation, no physics. Instant render, always legible. Hover highlights connected edges.</p>
+      <div class="pros-cons" style="font-size:11px">
+        <div class="pros"><h4>Pros</h4><ul><li>Instant — no simulation wait</li><li>Always readable left-to-right flow</li><li>Much simpler implementation</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Feels less alive than the main galaxy</li><li>Multi-hop committee chains stack vertically</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>

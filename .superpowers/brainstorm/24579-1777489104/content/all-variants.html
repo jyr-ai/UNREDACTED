@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Node Detail Panel — All Variants</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a12; color: #ccc; font-family: 'Roboto Mono', monospace; padding: 24px; }
+  h1 { font-size: 15px; color: #fff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .subtitle { font-size: 10px; color: #555; letter-spacing: 1px; margin-bottom: 24px; }
+
+  .section-label { font-size: 8px; letter-spacing: 2px; color: #FF8000; text-transform: uppercase; margin: 24px 0 12px; border-bottom: 1px solid #1e1e2e; padding-bottom: 6px; }
+
+  .variants-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+
+  .panel { background: #0b0b14; border: 1px solid #1e1e2e; border-radius: 4px; overflow: hidden; }
+  .panel-type { font-size: 7px; letter-spacing: 2px; padding: 5px 10px; border-bottom: 1px solid #1e1e2e; display: flex; justify-content: space-between; align-items: center; }
+  .panel-mini-galaxy { border-bottom: 1px solid #1a1a2e; position: relative; overflow: hidden; }
+  .panel-meta { padding: 8px 10px; border-bottom: 1px solid #1a1a2e; }
+  .panel-timeline { padding: 8px 10px; }
+
+  .badge { display: inline-block; padding: 1px 5px; border-radius: 2px; font-size: 6.5px; letter-spacing: 0.5px; margin-right: 3px; margin-bottom: 2px; }
+  .name { font-size: 10px; font-weight: 700; color: #fff; margin-bottom: 4px; line-height: 1.3; }
+  .kpi-row { display: flex; gap: 10px; margin-bottom: 6px; }
+  .kpi { font-size: 8px; color: #555; }
+  .kpi span { display: block; font-size: 12px; font-weight: 700; color: #FF8000; }
+  .chips { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+  .chip { padding: 1px 4px; background: #111; border: 1px solid #333; border-radius: 2px; font-size: 6px; color: #666; }
+
+  .tl-row { display: grid; grid-template-columns: 50px 8px 1fr; gap: 3px 6px; align-items: start; margin-bottom: 4px; }
+  .tl-date { font-size: 7.5px; color: #555; text-align: right; padding-top: 1px; }
+  .tl-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 2px; }
+  .tl-text { font-size: 8px; color: #999; line-height: 1.4; }
+  .tl-amount { color: #FF8000; font-weight: 600; }
+
+  .narrative-block { background: #0d0d1a; border-left: 2px solid #FF800055; padding: 5px 7px; margin: 5px 0; border-radius: 0 2px 2px 0; }
+  .narrative-label { font-size: 6px; letter-spacing: 1px; color: #FF8000; opacity: 0.7; margin-bottom: 2px; }
+  .narrative-text { font-size: 8px; color: #888; line-height: 1.5; }
+
+  .photo-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+  .photo-box { width: 38px; height: 48px; border-radius: 3px; background: linear-gradient(135deg,#1a1a2e,#2a2a3e); border: 1px solid #333; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+  .photo-avatar { width: 22px; height: 22px; background: #3a3a4e; border-radius: 50%; margin-bottom: 2px; }
+
+  .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .arch-box { background: #0b0b14; border: 1px solid #1e1e2e; border-radius: 4px; padding: 12px; }
+  .arch-title { font-size: 8px; letter-spacing: 2px; color: #4A7FFF; margin-bottom: 8px; }
+  .arch-item { display: flex; gap: 8px; margin-bottom: 8px; font-size: 9px; align-items: flex-start; }
+  .arch-tag { background: #FF800022; border: 1px solid #FF800044; color: #FF8000; border-radius: 2px; padding: 1px 5px; font-size: 7px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+  .arch-tag.blue { background: #4A7FFF22; border-color: #4A7FFF44; color: #4A7FFF; }
+  .arch-tag.green { background: #44CC8822; border-color: #44CC8844; color: #44CC88; }
+  .arch-tag.purple { background: #CC88FF22; border-color: #CC88FF44; color: #CC88FF; }
+  .arch-tag.gray { background: #33333322; border-color: #44444444; color: #888; }
+  .arch-desc { color: #888; line-height: 1.5; }
+  .arch-desc b { color: #ccc; }
+
+  .flow-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 8px; }
+  .flow-box { background: #0d0d1a; border: 1px solid #2a2a3e; border-radius: 3px; padding: 4px 7px; color: #aaa; text-align: center; }
+  .flow-arrow { color: #FF8000; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Node Detail Panel — All Drawer Variants</h1>
+<p class="subtitle">Agreed layout: mini-galaxy top (full width) · metadata middle · timeline bottom. Each node type customises the metadata section only.</p>
+
+<div class="section-label">Drawer Variants — by node type</div>
+
+<div class="variants-grid">
+
+  <!-- 1. EMPLOYER -->
+  <div class="panel">
+    <div class="panel-type" style="color:#FFB84D">
+      <span>EMPLOYER NODE</span>
+      <span style="color:#444">e.g. "Goldman Sachs"</span>
+    </div>
+    <div class="panel-mini-galaxy" style="height:110px">
+      <svg width="100%" height="110">
+        <circle cx="55" cy="55" r="12" fill="#FFB84D" opacity="0.95"/>
+        <circle cx="155" cy="30" r="8" fill="#4A7FFF" opacity="0.85"/>
+        <circle cx="155" cy="75" r="8" fill="#4A7FFF" opacity="0.85"/>
+        <circle cx="240" cy="20" r="7" fill="#FF4466" opacity="0.8"/>
+        <circle cx="240" cy="55" r="7" fill="#44AAFF" opacity="0.8"/>
+        <line x1="67" y1="50" x2="147" y2="34" stroke="#FF8000" stroke-width="2.5" opacity="0.55"/>
+        <line x1="67" y1="60" x2="147" y2="72" stroke="#FF8000" stroke-width="1.8" opacity="0.45"/>
+        <line x1="163" y1="28" x2="233" y2="23" stroke="#FF8000" stroke-width="1.4" opacity="0.35"/>
+        <line x1="163" y1="32" x2="233" y2="53" stroke="#FF8000" stroke-width="1.2" opacity="0.3"/>
+        <text x="55" y="73" text-anchor="middle" font-size="6.5" fill="#999">Goldman Sachs</text>
+        <text x="155" y="47" text-anchor="middle" font-size="6" fill="#777">PAC A</text>
+        <text x="155" y="92" text-anchor="middle" font-size="6" fill="#777">PAC B</text>
+      </svg>
+    </div>
+    <div class="panel-meta">
+      <div class="name">GOLDMAN SACHS</div>
+      <div class="kpi-row">
+        <div class="kpi">TOTAL DONATED<span>$47.2M</span></div>
+        <div class="kpi">CONTRIBUTIONS<span>1,842</span></div>
+        <div class="kpi">PACs FUNDED<span>6</span></div>
+      </div>
+      <div>
+        <span class="badge" style="background:#FFB84D18;border:1px solid #FFB84D44;color:#FFB84D">Finance</span>
+        <span class="badge" style="background:#22222a;border:1px solid #333;color:#666">EMPLOYER</span>
+      </div>
+      <div style="font-size:7px;color:#555;margin-top:4px">Self-reported field on FEC Schedule A</div>
+    </div>
+    <div class="panel-timeline">
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:5px">CONTRIBUTION RECEIPTS</div>
+      <div class="tl-row"><div class="tl-date">Mar 4 '24</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">→ Goldman Sachs PAC · <span class="tl-amount">$5k</span></div></div>
+      <div class="tl-row"><div class="tl-date">Jun 12</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">→ Senate Leadership · <span class="tl-amount">$2.5M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Sep 3</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">→ Senate Leadership · <span class="tl-amount">$2.5M</span></div></div>
+    </div>
+  </div>
+
+  <!-- 2. COMMITTEE / PAC -->
+  <div class="panel">
+    <div class="panel-type" style="color:#4A7FFF">
+      <span>COMMITTEE / PAC NODE</span>
+      <span style="color:#444">e.g. Super PAC</span>
+    </div>
+    <div class="panel-mini-galaxy" style="height:110px">
+      <svg width="100%" height="110">
+        <circle cx="140" cy="55" r="11" fill="#4A7FFF" opacity="0.95"/>
+        <circle cx="50" cy="30" r="8" fill="#FFB84D" opacity="0.85"/>
+        <circle cx="50" cy="80" r="8" fill="#FFB84D" opacity="0.85"/>
+        <circle cx="240" cy="30" r="7" fill="#FF4466" opacity="0.8"/>
+        <circle cx="240" cy="70" r="7" fill="#44AAFF" opacity="0.8"/>
+        <line x1="58" y1="33" x2="130" y2="52" stroke="#FF8000" stroke-width="2" opacity="0.5"/>
+        <line x1="58" y1="77" x2="130" y2="58" stroke="#FF8000" stroke-width="2.5" opacity="0.55"/>
+        <line x1="151" y1="52" x2="233" y2="33" stroke="#FF8000" stroke-width="1.8" opacity="0.4"/>
+        <line x1="151" y1="58" x2="233" y2="68" stroke="#FF8000" stroke-width="1.5" opacity="0.35"/>
+        <text x="140" y="72" text-anchor="middle" font-size="6" fill="#777">SLF</text>
+        <text x="50" y="47" text-anchor="middle" font-size="6" fill="#777">Citadel</text>
+        <text x="240" y="46" text-anchor="middle" font-size="6" fill="#777">OH Senate</text>
+      </svg>
+    </div>
+    <div class="panel-meta">
+      <div class="name">SENATE LEADERSHIP FUND</div>
+      <div class="kpi-row">
+        <div class="kpi">TOTAL RAISED<span>$294M</span></div>
+        <div class="kpi">TRANSFERS OUT<span>$271M</span></div>
+      </div>
+      <div>
+        <span class="badge" style="background:#4A7FFF18;border:1px solid #4A7FFF44;color:#4A7FFF">SUPER PAC</span>
+        <span class="badge" style="background:#22222a;border:1px solid #333;color:#666">NOT CONNECTED</span>
+        <span class="badge" style="background:#22222a;border:1px solid #333;color:#666">2024</span>
+      </div>
+      <div class="chips" style="margin-top:5px">
+        <div class="chip">Citadel → $27.5M</div>
+        <div class="chip">Blackstone → $25M</div>
+        <div class="chip">+12 donors</div>
+      </div>
+    </div>
+    <div class="panel-timeline">
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:5px">RECEIPTS + TRANSFERS</div>
+      <div class="tl-row"><div class="tl-date">Mar 14</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">Citadel → SLF · <span class="tl-amount">$27.5M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Jun 3</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">EMC → SLF · <span class="tl-amount">$25M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Oct 8</div><div class="tl-dot" style="background:#4A7FFF"></div><div class="tl-text">SLF → OH Senate race · <span class="tl-amount">$63M</span></div></div>
+    </div>
+  </div>
+
+  <!-- 3. POLITICIAN / CANDIDATE -->
+  <div class="panel">
+    <div class="panel-type" style="color:#FF4466">
+      <span>POLITICIAN NODE</span>
+      <span style="color:#44CC88;font-size:6px">+ congress.gov photo</span>
+    </div>
+    <div class="panel-mini-galaxy" style="height:110px">
+      <svg width="100%" height="110">
+        <circle cx="220" cy="55" r="12" fill="#FF4466" opacity="0.95"/>
+        <circle cx="110" cy="30" r="8" fill="#4A7FFF" opacity="0.85"/>
+        <circle cx="110" cy="80" r="8" fill="#4A7FFF" opacity="0.85"/>
+        <circle cx="30" cy="20" r="7" fill="#FFB84D" opacity="0.8"/>
+        <line x1="118" y1="33" x2="209" y2="52" stroke="#FF8000" stroke-width="2.5" opacity="0.55"/>
+        <line x1="118" y1="77" x2="209" y2="58" stroke="#FF8000" stroke-width="2" opacity="0.5"/>
+        <line x1="37" y1="23" x2="102" y2="33" stroke="#FF8000" stroke-width="1.5" opacity="0.35"/>
+        <text x="220" y="73" text-anchor="middle" font-size="6.5" fill="#999">Candidate</text>
+        <text x="110" y="47" text-anchor="middle" font-size="6" fill="#777">AMERICA PAC</text>
+        <text x="110" y="97" text-anchor="middle" font-size="6" fill="#777">MAGA PAC</text>
+      </svg>
+    </div>
+    <div class="panel-meta">
+      <div class="photo-row">
+        <div class="photo-box"><div class="photo-avatar"></div></div>
+        <div style="flex:1">
+          <div class="name">TRUMP, DONALD J.</div>
+          <div>
+            <span class="badge" style="background:#FF446618;border:1px solid #FF446644;color:#FF4466">REPUBLICAN</span>
+            <span class="badge" style="background:#22222a;border:1px solid #333;color:#888">PRESIDENTIAL</span>
+            <span class="badge" style="background:#22222a;border:1px solid #333;color:#888">FL</span>
+          </div>
+          <div style="font-size:7.5px;color:#555;margin-top:3px">Raised <span style="color:#FF8000">$1.1B</span> · Bioguide: T000483</div>
+        </div>
+      </div>
+      <div style="background:#0d0d1a;border-radius:2px;padding:5px 7px;font-size:7.5px">
+        <div style="font-size:6.5px;letter-spacing:1px;color:#555;margin-bottom:3px">CONGRESS.GOV</div>
+        <div style="color:#888">Chamber: <span style="color:#ccc">Presidential</span> &nbsp;·&nbsp; Party: <span style="color:#ccc">R</span> &nbsp;·&nbsp; State: <span style="color:#ccc">FL</span></div>
+        <div style="margin-top:2px"><a style="color:#4A7FFF;text-decoration:none;font-size:7px">View on congress.gov ↗</a></div>
+      </div>
+    </div>
+    <div class="panel-timeline">
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:5px">TRANSFERS RECEIVED</div>
+      <div class="tl-row"><div class="tl-date">Oct 15</div><div class="tl-dot" style="background:#4A7FFF"></div><div class="tl-text">AMERICA PAC → Trump · <span class="tl-amount">$54.4M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Oct 30</div><div class="tl-dot" style="background:#4A7FFF"></div><div class="tl-text">MAGA PAC → Trump · <span class="tl-amount">$112M</span></div></div>
+    </div>
+  </div>
+
+  <!-- 4. PATTERN FLARE NODE -->
+  <div class="panel" style="border-color:#FF800033">
+    <div class="panel-type" style="color:#FF8000;background:#0f0d09">
+      <span>⚡ PATTERN FLARE NODE</span>
+      <span style="color:#FF800088;font-size:6px">any type + AI layer</span>
+    </div>
+    <div class="panel-mini-galaxy" style="height:110px;background:#090908">
+      <svg width="100%" height="110">
+        <!-- flare glow halos -->
+        <circle cx="65" cy="55" r="20" fill="#FF8000" opacity="0.08"/>
+        <circle cx="160" cy="35" r="15" fill="#FF8000" opacity="0.06"/>
+        <circle cx="240" cy="25" r="12" fill="#FF8000" opacity="0.05"/>
+        <circle cx="240" cy="75" r="12" fill="#FF8000" opacity="0.05"/>
+        <circle cx="65" cy="55" r="13" fill="#FFB84D" opacity="0.95"/>
+        <circle cx="160" cy="35" r="9" fill="#4A7FFF" opacity="0.95"/>
+        <circle cx="240" cy="25" r="8" fill="#FF4466" opacity="0.9"/>
+        <circle cx="240" cy="75" r="8" fill="#44AAFF" opacity="0.9"/>
+        <line x1="78" y1="50" x2="151" y2="38" stroke="#FF8000" stroke-width="2.5" opacity="0.6"/>
+        <line x1="169" y1="33" x2="232" y2="27" stroke="#FF8000" stroke-width="1.8" opacity="0.45"/>
+        <line x1="169" y1="37" x2="232" y2="73" stroke="#FF8000" stroke-width="1.5" opacity="0.4"/>
+        <text x="65" y="74" text-anchor="middle" font-size="6.5" fill="#aaa">SpaceX</text>
+        <text x="160" y="52" text-anchor="middle" font-size="6" fill="#888">AMERICA PAC</text>
+      </svg>
+    </div>
+    <div class="panel-meta" style="background:#0c0b09">
+      <div class="name">SPACE EXPLORATION TECHNOLOGIES</div>
+      <div style="margin-bottom:5px">
+        <span class="badge" style="background:#FF446618;border:1px solid #FF446644;color:#FF4466">SEVERITY 9/10</span>
+        <span class="badge" style="background:#FF800018;border:1px solid #FF800044;color:#FF8000">SECTOR CONCENTRATION</span>
+      </div>
+      <!-- AI narrative — only on flare nodes -->
+      <div class="narrative-block">
+        <div class="narrative-label">AI PATTERN ANALYSIS</div>
+        <div class="narrative-text">SpaceX funneled $238.5M into AMERICA PAC, financing both major presidential contenders through one intermediary — maximizing influence regardless of outcome.</div>
+      </div>
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-top:5px;margin-bottom:3px">ALSO APPEARS IN</div>
+      <div class="chips">
+        <div class="chip" style="color:#FF8000;border-color:#FF800044">⚡ Defense sector surge</div>
+        <div class="chip" style="color:#FF8000;border-color:#FF800044">⚡ Presidential funnel</div>
+      </div>
+    </div>
+    <div class="panel-timeline">
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:5px">MONEY TRAIL</div>
+      <div class="tl-row"><div class="tl-date">Jul 3</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">SpaceX → AMERICA PAC · <span class="tl-amount">$5M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Aug 5</div><div class="tl-dot" style="background:#FFB84D"></div><div class="tl-text">SpaceX → AMERICA PAC · <span class="tl-amount">$7.5M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Oct 15</div><div class="tl-dot" style="background:#4A7FFF"></div><div class="tl-text">AMERICA PAC → Trump · <span class="tl-amount">$54.4M</span></div></div>
+    </div>
+  </div>
+
+  <!-- 5. SECTOR HALO CLICK -->
+  <div class="panel" style="border-color:#4A7FFF33">
+    <div class="panel-type" style="color:#4A7FFF">
+      <span>◯ SECTOR HALO CLICK</span>
+      <span style="color:#444">e.g. "Finance" ring</span>
+    </div>
+    <div class="panel-mini-galaxy" style="height:110px;background:#090912">
+      <svg width="100%" height="110">
+        <!-- sector halo hint -->
+        <ellipse cx="140" cy="55" rx="110" ry="45" fill="none" stroke="#4A7FFF" stroke-width="1" stroke-dasharray="4,3" opacity="0.25"/>
+        <circle cx="60" cy="50" r="10" fill="#FFB84D" opacity="0.85"/>
+        <circle cx="100" cy="30" r="8" fill="#FFB84D" opacity="0.8"/>
+        <circle cx="100" cy="75" r="7" fill="#FFB84D" opacity="0.75"/>
+        <circle cx="175" cy="40" r="9" fill="#4A7FFF" opacity="0.9"/>
+        <circle cx="175" cy="70" r="8" fill="#4A7FFF" opacity="0.85"/>
+        <circle cx="235" cy="35" r="7" fill="#FF4466" opacity="0.8"/>
+        <circle cx="235" cy="65" r="7" fill="#44AAFF" opacity="0.8"/>
+        <line x1="69" y1="48" x2="92" y2="34" stroke="#4A7FFF" stroke-width="1.5" opacity="0.4"/>
+        <line x1="108" y1="32" x2="166" y2="42" stroke="#FF8000" stroke-width="1.8" opacity="0.45"/>
+        <line x1="183" y1="42" x2="228" y2="38" stroke="#FF8000" stroke-width="1.5" opacity="0.4"/>
+        <text x="140" y="100" text-anchor="middle" font-size="6.5" fill="#4A7FFF" opacity="0.4">FINANCE SECTOR</text>
+      </svg>
+    </div>
+    <div class="panel-meta">
+      <div class="name" style="color:#4A7FFF">FINANCE SECTOR</div>
+      <div class="kpi-row">
+        <div class="kpi">TOTAL FLOW<span>$2.1B</span></div>
+        <div class="kpi">NODES<span>87</span></div>
+        <div class="kpi">PATTERNS<span>3</span></div>
+      </div>
+      <div style="font-size:7px;color:#555;margin-bottom:4px">Top pattern in this sector:</div>
+      <div class="narrative-block" style="border-color:#4A7FFF55">
+        <div class="narrative-label" style="color:#4A7FFF">TOP PATTERN</div>
+        <div class="narrative-text">Citadel + Blackstone route $52M into Senate Leadership Fund targeting 5 battleground Senate seats.</div>
+      </div>
+    </div>
+    <div class="panel-timeline">
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:5px">SECTOR MONEY TRAIL</div>
+      <div class="tl-row"><div class="tl-date">Mar 14</div><div class="tl-dot" style="background:#4A7FFF"></div><div class="tl-text">Citadel → SLF · <span class="tl-amount">$27.5M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Jun 3</div><div class="tl-dot" style="background:#4A7FFF"></div><div class="tl-text">Blackstone → SLF · <span class="tl-amount">$25M</span></div></div>
+    </div>
+  </div>
+
+  <!-- 6. DARK MONEY / 501c4 -->
+  <div class="panel" style="border-color:#CC88FF33">
+    <div class="panel-type" style="color:#CC88FF">
+      <span>🕳 DARK MONEY NODE</span>
+      <span style="color:#444">501c4 / non-disclosing</span>
+    </div>
+    <div class="panel-mini-galaxy" style="height:110px;background:#0d090d">
+      <svg width="100%" height="110">
+        <!-- redacted halos -->
+        <circle cx="140" cy="55" r="25" fill="#CC88FF" opacity="0.05"/>
+        <circle cx="60" cy="55" r="9" fill="#555" opacity="0.6" stroke="#CC88FF" stroke-width="1" stroke-dasharray="2,2"/>
+        <circle cx="140" cy="55" r="11" fill="#CC88FF" opacity="0.7"/>
+        <circle cx="220" cy="35" r="8" fill="#FF4466" opacity="0.7"/>
+        <circle cx="220" cy="75" r="8" fill="#44AAFF" opacity="0.7"/>
+        <line x1="69" y1="55" x2="129" y2="55" stroke="#CC88FF" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.4"/>
+        <line x1="151" y1="51" x2="212" y2="38" stroke="#FF8000" stroke-width="1.8" opacity="0.4"/>
+        <line x1="151" y1="59" x2="212" y2="72" stroke="#FF8000" stroke-width="1.5" opacity="0.35"/>
+        <text x="140" y="73" text-anchor="middle" font-size="6.5" fill="#CC88FF" opacity="0.7">Dark PAC</text>
+        <text x="60" y="73" text-anchor="middle" font-size="6" fill="#555">Unknown</text>
+      </svg>
+    </div>
+    <div class="panel-meta">
+      <div class="name">C00865444</div>
+      <div style="margin-bottom:5px">
+        <span class="badge" style="background:#CC88FF18;border:1px solid #CC88FF44;color:#CC88FF">DARK MONEY</span>
+        <span class="badge" style="background:#CC88FF18;border:1px solid #CC88FF44;color:#CC88FF">501c4</span>
+        <span class="badge" style="background:#22222a;border:1px solid #333;color:#666">NO DISCLOSURE</span>
+      </div>
+      <div style="background:#0d090d;border:1px dashed #CC88FF33;border-radius:2px;padding:5px 7px;font-size:8px;color:#888">
+        <span style="color:#CC88FF">⚠</span> Donor identity not disclosed. Deployed <span style="color:#FF8000">$294M+</span> across 8 Senate races. Connected org unknown.
+      </div>
+    </div>
+    <div class="panel-timeline">
+      <div style="font-size:6.5px;letter-spacing:1px;color:#444;margin-bottom:5px">DISBURSEMENTS ONLY (receipts redacted)</div>
+      <div class="tl-row"><div class="tl-date">Sep 4</div><div class="tl-dot" style="background:#CC88FF"></div><div class="tl-text">→ OH Senate race · <span class="tl-amount">$63M</span></div></div>
+      <div class="tl-row"><div class="tl-date">Sep 18</div><div class="tl-dot" style="background:#CC88FF"></div><div class="tl-text">→ PA Senate race · <span class="tl-amount">$52M</span></div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Architecture C -->
+<div class="section-label">Architecture C — Approach &amp; Component Map</div>
+
+<div class="arch-grid">
+
+  <div class="arch-box">
+    <div class="arch-title">NEW SERVER COMPONENTS</div>
+    <div class="arch-item">
+      <div class="arch-tag">NEW ROUTE</div>
+      <div class="arch-desc"><b>GET /api/galaxy/node/:id?cycle</b><br/>Returns 1-hop subgraph (edges + nodes) + dated transactions (contributions + committee_transfers) for any node ID. Single endpoint works for all 500 nodes.</div>
+    </div>
+    <div class="arch-item">
+      <div class="arch-tag">NEW ROUTE</div>
+      <div class="arch-desc"><b>GET /api/congress/member/:bioguideId</b><br/>One-liner wrapping existing <code>getMemberDetails()</code> in congressGov.js. Returns photo URL (depiction.imageUrl), chamber, party, state, committees.</div>
+    </div>
+    <div class="arch-item">
+      <div class="arch-tag gray">EXISTING</div>
+      <div class="arch-desc"><b>GET /api/galaxy/patterns/:id</b><br/>Already exists. Returns pattern narrative, explanation, node_ids, evidence edges. No changes needed.</div>
+    </div>
+  </div>
+
+  <div class="arch-box">
+    <div class="arch-title">NEW FRONTEND COMPONENTS</div>
+    <div class="arch-item">
+      <div class="arch-tag blue">NEW</div>
+      <div class="arch-desc"><b>MiniGalaxy.jsx</b><br/>Self-contained D3 force simulation. Accepts <code>nodes[]</code> + <code>edges[]</code> from the node endpoint. Renders at ~220px height. Zoom + drag. Reuses galaxyBuild / galaxyForces.</div>
+    </div>
+    <div class="arch-item">
+      <div class="arch-tag blue">NEW</div>
+      <div class="arch-desc"><b>ContributionTimeline.jsx</b><br/>Sorted dated event list. Accepts mixed <code>receipts[]</code> + <code>transfers[]</code>. Amber dot = individual receipt, blue dot = committee transfer.</div>
+    </div>
+    <div class="arch-item">
+      <div class="arch-tag blue">NEW</div>
+      <div class="arch-desc"><b>PatternNarrative.jsx</b><br/>AI text block + severity badge + "also appears in" chip list. Only renders when the clicked node appears in <code>funding_flow_patterns.node_ids</code>.</div>
+    </div>
+    <div class="arch-item">
+      <div class="arch-tag blue">NEW</div>
+      <div class="arch-desc"><b>PoliticianProfile.jsx</b><br/>Photo + congress.gov metadata block. Renders only when <code>node.kind === 'candidate'</code> and <code>node.bioguide_id</code> is non-null. Fetches in parallel with node endpoint call.</div>
+    </div>
+    <div class="arch-item">
+      <div class="arch-tag green">REFACTOR</div>
+      <div class="arch-desc"><b>GalaxyDrawer.jsx</b><br/>Refactored to wire the four components above. Calls <code>/api/galaxy/node/:id</code> on any click. Renders MiniGalaxy + [PatternNarrative if flare] + [PoliticianProfile if candidate] + ContributionTimeline.</div>
+    </div>
+  </div>
+
+  <!-- Data flow -->
+  <div class="arch-box" style="grid-column:1/-1">
+    <div class="arch-title">DATA FLOW — USER CLICKS ANY NODE</div>
+    <div class="flow-row">
+      <div class="flow-box" style="background:#0f0b09">🖱 Click any node<br/><span style="font-size:7px;color:#555">node.id, node.kind, node.bioguide_id</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">Parallel fetch<br/><span style="font-size:7px;color:#555">① /api/galaxy/node/:id (always)<br/>② /api/congress/member/:bioguide_id (candidate only)</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">GalaxyDrawer renders<br/><span style="font-size:7px;color:#555">MiniGalaxy ← subgraph<br/>PatternNarrative ← if flare<br/>PoliticianProfile ← if candidate<br/>Timeline ← receipts + transfers</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#090f09">✓ Panel shown<br/><span style="font-size:7px;color:#44CC88">all 500 nodes supported</span></div>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:12px;font-size:8px;color:#555">
+      <div>🟠 Amber dot = individual FEC Schedule A receipt (contributions.date)</div>
+      <div>🔵 Blue dot = PAC-to-PAC transfer (committee_transfers.transfer_date)</div>
+      <div>⚡ Flare glow = node appears in funding_flow_patterns</div>
+      <div>📷 Photo = bioguide_id → congress.gov depiction.imageUrl</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

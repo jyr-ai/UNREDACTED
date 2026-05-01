@@ -353,7 +353,7 @@ function DonorIntel() {
     <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>DONOR INTELLIGENCE · FEC · OPENSECRETS</div>
-        <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Money Flow Galaxy: Who is influenceing American politics?</h2>
+        <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Money Flow Galaxy: Who is Influencing American Politics?</h2>
         <p style={{ fontFamily:SF, fontSize:14, fontStyle:"italic", color:t.mid, lineHeight:1.7, maxWidth:640 }}>A systematic analysis of PAC contributions, individual donations and independent expenditures across the 2024–26 federal election cycle.</p>
       </div>
 
