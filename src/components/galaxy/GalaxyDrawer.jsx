@@ -231,6 +231,7 @@ function ConnectedTimeline({ nodeId, cycle, t }) {
 // ── Main drawer shell ─────────────────────────────────────────────────────────
 export default function GalaxyDrawer({ payload, onClose, surface = 'dark', cycle = '2024' }) {
   const t = galaxyTokens[surface] || galaxyTokens.dark
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose?.() }
@@ -242,31 +243,52 @@ export default function GalaxyDrawer({ payload, onClose, surface = 'dark', cycle
 
   return (
     <>
-      {/* Backdrop — fixed to full viewport */}
-      <div onClick={onClose} style={{
-        position: 'fixed', inset: 0,
-        background: t.drawerBackdrop, backdropFilter: 'blur(4px)',
-        zIndex: 1000,
-      }} />
+      {/* Backdrop — hidden when expanded (panel IS the full screen) */}
+      {!expanded && (
+        <div onClick={onClose} style={{
+          position: 'fixed', inset: 0,
+          background: t.drawerBackdrop, backdropFilter: 'blur(4px)',
+          zIndex: 1000,
+        }} />
+      )}
 
-      {/* Panel — fixed full viewport height, right edge */}
+      {/* Panel */}
       <aside style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0,
-        width: 420, background: t.surface, borderLeft: `1px solid ${t.panelBorder}`,
-        zIndex: 1001, display: 'flex', flexDirection: 'column',
-        overflowY: 'auto',
+        position: 'fixed',
+        top: 0, bottom: 0,
+        right: 0,
+        left: expanded ? 0 : 'auto',
+        width: expanded ? '100vw' : 420,
+        background: t.surface,
+        borderLeft: expanded ? 'none' : `1px solid ${t.panelBorder}`,
+        zIndex: 1001,
+        display: 'flex',
+        flexDirection: 'column',
+        overflowY: expanded ? 'hidden' : 'auto',
       }}>
         {/* Close button */}
         <button onClick={onClose} style={{
           position: 'absolute', top: 6, right: 12, background: 'none', border: 'none',
-          color: t.textMuted, cursor: 'pointer', fontSize: 16, zIndex: 1, lineHeight: 1,
+          color: t.textMuted, cursor: 'pointer', fontSize: 16, zIndex: 2, lineHeight: 1,
         }}>✕</button>
 
+        {/* Expand / collapse button — sits left of the X */}
+        <button
+          onClick={() => setExpanded(e => !e)}
+          title={expanded ? 'Collapse panel' : 'Expand to full page'}
+          style={{
+            position: 'absolute', top: 6, right: 36, background: 'none', border: 'none',
+            color: t.textMuted, cursor: 'pointer', fontSize: 14, zIndex: 2, lineHeight: 1,
+          }}
+        >
+          {expanded ? '⤡' : '⤢'}
+        </button>
+
         {payload.kind === 'sector'
-          ? <SectorView  payload={payload} cycle={cycle} t={t} surface={surface} />
+          ? <SectorView  payload={payload} cycle={cycle} t={t} surface={surface} expanded={expanded} />
           : payload.kind === 'pattern'
-          ? <PatternView payload={payload} cycle={cycle} t={t} surface={surface} />
-          : <DetailView  payload={payload} cycle={cycle} t={t} surface={surface} />
+          ? <PatternView payload={payload} cycle={cycle} t={t} surface={surface} expanded={expanded} />
+          : <DetailView  payload={payload} cycle={cycle} t={t} surface={surface} expanded={expanded} />
         }
       </aside>
     </>
