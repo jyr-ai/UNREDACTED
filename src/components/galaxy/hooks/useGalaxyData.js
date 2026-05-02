@@ -5,7 +5,7 @@ import { galaxy } from '../../../api/client.js'
  * Fetches the correct galaxy envelope for (mode, cycle, scope).
  * Cancellation-safe; returns { data, loading, error, refetch }.
  */
-export default function useGalaxyData({ mode, cycle, sector, employerId, rawIds }) {
+export default function useGalaxyData({ mode, cycle, sector, employerId, rawIds, corpId }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
@@ -18,7 +18,8 @@ export default function useGalaxyData({ mode, cycle, sector, employerId, rawIds 
       let res
       if (mode === 'universe')      res = await galaxy.universe({ cycle })
       else if (mode === 'sector')   res = await galaxy.sector(sector, { cycle })
-      else if (mode === 'employer') res = await galaxy.employer(employerId, { cycle, rawIds })
+      else if (mode === 'employer')     res = await galaxy.employer(employerId, { cycle, rawIds })
+      else if (mode === 'corporation')  res = await galaxy.corporation(corpId, { cycle })
       else throw new Error(`unknown galaxy mode: ${mode}`)
       if (id !== reqId.current) return                 // stale response
       setData(res || null)
@@ -31,12 +32,12 @@ export default function useGalaxyData({ mode, cycle, sector, employerId, rawIds 
   }
 
   useEffect(() => {
-    if (mode === 'sector'   && !sector) return
-    if (mode === 'employer' && !employerId) return
+    if (mode === 'sector'      && !sector)    return
+    if (mode === 'employer'    && !employerId) return
+    if (mode === 'corporation' && !corpId)     return
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, cycle, sector, employerId, rawIds?.join('|')])
+  }, [mode, cycle, sector, employerId, rawIds?.join('|'), corpId])
 
   return { data, loading, error, refetch: load }
 }

@@ -246,6 +246,10 @@ export const galaxy = {
     const qs = new URLSearchParams(params).toString()
     return request(`/api/galaxy/employer/${encodeURIComponent(employerId)}${qs ? '?' + qs : ''}`)
   },
+  corporation: (corpId, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/corporation/${encodeURIComponent(corpId)}${qs ? '?' + qs : ''}`)
+  },
   pattern: (id) => request(`/api/galaxy/patterns/${encodeURIComponent(id)}`),
   node: (nodeId, { cycle } = {}) => {
     const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()

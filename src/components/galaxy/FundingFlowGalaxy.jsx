@@ -15,6 +15,7 @@ export default function FundingFlowGalaxy({
   sector = null,
   employerId = null,
   rawIds = null,
+  corpId = null,
   height = 560,
   onNodeSelect
 }) {
@@ -37,7 +38,7 @@ export default function FundingFlowGalaxy({
     return () => ro.disconnect()
   }, [])
 
-  const { data, loading, error } = useGalaxyData({ mode, cycle, sector, employerId, rawIds })
+  const { data, loading, error } = useGalaxyData({ mode, cycle, sector, employerId, rawIds, corpId })
   const [drawerPayload, setDrawer] = useState(null)
 
   const rightMeta = mode === 'universe'
