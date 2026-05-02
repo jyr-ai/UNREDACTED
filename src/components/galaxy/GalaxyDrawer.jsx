@@ -51,7 +51,7 @@ function fmt$(v) {
 }
 
 // ── Universal node detail view ────────────────────────────────────────────────
-function DetailView({ payload, cycle, t, surface }) {
+function DetailView({ payload, cycle, t, surface, expanded = false }) {
   const node = payload.node
   const [detail, setDetail] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -71,6 +71,78 @@ function DetailView({ payload, cycle, t, surface }) {
                   : node.kind === 'dark_money' ? 'DARK MONEY'
                   : 'COMMITTEE'
 
+  if (expanded) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Band
+          label={`${bandLabel}${detail?.node?.sector ? ` · ${detail.node.sector}` : ''}`}
+          right={cycle}
+          t={t}
+        />
+        <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+          {/* Left column — mini galaxy */}
+          <div style={{
+            width: '40%', borderRight: `1px solid ${t.panelBorder}`,
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <MiniGalaxy
+              nodes={detail?.nodes || [node]}
+              edges={detail?.edges || []}
+              height={600}
+              surface={surface}
+              focusNodeId={node.id}
+            />
+          </div>
+
+          {/* Right column — metadata + timeline, independently scrollable */}
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 14px', borderBottom: `1px solid ${t.panelBorder}` }}>
+              {node.kind !== 'politician' && (
+                <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 6, fontFamily: 'Roboto, sans-serif', lineHeight: 1.3 }}>
+                  {detail?.node?.label || node.label}
+                </div>
+              )}
+              {node.kind === 'politician' && detail?.node && (
+                <PoliticianProfile node={detail.node} />
+              )}
+              {node.kind !== 'politician' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+                  <KPI label="Total $" value={fmt$(detail?.node?.amount ?? node.amount)} t={t} />
+                  <KPI label="Connections" value={String(detail?.node?.degree ?? node.degree ?? 0)} t={t} />
+                </div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+                {detail?.node?.is_super_pac && <Chip label="SUPER PAC" color="#4A7FFF" t={t} />}
+                {detail?.node?.is_501c4    && <Chip label="501(c)(4)" color="#CC88FF" t={t} />}
+                {detail?.node?.sector      && <Chip label={detail.node.sector} color="#FF8000" t={t} />}
+              </div>
+              {node.kind === 'employer' && (
+                <SourceFooter
+                  s="Self-reported employer field on FEC Schedule A · Individual Contributions"
+                  href="https://www.fec.gov/data/receipts/individual-contributions/"
+                />
+              )}
+              {(node.kind === 'trad_pac' || node.kind === 'super_pac' || node.kind === 'dark_money') && (
+                <SourceFooter
+                  s="FEC Committee Database"
+                  href={`https://www.fec.gov/data/committee/${node.id.replace('cmt:', '')}/`}
+                />
+              )}
+            </div>
+            {detail?.patterns?.length > 0 && (
+              <PatternNarrative patterns={detail.patterns} />
+            )}
+            {loading
+              ? <div style={{ padding: '16px 14px', fontSize: 9, color: t.textMuted, fontFamily: FONT_MONO }}>Loading transactions…</div>
+              : <ContributionTimeline events={detail?.timeline || []} />
+            }
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Collapsed (default side-panel) layout — unchanged from current code
   return (
     <>
       <Band
@@ -78,8 +150,6 @@ function DetailView({ payload, cycle, t, surface }) {
         right={cycle}
         t={t}
       />
-
-      {/* Section 1: Mini galaxy */}
       <MiniGalaxy
         nodes={detail?.nodes || [node]}
         edges={detail?.edges || []}
@@ -87,36 +157,26 @@ function DetailView({ payload, cycle, t, surface }) {
         surface={surface}
         focusNodeId={node.id}
       />
-
-      {/* Section 2: Metadata */}
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${t.panelBorder}` }}>
         {node.kind !== 'politician' && (
           <div style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, marginBottom: 6, fontFamily: 'Roboto, sans-serif', lineHeight: 1.3 }}>
             {detail?.node?.label || node.label}
           </div>
         )}
-
-        {/* Politician photo block */}
         {node.kind === 'politician' && detail?.node && (
           <PoliticianProfile node={detail.node} />
         )}
-
-        {/* KPIs for non-politician nodes */}
         {node.kind !== 'politician' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
             <KPI label="Total $" value={fmt$(detail?.node?.amount ?? node.amount)} t={t} />
             <KPI label="Connections" value={String(detail?.node?.degree ?? node.degree ?? 0)} t={t} />
           </div>
         )}
-
-        {/* Badges */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
           {detail?.node?.is_super_pac && <Chip label="SUPER PAC" color="#4A7FFF" t={t} />}
           {detail?.node?.is_501c4    && <Chip label="501(c)(4)" color="#CC88FF" t={t} />}
           {detail?.node?.sector      && <Chip label={detail.node.sector} color="#FF8000" t={t} />}
         </div>
-
-        {/* Source attribution */}
         {node.kind === 'employer' && (
           <SourceFooter
             s="Self-reported employer field on FEC Schedule A · Individual Contributions"
@@ -129,15 +189,10 @@ function DetailView({ payload, cycle, t, surface }) {
             href={`https://www.fec.gov/data/committee/${node.id.replace('cmt:', '')}/`}
           />
         )}
-        {/* Politician SourceFooter is rendered inside PoliticianProfile — skip it here */}
       </div>
-
-      {/* Section 3: Pattern narrative (only if this node has patterns) */}
       {detail?.patterns?.length > 0 && (
         <PatternNarrative patterns={detail.patterns} />
       )}
-
-      {/* Section 4: Timeline */}
       {loading
         ? <div style={{ padding: '16px 14px', fontSize: 9, color: t.textMuted, fontFamily: FONT_MONO }}>Loading transactions…</div>
         : <ContributionTimeline events={detail?.timeline || []} />
@@ -147,7 +202,7 @@ function DetailView({ payload, cycle, t, surface }) {
 }
 
 // ── Sector halo click view ────────────────────────────────────────────────────
-function SectorView({ payload, cycle, t, surface }) {
+function SectorView({ payload, cycle, t, surface, expanded = false }) {
   const sector = payload.sector
   const [data, setData] = useState(null)
 
@@ -184,7 +239,7 @@ function SectorView({ payload, cycle, t, surface }) {
 }
 
 // ── Pattern flare click view ──────────────────────────────────────────────────
-function PatternView({ payload, cycle, t, surface }) {
+function PatternView({ payload, cycle, t, surface, expanded = false }) {
   const p = payload.pattern
   const [detail, setDetail] = useState(null)
 
