@@ -136,23 +136,31 @@ export default function CorporatePACFlow() {
                   layout="vertical"
                   margin={{ left: 8, right: 60, top: 4, bottom: 4 }}
                   barCategoryGap="18%"
-                  onClick={d => d?.activePayload && setSelected(corps.find(c => c.corp_id === d.activePayload[0]?.payload?.corp_id) || null)}
                 >
                   <CartesianGrid horizontal={false} stroke={t.grid} />
                   <XAxis type="number" tick={{ fontFamily: MF, fontSize: 9, fill: t.mid }} tickFormatter={fmt$} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="label" tick={{ fontFamily: MF, fontSize: 9, fill: t.mid }} width={130} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip t={t} />} cursor={{ fill: `${ORANGE}10` }} />
-                  <Bar dataKey="pac_total"       name="Connected PAC" stackId="a" barSize={14} fill={PAC_COLOR}>
+                  <Bar dataKey="pac_total"       name="Connected PAC" stackId="a" barSize={14} fill={PAC_COLOR}
+                    style={{ cursor: 'pointer' }}
+                    onClick={data => setSelected(data)}
+                  >
                     {chartData.map((entry, i) => (
                       <Cell key={i} fill={PAC_COLOR} fillOpacity={selected?.corp_id === entry.corp_id ? 1 : 0.75} />
                     ))}
                   </Bar>
-                  <Bar dataKey="super_pac_total" name="Super PAC"     stackId="a" barSize={14} fill={SUPER_PAC_COLOR}>
+                  <Bar dataKey="super_pac_total" name="Super PAC"     stackId="a" barSize={14} fill={SUPER_PAC_COLOR}
+                    style={{ cursor: 'pointer' }}
+                    onClick={data => setSelected(data)}
+                  >
                     {chartData.map((entry, i) => (
                       <Cell key={i} fill={SUPER_PAC_COLOR} fillOpacity={selected?.corp_id === entry.corp_id ? 1 : 0.75} />
                     ))}
                   </Bar>
-                  <Bar dataKey="c4_total"        name="501(c)4"       stackId="a" barSize={14} fill={C4_COLOR} radius={[0, 3, 3, 0]}>
+                  <Bar dataKey="c4_total"        name="501(c)4"       stackId="a" barSize={14} fill={C4_COLOR} radius={[0, 3, 3, 0]}
+                    style={{ cursor: 'pointer' }}
+                    onClick={data => setSelected(data)}
+                  >
                     {chartData.map((entry, i) => (
                       <Cell key={i} fill={C4_COLOR} fillOpacity={selected?.corp_id === entry.corp_id ? 1 : 0.75} />
                     ))}

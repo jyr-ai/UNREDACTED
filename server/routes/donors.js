@@ -295,18 +295,24 @@ router.get('/cash-flood', async (req, res) => {
 
 router.get('/employers', async (req, res) => {
   try {
-    const { cycle, minAmount, limit, sector } = req.query
+    const { cycle, minAmount, limit, sector, search } = req.query
     const requestedLimit = parseInt(limit) || 100
-    // Fetch more rows when sector filter is active so post-filter has enough coverage
-    const fetchLimit = sector ? Math.max(requestedLimit * 5, 200) : requestedLimit
+    const isSearching = !!(search?.trim())
+    // When searching all sectors, fetch more rows so name filter has full coverage
+    const fetchLimit = isSearching ? 2000 : sector ? Math.max(requestedLimit * 5, 200) : requestedLimit
     const rows = await sbDonors.getTopEmployers({
       cycle,
       minAmount: parseInt(minAmount) || 0,
       limit:     fetchLimit,
     })
-    // Apply sector classification, optional sector filter, then re-limit
+    // Apply sector classification; search overrides sector filter
     let results = rows.map(r => ({ ...r, sector: classifySector(r.employer) }))
-    if (sector) results = results.filter(r => r.sector === sector)
+    if (isSearching) {
+      const q = search.trim().toLowerCase()
+      results = results.filter(r => r.employer?.toLowerCase().includes(q))
+    } else if (sector) {
+      results = results.filter(r => r.sector === sector)
+    }
     results = results.slice(0, requestedLimit)
     res.json({ success: true, source: 'supabase', data: { results, pagination: { count: results.length, limit: requestedLimit, offset: 0 } } })
   } catch (e) {

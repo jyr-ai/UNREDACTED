@@ -19,17 +19,53 @@ function cycleRange(cycle) {
 export async function getNodeDetail({ nodeId, cycle = '2024' }) {
   const db = ensure()
   const { kind, rawId } = parseNodeId(nodeId)
+  const { start, end, year } = cycleRange(cycle)
 
   // ── 1. 1-hop subgraph ────────────────────────────────────────────────────
-  const { data: edgeRows, error: edgeErr } = await db
-    .from('money_flow_edges')
-    .select('source_type,source_id,source_label,target_type,target_id,target_label,amount,txn_count,source_tier,target_tier')
-    .or(`source_id.eq.${rawId},target_id.eq.${rawId}`)
-    .eq('cycle', parseInt(cycle))
-    .order('amount', { ascending: false })
-    .limit(50)
-  if (edgeErr) throw edgeErr
-  const edges = edgeRows || []
+  // Employer nodes: query contributions directly — MV only captures top flows
+  // and may have just 1 edge even if the employer donated to many committees.
+  // Cache receipts here so the timeline step can reuse them without a second query.
+  let edges = []
+  let empReceipts = null
+
+  if (kind === 'emp') {
+    const { data: contribs, error: empSubErr } = await db
+      .from('contributions')
+      .select('committee_id,amount,date,contributor_employer')
+      .ilike('contributor_employer', rawId)
+      .gte('date', start).lte('date', end)
+      .gt('amount', 0)
+      .order('date', { ascending: true }).limit(50)
+    if (empSubErr) throw empSubErr
+    empReceipts = contribs || []
+
+    // Aggregate by committee to build one edge per destination
+    const cmtAmounts = new Map()
+    for (const r of empReceipts) {
+      if (!r.committee_id) continue
+      const cur = cmtAmounts.get(r.committee_id) || { amount: 0, txn_count: 0 }
+      cur.amount    += Number(r.amount) || 0
+      cur.txn_count += 1
+      cmtAmounts.set(r.committee_id, cur)
+    }
+    edges = [...cmtAmounts.entries()].map(([cmtId, { amount, txn_count }]) => ({
+      source_type: 'employer', source_id: rawId, source_label: rawId,
+      source_tier: 1,
+      target_type: 'committee', target_id: cmtId, target_label: null,
+      target_tier: 2,
+      amount, txn_count,
+    }))
+  } else {
+    const { data: edgeRows, error: edgeErr } = await db
+      .from('money_flow_edges')
+      .select('source_type,source_id,source_label,target_type,target_id,target_label,amount,txn_count,source_tier,target_tier')
+      .or(`source_id.eq.${rawId},target_id.eq.${rawId}`)
+      .eq('cycle', parseInt(cycle))
+      .order('amount', { ascending: false })
+      .limit(50)
+    if (edgeErr) throw edgeErr
+    edges = edgeRows || []
+  }
 
   // ── 2. Collect IDs for label joins ───────────────────────────────────────
   const committeeIds = new Set()
@@ -106,18 +142,23 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
   const focalNode = nodesMap.get(nodeId)
 
   // ── 5. Timeline ──────────────────────────────────────────────────────────
-  const { start, end, year } = cycleRange(cycle)
+  // start/end/year come from cycleRange at top of function (step 1)
   const timeline = []
 
   if (kind === 'emp') {
-    const { data: receipts, error: empErr } = await db
-      .from('contributions')
-      .select('contributor_employer,committee_id,amount,date')
-      .ilike('contributor_employer', rawId)
-      .gte('date', start).lte('date', end)
-      .order('date', { ascending: true }).limit(50)
-    if (empErr) throw empErr
-    for (const r of receipts || []) {
+    // Reuse empReceipts fetched in step 1 — no second query needed
+    // Second-pass: resolve any committee IDs not already in cmtMap (built from step 1 edges)
+    const empUnresolved = new Set()
+    for (const r of empReceipts) {
+      if (r.committee_id && !cmtMap.has(r.committee_id)) empUnresolved.add(r.committee_id)
+    }
+    if (empUnresolved.size) {
+      const { data: extraCmts } = await db
+        .from('pac_committees').select('committee_id,name,is_super_pac,is_501c4')
+        .in('committee_id', [...empUnresolved])
+      for (const c of extraCmts || []) cmtMap.set(c.committee_id, c)
+    }
+    for (const r of empReceipts) {
       timeline.push({
         date: r.date, kind: 'receipt',
         from_label: r.contributor_employer || rawId,
@@ -209,7 +250,19 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
     }
   }
 
-  timeline.sort((a, b) => new Date(a.date) - new Date(b.date))
+  // Aggregate: collapse rows with same date + from_id + to_id
+  const aggMap = new Map()
+  for (const entry of timeline) {
+    const key = `${entry.date}|${entry.from_id}|${entry.to_id}`
+    const existing = aggMap.get(key)
+    if (existing) {
+      existing.amount += entry.amount
+    } else {
+      aggMap.set(key, { ...entry })
+    }
+  }
+  const dedupedTimeline = [...aggMap.values()]
+  dedupedTimeline.sort((a, b) => new Date(a.date) - new Date(b.date))
 
   // ── 6. Patterns ──────────────────────────────────────────────────────────
   const { data: patternRows, error: patErr } = await db
@@ -224,7 +277,7 @@ export async function getNodeDetail({ nodeId, cycle = '2024' }) {
     node:     focalNode,
     nodes:    [...nodesMap.values()],
     edges:    builtEdges,
-    timeline,
+    timeline: dedupedTimeline,
     patterns: patternRows || [],
   }
 }

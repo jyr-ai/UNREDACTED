@@ -4,14 +4,23 @@
 
 const SUFFIX_RE = /\b(llc|l\.l\.c|inc|incorporated|corp|corporation|co|ltd|limited|lp|l\.p|llp|pllc|pa|pc|na|n\.a|group|holdings|holding|international|intl)\b\.?/gi
 
+// Known FEC free-text patterns where donors write the same thing many ways.
+// Keys are post-normalization strings; values are the canonical key to use instead.
+const CANONICAL_OVERRIDES = {
+  'self':                    'self employed',
+  'self employed candidate': 'self employed',
+  'self-employed':           'self employed', // hyphen not yet stripped at override time
+}
+
 export function normalizeEmployer(name) {
   if (!name || typeof name !== 'string') return ''
-  return name
+  const normalized = name
     .toLowerCase()
-    .replace(/[.,&]/g, ' ')        // punctuation → space
+    .replace(/[.,&\-]/g, ' ')      // punctuation + hyphens → space
     .replace(SUFFIX_RE, ' ')       // strip legal suffixes
     .replace(/\s+/g, ' ')          // collapse whitespace
     .trim()
+  return CANONICAL_OVERRIDES[normalized] ?? normalized
 }
 
 /**

@@ -44,25 +44,24 @@ function TierBadge({ tier }) {
 }
 
 function ScoreBadge({ score }) {
-  if (score == null) return <span style={{ fontFamily: MF, fontSize: 10, color: '#555' }}>—</span>
+  if (score == null) return <span style={{ fontFamily: MF, fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>—</span>
   const color = score >= 70 ? '#4A7FFF' : score >= 50 ? '#FFB84D' : score >= 35 ? ORANGE : '#E63946'
   return <span style={{ fontFamily: MF, fontSize: 11, color, fontWeight: 700 }}>{score}</span>
 }
 
 function EmptyState({ filter, theme }) {
-  const T = theme
   return (
     <div style={{
       textAlign:  'center',
       padding:    '48px 24px',
-      color:      T.mid,
+      color:      '#FFFFFF',
       fontFamily: MF,
     }}>
       <div style={{ fontSize: 32, marginBottom: 12 }}>◎</div>
-      <div style={{ fontSize: 12, marginBottom: 6, color: T.hi }}>
+      <div style={{ fontSize: 12, marginBottom: 6, color: '#FFFFFF' }}>
         No {filter !== 'all' ? filter : ''} items in watchlist
       </div>
-      <div style={{ fontSize: 10, color: T.low, maxWidth: 300, margin: '0 auto', lineHeight: 1.6 }}>
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', maxWidth: 300, margin: '0 auto', lineHeight: 1.6 }}>
         Add politicians and companies from the Accountability Index, Company Profile, or Donor Intelligence tabs.
       </div>
     </div>
@@ -81,10 +80,10 @@ function SignInPrompt({ onSignIn, theme }) {
       textAlign:      'center',
     }}>
       <div style={{ fontSize: 36, marginBottom: 16 }}>⚑</div>
-      <div style={{ fontFamily: SF, fontSize: 22, color: T.hi, marginBottom: 10 }}>
+      <div style={{ fontFamily: SF, fontSize: 22, color: '#FFFFFF', marginBottom: 10 }}>
         Your personal watchlist
       </div>
-      <p style={{ fontFamily: MF, fontSize: 11, color: T.mid, lineHeight: 1.75, maxWidth: 400, marginBottom: 28 }}>
+      <p style={{ fontFamily: MF, fontSize: 11, color: 'rgba(255,255,255,0.7)', lineHeight: 1.75, maxWidth: 400, marginBottom: 28 }}>
         Track politicians and companies, monitor their corruption scores over time,
         and get alerts when scores change significantly. Sign in to get started.
       </p>
@@ -95,12 +94,12 @@ function SignInPrompt({ onSignIn, theme }) {
           ['⟳', 'Live data from FEC, USASpending'],
         ].map(([icon, text]) => (
           <div key={text} style={{
-            background:  T.card,
-            border:      `1px solid ${T.border}`,
+            background:  'rgba(255,255,255,0.06)',
+            border:      '1px solid rgba(255,255,255,0.15)',
             padding:     '12px 16px',
             fontFamily:  MF,
             fontSize:    10,
-            color:       T.mid,
+            color:       'rgba(255,255,255,0.75)',
             display:     'flex',
             alignItems:  'center',
             gap:         8,

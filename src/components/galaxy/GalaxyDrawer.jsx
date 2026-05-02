@@ -3,6 +3,7 @@ import { galaxy } from '../../api/client.js'
 import { galaxyTokens } from './lib/galaxyTokens.js'
 import { FONT_MONO } from '../../theme/tokens.js'
 import MiniGalaxy from './MiniGalaxy.jsx'
+import GalaxyLegend from './GalaxyLegend.jsx'
 import ContributionTimeline from './ContributionTimeline.jsx'
 import PatternNarrative from './PatternNarrative.jsx'
 import PoliticianProfile from './PoliticianProfile.jsx'
@@ -12,11 +13,16 @@ function Band({ label, right, t }) {
   return (
     <div style={{
       background: t.band, color: t.bandText,
-      padding: '7px 36px 7px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      fontFamily: FONT_MONO, flexShrink: 0,
+      padding: '7px 36px 7px 14px', display: 'flex', alignItems: 'center',
+      fontFamily: FONT_MONO, flexShrink: 0, position: 'relative',
     }}>
       <span style={{ fontSize: 9, letterSpacing: 2, textTransform: 'uppercase', fontWeight: 500 }}>{label}</span>
-      {right && <span style={{ fontSize: 8, opacity: 0.55 }}>{right}</span>}
+      {right && (
+        <span style={{
+          position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+          fontSize: 8, opacity: 0.55,
+        }}>{right}</span>
+      )}
     </div>
   )
 }
@@ -80,19 +86,20 @@ function DetailView({ payload, cycle, t, surface, expanded = false }) {
           t={t}
         />
         <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-          {/* Left column — mini galaxy */}
+          {/* Left column — mini galaxy + legend */}
           <div style={{
-            width: '40%', borderRight: `1px solid ${t.panelBorder}`,
+            width: '50%', borderRight: `1px solid ${t.panelBorder}`,
             display: 'flex', flexDirection: 'column',
             overflowY: 'hidden',
           }}>
             <MiniGalaxy
               nodes={detail?.nodes || [node]}
               edges={detail?.edges || []}
-              height={600}
+              height={window.innerHeight - 74}
               surface={surface}
               focusNodeId={node.id}
             />
+            <GalaxyLegend surface={surface} />
           </div>
 
           {/* Right column — metadata + timeline, independently scrollable */}
@@ -334,11 +341,12 @@ export default function GalaxyDrawer({ payload, onClose, surface = 'dark', cycle
           onClick={() => setExpanded(e => !e)}
           title={expanded ? 'Collapse panel' : 'Expand to full page'}
           style={{
-            position: 'absolute', top: 6, right: 36, background: 'none', border: 'none',
-            color: t.textMuted, cursor: 'pointer', fontSize: 14, zIndex: 2, lineHeight: 1,
+            position: 'absolute', top: 7, right: 36, background: 'none', border: 'none',
+            color: t.textMuted, cursor: 'pointer', fontSize: 9, zIndex: 2, lineHeight: 1,
+            fontFamily: FONT_MONO, letterSpacing: 0.5,
           }}
         >
-          {expanded ? '⤡' : '⤢'}
+          {expanded ? 'Collapse' : 'Full View'}
         </button>
 
         {payload.kind === 'sector'
