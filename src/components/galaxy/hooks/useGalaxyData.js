@@ -35,7 +35,8 @@ export default function useGalaxyData({ mode, cycle, sector, employerId, rawIds 
     if (mode === 'employer' && !employerId) return
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, cycle, sector, employerId, rawIds])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, cycle, sector, employerId, rawIds?.join('|')])
 
   return { data, loading, error, refetch: load }
 }
