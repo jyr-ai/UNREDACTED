@@ -70,14 +70,22 @@ function SectorBadge({ sector }) {
 
 export default function EmployerLeaderboard() {
   const t = useTheme()
-  const [cycle, setCycle]       = useState('2026')
-  const [sector, setSector]     = useState('Finance')
-  const [minAmount, setMin]     = useState(200)
-  const [employers, setEmp]     = useState([])
-  const [loadingEmp, setLdEmp]  = useState(false)
-  const [selected, setSelected] = useState(null)   // { employer, employer_id, sector, total, txn_count }
+  const [cycle, setCycle]             = useState('2026')
+  const [sector, setSector]           = useState('Finance')
+  const [minAmount, setMin]           = useState(200)
+  const [employers, setEmp]           = useState([])
+  const [loadingEmp, setLdEmp]        = useState(false)
+  const [selected, setSelected]       = useState(null)
+  const [search, setSearch]           = useState('')
+  const [debouncedSearch, setDebSearch] = useState('')
 
-  // Load leaderboard
+  // Debounce search input — 300ms
+  useEffect(() => {
+    const t = setTimeout(() => setDebSearch(search.trim()), 300)
+    return () => clearTimeout(t)
+  }, [search])
+
+  // Load leaderboard — search overrides sector filter
   useEffect(() => {
     let cancelled = false
     setLdEmp(true)
@@ -86,13 +94,15 @@ export default function EmployerLeaderboard() {
       cycle,
       minAmount,
       limit: 100,
-      ...(sector !== 'All Sectors' && { sector }),
+      ...(debouncedSearch
+        ? { search: debouncedSearch }
+        : sector !== 'All Sectors' ? { sector } : {}),
     })
       .then(r => { if (!cancelled) setEmp(r?.data?.results || []) })
       .catch(() => { if (!cancelled) setEmp([]) })
       .finally(() => { if (!cancelled) setLdEmp(false) })
     return () => { cancelled = true }
-  }, [cycle, minAmount, sector])
+  }, [cycle, minAmount, sector, debouncedSearch])
 
   const selectStyle = {
     background: t.card, color: t.hi, border: `1px solid ${t.border}`,
@@ -114,9 +124,14 @@ export default function EmployerLeaderboard() {
                 {CYCLES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
-            <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <label style={{ fontFamily: MF, fontSize: 9, color: search ? t.low : t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
               SECTOR
-              <select value={sector} onChange={e => setSector(e.target.value)} style={selectStyle}>
+              <select
+                value={sector}
+                onChange={e => setSector(e.target.value)}
+                disabled={!!search}
+                style={{ ...selectStyle, opacity: search ? 0.4 : 1, cursor: search ? 'not-allowed' : 'default' }}
+              >
                 {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </label>
@@ -126,6 +141,39 @@ export default function EmployerLeaderboard() {
                 {MIN_OPTIONS.map(v => <option key={v} value={v}>{fmt$(v)}</option>)}
               </select>
             </label>
+            {/* Name search — overrides sector filter, searches all sectors */}
+            <label style={{ fontFamily: MF, fontSize: 9, color: t.mid, display: 'flex', alignItems: 'center', gap: 5 }}>
+              SEARCH
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="employer name…"
+                  style={{
+                    ...selectStyle,
+                    width: 130,
+                    outline: 'none',
+                    paddingRight: search ? 20 : 8,
+                  }}
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    style={{
+                      position: 'absolute', right: 4,
+                      background: 'none', border: 'none',
+                      color: t.low, cursor: 'pointer', fontSize: 10, lineHeight: 1, padding: 0,
+                    }}
+                  >✕</button>
+                )}
+              </div>
+            </label>
+            {search && (
+              <span style={{ fontFamily: MF, fontSize: 8, color: ORANGE }}>
+                ALL SECTORS
+              </span>
+            )}
             <span style={{ fontFamily: MF, fontSize: 8, color: t.low, marginLeft: 'auto' }}>
               Employer = self-reported field on FEC Schedule A (≥ ${minAmount.toLocaleString()} contributions only)
             </span>
@@ -189,6 +237,7 @@ export default function EmployerLeaderboard() {
         cycle={cycle}
         sector={selected ? null : (sector !== 'All Sectors' ? sector : null)}
         employerId={selected?.employer_id ?? null}
+        rawIds={selected?.raw_ids ?? null}
         height={560}
       />
 
