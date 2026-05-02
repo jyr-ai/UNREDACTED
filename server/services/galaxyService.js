@@ -309,16 +309,26 @@ export async function getEmployer({ cycle = '2024', employerId, rawIds, nodeCap 
   const dateStart = `${y - 1}-01-01`
   const dateEnd   = `${y}-12-31`
 
-  // Hop 1: query contributions directly using all raw ID variants
-  // rawIds covers all name variants of this canonical employer (e.g. ["GOOGLE", "Google Llc"])
+  // Hop 1: query contributions directly using all raw ID variants.
+  // Use ilike (case-insensitive) — money_flow_edges.source_id may be uppercased
+  // by the MV while contributions.contributor_employer preserves original case.
   const ids = (rawIds?.length > 0) ? rawIds : [employerId]
-  const { data: contribs, error: e1 } = await db
+  let contribQuery = db
     .from('contributions')
     .select('committee_id, amount')
-    .in('contributor_employer', ids)
     .gte('date', dateStart).lte('date', dateEnd)
     .gt('amount', 0)
     .limit(10000)
+  if (ids.length === 1) {
+    contribQuery = contribQuery.ilike('contributor_employer', ids[0])
+  } else {
+    // Multiple variants: OR filter with ilike per ID; quote values containing commas
+    const orFilter = ids
+      .map(id => `contributor_employer.ilike.${id.includes(',') ? `"${id}"` : id}`)
+      .join(',')
+    contribQuery = contribQuery.or(orFilter)
+  }
+  const { data: contribs, error: e1 } = await contribQuery
   if (e1) throw e1
 
   // Aggregate by committee in JS (PostgREST GROUP BY not available)
@@ -383,6 +393,82 @@ export async function getEmployer({ cycle = '2024', employerId, rawIds, nodeCap 
     envelope.meta.edge_count = envelope.edges.length
   }
   envelope.meta.scope = { mode: 'employer', employerId }
+  return envelope
+}
+
+/**
+ * Corporation mode — network around a corporation's PAC ecosystem.
+ * Fetches the corp's committee IDs from pac_committees, then walks
+ * their edges in money_flow_edges (outbound to politicians + inbound from employers).
+ */
+export async function getCorporation({ cycle = '2024', corpId, nodeCap = 60 } = {}) {
+  if (!corpId) throw new Error('corpId is required')
+  const db = ensure()
+
+  // Fetch all PAC committees connected to this corporation
+  const { data: cmts, error: ce } = await db
+    .from('pac_committees')
+    .select('committee_id, name, is_super_pac, is_501c4, connected_org_name')
+    .ilike('connected_org_name', corpId)
+    .limit(50)
+  if (ce) throw ce
+
+  const committeeIds = (cmts || []).map(c => c.committee_id)
+  if (!committeeIds.length) {
+    return buildEnvelope({ edges: [], committees: new Map(), politicians: new Map(), cycle })
+  }
+
+  // Pre-load committee metadata so buildEnvelope can classify node kinds
+  const cmtMap = new Map((cmts || []).map(c => [c.committee_id, c]))
+
+  // Outbound: committee → politician (PAC spending on candidates)
+  const { data: outEdges, error: oe } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', parseInt(cycle))
+    .in('source_id', committeeIds)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(150)
+  if (oe) throw oe
+
+  // Inbound: employer → committee (who funds the PAC)
+  const { data: inEdges, error: ie } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', parseInt(cycle))
+    .in('target_id', committeeIds)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(50)
+  if (ie) throw ie
+
+  const allEdges = [...(outEdges || []), ...(inEdges || [])]
+  const enriched = enrichEdgesWithSector(allEdges)
+
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(enriched)),
+    loadPoliticians(db, collectCandidateIds(enriched))
+  ])
+
+  // Merge pre-fetched committee metadata so kinds (super_pac, dark_money) resolve correctly
+  for (const [id, cmt] of cmtMap) {
+    if (!committees.has(id)) committees.set(id, cmt)
+  }
+
+  const envelope = buildEnvelope({ edges: enriched, committees, politicians, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    const topIds = new Set(
+      [...envelope.nodes].sort((a, b) => b.amount - a.amount).slice(0, nodeCap).map(n => n.id)
+    )
+    envelope.nodes = envelope.nodes.filter(n => topIds.has(n.id))
+    envelope.edges = envelope.edges.filter(e => topIds.has(e.source) && topIds.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+
+  envelope.meta.scope = { mode: 'corporation', corpId }
   return envelope
 }
 

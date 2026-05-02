@@ -9,6 +9,7 @@ import {
   getUniverse,
   getSector,
   getEmployer,
+  getCorporation,
   getPatternDetail
 } from '../services/galaxyService.js'
 import { getNodeDetail } from '../services/galaxyNodeService.js'
@@ -51,6 +52,12 @@ router.get('/employer/:employerId', wrap(req => getEmployer({
   employerId: decodeURIComponent(req.params.employerId),
   rawIds:     req.query.rawIds ? req.query.rawIds.split('|').filter(Boolean) : undefined,
   nodeCap:    Number(req.query.limit) || 40
+})))
+
+router.get('/corporation/:corpId', wrap(req => getCorporation({
+  cycle:   req.query.cycle || '2024',
+  corpId:  decodeURIComponent(req.params.corpId),
+  nodeCap: Number(req.query.limit) || 60
 })))
 
 router.get('/patterns/:id', wrap(req => getPatternDetail({ patternId: req.params.id })))
