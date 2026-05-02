@@ -267,11 +267,9 @@ export async function getTopEmployers({ cycle, minAmount = 0, limit = 100 } = {}
 
   const raw = [...byId.values()]
     .filter(r => r.total >= minAmount)
-    .sort((a, b) => b.total - a.total)
 
   return canonicalizeEmployers(raw)
     .sort((a, b) => b.total - a.total)
-    .slice(0, limit)
 }
 
 /**
