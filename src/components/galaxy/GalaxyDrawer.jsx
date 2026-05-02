@@ -232,6 +232,7 @@ function ConnectedTimeline({ nodeId, cycle, t }) {
 export default function GalaxyDrawer({ payload, onClose, surface = 'dark', cycle = '2024' }) {
   const t = galaxyTokens[surface] || galaxyTokens.dark
   const [expanded, setExpanded] = useState(false)
+  useEffect(() => { setExpanded(false) }, [payload])
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose?.() }
