@@ -451,7 +451,8 @@ export async function getCorporation({ cycle = '2024', corpId, nodeCap = 60 } = 
     loadPoliticians(db, collectCandidateIds(enriched))
   ])
 
-  // Merge pre-fetched committee metadata so kinds (super_pac, dark_money) resolve correctly
+  // cmtMap has all matched PACs; loadCommittees only fetched those appearing in edges.
+  // Merge to restore metadata for any PAC not in money_flow_edges (zero-flow PACs).
   for (const [id, cmt] of cmtMap) {
     if (!committees.has(id)) committees.set(id, cmt)
   }
