@@ -5,10 +5,11 @@
  * Orange accent (#FF8000) for all interactive elements.
  */
 import { useState, useEffect, useRef } from 'react'
+import { FONT_MONO } from '../theme/tokens.js';
 import { useAuth } from '../contexts/AuthContext.jsx'
 
 const ORANGE = '#FF8000'
-const MF     = "'Roboto', sans-serif"
+const MF     = FONT_MONO
 
 export default function Auth({ isOpen, onClose, theme }) {
   const { signIn, signUp, loading, error, clearError } = useAuth()

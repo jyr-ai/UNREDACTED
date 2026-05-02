@@ -6,13 +6,13 @@ import { RedactedBlock } from "../components/charts/index.js";
 import { SPEND, TREND } from "../data/spending.js";
 import { CORPS } from "../data/donors.js";
 
-const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize:9.5, fill:t.mid } });
+const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize: 11, fill:t.mid } });
 
 export default function Spending() {
   const t = useTheme();
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap: 14 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>SPENDING AUDIT · USASPENDING.GOV · FPDS-NG · FEC</div>
         <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Federal Spending &amp; Corporate Accountability</h2>
@@ -88,7 +88,7 @@ export default function Spending() {
               return (
                 <tr key={i} style={{ borderBottom:`1px solid ${t.border}`, background:i%2===0?t.card:t.tableAlt }}>
                   <td style={{ padding:"10px 14px", borderRight:`1px solid ${t.border}`, fontFamily:MF, fontSize:11, color:t.hi }}>{d.n}</td>
-                  <td style={{ padding:"10px 14px", fontFamily:MF, fontSize:9.5, color:t.mid, borderRight:`1px solid ${t.border}` }}>{d.s}</td>
+                  <td style={{ padding:"10px 14px", fontFamily:MF, fontSize: 11, color:t.mid, borderRight:`1px solid ${t.border}` }}>{d.s}</td>
                   <td style={{ padding:"10px 14px", fontFamily:MF, fontSize:11, color:ORANGE, fontWeight:700, textAlign:"right", borderRight:`1px solid ${t.border}` }}>${d.pac}m</td>
                   <td style={{ padding:"10px 14px", textAlign:"right", borderRight:`1px solid ${t.border}` }}>
                     {d.sc<40 ? <RedactedBlock w="72px"><span style={{ fontFamily:MF, fontSize:11, color:ORANGE, fontWeight:700 }}>${(d.con/1000).toFixed(1)}bn</span></RedactedBlock>

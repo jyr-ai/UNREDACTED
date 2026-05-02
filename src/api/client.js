@@ -38,16 +38,40 @@ export const spending = {
 
 // ── Donors / FEC ──────────────────────────────────────────────────────────────
 export const donors = {
-  committees:    (keyword, limit = 10) => request(`/api/donors/committees?keyword=${encodeURIComponent(keyword)}&limit=${limit}`),
-  candidates:    (name, office, state, limit = 10) => {
-    const qs = new URLSearchParams({ ...(name && { name }), ...(office && { office }), ...(state && { state }), limit }).toString()
+  committees:    ({ keyword, limit = 100, offset = 0, cycle, source } = {}) => {
+    const qs = new URLSearchParams({
+      ...(keyword && { keyword }),
+      limit, offset,
+      ...(cycle && { cycle }),
+      ...(source && { source }),
+    }).toString()
+    return request(`/api/donors/committees?${qs}`)
+  },
+  candidates:    ({ name, office, state, party, cycle, limit = 100, offset = 0, source, sortBy, sortDir } = {}) => {
+    const qs = new URLSearchParams({
+      ...(name && { name }), ...(office && { office }), ...(state && { state }),
+      ...(party && { party }), ...(cycle && { cycle }),
+      limit, offset,
+      ...(source && { source }),
+      ...(sortBy  && { sortBy }),
+      ...(sortDir && { sortDir }),
+    }).toString()
     return request(`/api/donors/candidates?${qs}`)
   },
-  totals:        (id)  => request(`/api/donors/candidates/${id}/totals`),
-  contributions: (id, limit = 50, minAmount = 1000) =>
-    request(`/api/donors/candidates/${id}/contributions?limit=${limit}&minAmount=${minAmount}`),
-  committeeContributions: (id, limit = 50) =>
-    request(`/api/donors/committees/${id}/contributions?limit=${limit}`),
+  totals:        (id, { source } = {}) =>
+    request(`/api/donors/candidates/${id}/totals${source ? `?source=${source}` : ''}`),
+  contributions: (id, { limit = 100, offset = 0, minAmount = 1000, source } = {}) => {
+    const qs = new URLSearchParams({ limit, offset, minAmount, ...(source && { source }) }).toString()
+    return request(`/api/donors/candidates/${id}/contributions?${qs}`)
+  },
+  candidateTopIndustries: (id, { cycle, limit = 15 } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }), limit }).toString()
+    return request(`/api/donors/candidates/${id}/top-industries?${qs}`)
+  },
+  committeeContributions: (id, { limit = 100, offset = 0, minAmount = 1000, source } = {}) => {
+    const qs = new URLSearchParams({ limit, offset, minAmount, ...(source && { source }) }).toString()
+    return request(`/api/donors/committees/${id}/contributions?${qs}`)
+  },
   byEmployer:    (employer, limit = 20) =>
     request(`/api/donors/donors/by-employer?employer=${encodeURIComponent(employer)}&limit=${limit}`),
   network:       (name, limit = 30) =>
@@ -56,6 +80,24 @@ export const donors = {
     request(`/api/donors/contributions/by-industry?keywords=${encodeURIComponent(keywords.join(','))}&limit=${limit}`),
   compare:       (ids) => request(`/api/donors/candidates/compare?ids=${ids.join(',')}`),
   pacSpending:   (id, limit = 20) => request(`/api/donors/committees/${id}/spending?limit=${limit}`),
+  employers: ({ cycle, minAmount, limit = 100, sector, search } = {}) => {
+    const qs = new URLSearchParams({
+      ...(cycle     && { cycle }),
+      ...(minAmount && { minAmount }),
+      ...(sector    && { sector }),
+      ...(search    && { search }),
+      limit,
+    }).toString()
+    return request(`/api/donors/employers?${qs}`)
+  },
+  corporatePACs: ({ cycle, limit = 20, minAmount = 0 } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }), limit, minAmount }).toString()
+    return request(`/api/donors/corporate-pacs?${qs}`)
+  },
+  corporatePACRecipients: (corpId, { cycle, limit = 15 } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }), limit }).toString()
+    return request(`/api/donors/corporate-pacs/${encodeURIComponent(corpId)}/recipients?${qs}`)
+  },
 }
 
 // ── Policy / Federal Register ─────────────────────────────────────────────────
@@ -71,6 +113,11 @@ export const congress = {
   bills:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/bills${qs ? `?${qs}` : ''}`) },
   votes:   (params = {}) => { const qs = new URLSearchParams(params).toString(); return request(`/api/congress/votes${qs ? `?${qs}` : ''}`) },
   members: (state)       => request(`/api/congress/members?state=${state}`),
+  member:       (bioguideId) => request(`/api/congress/member/${encodeURIComponent(bioguideId)}`),
+  memberSearch: (name, state) => {
+    const qs = new URLSearchParams({ name, ...(state && { state }) }).toString()
+    return request(`/api/congress/member-search?${qs}`)
+  },
 }
 
 // ── News Feed ─────────────────────────────────────────────────────────────────
@@ -145,7 +192,7 @@ export const stockAct = {
 
 // ── Dark Money ────────────────────────────────────────────────────────────────
 export const darkMoney = {
-  orgs:       (limit = 20) => request(`/api/darkmoney/orgs?limit=${limit}`),
+  orgs:       (limit = 20, cycle) => request(`/api/darkmoney/orgs?limit=${limit}${cycle ? `&cycle=${cycle}` : ''}`),
   trace:      (committeeId) => request(`/api/darkmoney/trace/${committeeId}`),
   exposure:   (candidateId) => request(`/api/darkmoney/candidate/${candidateId}/exposure`),
   infer:      (committeeId) => request(`/api/darkmoney/candidate/${committeeId}/infer`),
@@ -183,6 +230,33 @@ export const campaignWatch = {
   clearCache:        (prefix)    => request(`/api/campaign-watch/cache${prefix ? `?prefix=${prefix}` : ''}`, { method: 'DELETE' }),
 }
 
+// ── Galaxy ────────────────────────────────────────────────────────────────────
+export const galaxy = {
+  universe: ({ cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/universe${qs ? '?' + qs : ''}`)
+  },
+  sector: (sector, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/sector/${encodeURIComponent(sector)}${qs ? '?' + qs : ''}`)
+  },
+  employer: (employerId, { cycle, rawIds } = {}) => {
+    const params = { ...(cycle && { cycle }) }
+    if (rawIds?.length > 1) params.rawIds = rawIds.join('|')
+    const qs = new URLSearchParams(params).toString()
+    return request(`/api/galaxy/employer/${encodeURIComponent(employerId)}${qs ? '?' + qs : ''}`)
+  },
+  corporation: (corpId, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/corporation/${encodeURIComponent(corpId)}${qs ? '?' + qs : ''}`)
+  },
+  pattern: (id) => request(`/api/galaxy/patterns/${encodeURIComponent(id)}`),
+  node: (nodeId, { cycle } = {}) => {
+    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+    return request(`/api/galaxy/node/${encodeURIComponent(nodeId)}${qs ? '?' + qs : ''}`)
+  },
+}
+
 // ── Version ──────────────────────────────────────────────────────────────────
 export const version = {
   get: () => request('/api/version'),
@@ -206,12 +280,12 @@ export const getAccountabilityLeaderboard = (chamber, party, limit) => corruptio
 export const getCompanyProfile            = (name)   => companies.profile(name)
 export const getCompanyPoliticalFootprint = (name)   => companies.politicalFootprint(name)
 export const getCompanyConflicts          = (name)   => companies.conflicts(name)
-export const getDarkMoneyOrgs             = (limit)  => darkMoney.orgs(limit)
+export const getDarkMoneyOrgs             = (limit, cycle) => darkMoney.orgs(limit, cycle)
 export const getDarkMoneyFlowData         = (cycle)  => darkMoney.flow(cycle)
 export const getRecentStockTrades         = (chamber, limit) => stockAct.recent(chamber, limit)
 export const getStockActWatchlist         = ()       => stockAct.watchlist()
 
 export default {
   spending, donors, policy, congress, feed, agent, aiAgent, settings,
-  corruption, companies, stockAct, darkMoney, campaignWatch, health,
+  corruption, companies, stockAct, darkMoney, campaignWatch, galaxy, health,
 }

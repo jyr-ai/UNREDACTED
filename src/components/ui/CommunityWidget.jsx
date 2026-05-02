@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { FONT_MONO } from '../../theme/tokens.js';
 import { useLocalStorage } from '../../hooks/useLocalStorage.js';
 
 const DISCUSSION_URL = 'https://github.com/policybot-io/UNREDACTED/discussions';
@@ -57,7 +58,7 @@ export default function CommunityWidget({ theme }) {
           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
           maxWidth: 320,
           overflow: 'hidden',
-          fontFamily: "'Roboto', sans-serif",
+          fontFamily: FONT_MONO,
         }}
       >
         {/* Main pill */}

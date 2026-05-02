@@ -4,7 +4,7 @@
  *           error boundaries, D3 lazy loading, bundle splitting.
  */
 
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { useTheme } from '../theme/index.js';
 import { Card, Band, CardTitle } from '../components/ui/index.js';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -12,6 +12,7 @@ import LiveNewsPanel from '../components/LiveNewsPanel.jsx';
 import LiveFeedPanel from '../components/LiveFeedPanel.jsx';
 // WarStats inlined — conflict data fetched directly so the KPI cell shares
 // the exact same DOM structure, padding, border, and font tokens as every other column.
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 import { useMobile } from '../hooks/useMediaQuery.js';
 import { DATA_CENTERS } from '../data/geo';
 import { campaignWatch as cwApi, fetchContracts } from '../api/client';
@@ -27,7 +28,7 @@ const CorruptionDialog = lazy(() => import('../components/CorruptionDialog'));
 // Shared loading fallback used by Suspense wrappers
 const MapFallback = ({ t }) => (
   <div style={{ height: 520, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t?.mid || '#888' }}>
+    fontFamily: FONT_MONO, fontSize: 11, color: t?.mid || '#888' }}>
     Loading map…
   </div>
 );
@@ -142,11 +143,14 @@ const CampaignWatch = () => {
       .catch(() => {});
   }, []);
 
+  const contractsArr = Array.isArray(liveContracts?.data)
+    ? liveContracts.data
+    : (liveContracts?.data?.results || []);
   const totalSpend = liveContracts
-    ? liveContracts.data.reduce((s, c) => s + parseFloat(c['Award Amount'] || 0), 0)
+    ? contractsArr.reduce((s, c) => s + parseFloat(c['Award Amount'] || 0), 0)
     : null;
   const flaggedCount = liveContracts
-    ? liveContracts.data.filter(c => parseFloat(c['Award Amount'] || 0) >= 5e8).length
+    ? contractsArr.filter(c => parseFloat(c['Award Amount'] || 0) >= 5e8).length
     : null;
 
   const [selectedState,   setSelectedState]   = useState(null);
@@ -280,81 +284,196 @@ const CampaignWatch = () => {
     score < 50 ? t.accent :
     score < 70 ? t.ok : t.blue;
 
+  const [splitPct, setSplitPct] = useState(50);
+  const feedsContainerRef = useRef(null);
+  const isDragging = useRef(false);
+
+  const handleDividerMouseDown = useCallback((e) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e) => {
+      if (!isDragging.current || !feedsContainerRef.current) return;
+      const rect = feedsContainerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setSplitPct(Math.max(20, Math.min(80, pct)));
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* ── KPI row (10 columns: national debt + 4 map KPIs + 4 overview KPIs + WarStats) ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(10, 1fr)',
-        borderTop: `1px solid ${t.border}`,
-        borderBottom: `1px solid ${t.border}`,
-      }}>
-        {/* National Debt — always first */}
-        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>$39.0T</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US national debt</div>
-          <a href="https://www.pgpf.org/national-debt-clock/" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none' }}>pgpf.org · live clock</a>
-        </div>
-        {/* US-Iran War spending */}
-        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{conflictData ? fmtSpend(conflictData.spending?.value) : '…'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>US-Iran War spending</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>Strikes: {conflictData ? fmtNum(conflictData.strikes?.value) : '—'} · Deaths: {conflictData ? fmtNum(conflictData.deaths?.value) : '—'} · <a href="https://meta-trials.vercel.app/us-iran-conflict" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>tracker</a></div>
-        </div>
-        {[
-          { v: corruptionLoading ? '…' : fmtM(kpiStats.total),                                      d: '2026 total raised',           s: 'FEC · current cycle' },
-          { v: fmtK(totalSpend) || '$157bn',                                                          d: totalSpend != null ? 'Contract obligations' : 'Overspent vs. appropriations', s: liveContracts?.fiscalYear ? `FY${liveContracts.fiscalYear} · live` : 'FY2024 federal agencies' },
-          { v: flaggedCount != null ? String(flaggedCount) : '1,847',                                d: flaggedCount != null ? 'Contracts ≥ $500M flagged' : 'Contracts flagged anomalous', s: flaggedCount != null ? `From ${liveContracts?.data?.length} loaded` : 'Across 23 federal agencies' },
-          { v: '34',                                                                                   d: 'STOCK Act potential violations', s: 'Current congressional session' },
-          { v: '$18bn',                                                                                d: 'PAC donations to Congress',   s: '2023–24 election cycle' },
-        ].map((k, i) => (
-          <div key={i} style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-            <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{k.v}</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>{k.d}</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{k.s}</div>
+      {/* ── Intelligence Briefing: Signal Status + grouped KPI grid ── */}
+      <div>
+        <Band
+          label="INTELLIGENCE BRIEFING · 2026 CYCLE"
+          right={[
+            flaggedCount != null ? `${flaggedCount} contracts ≥$500M flagged` : null,
+            '$18bn PAC donations · 2023–24',
+            fearGreedData?.rating ? `Market: ${fearGreedLabel(fearGreedData.rating)}` : null,
+          ].filter(Boolean).join('  ·  ')}
+        />
+
+        {/* Group header labels */}
+        {!isMobile && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '4fr 3fr 3fr',
+            background: t.navBg,
+            borderLeft: `1px solid ${t.border}`,
+            borderRight: `1px solid ${t.border}`,
+            borderBottom: `1px solid ${t.border}`,
+          }}>
+            {['ECONOMIC INDICATORS', 'CAMPAIGN FINANCE', 'FEDERAL SPENDING'].map((label, i) => (
+              <div key={i} style={{
+                padding: '5px 14px',
+                fontFamily: FONT_MONO,
+                fontSize: 10,
+                color: t.mid,
+                letterSpacing: 2,
+                borderLeft: i > 0 ? `1px solid ${t.border}` : 'none',
+              }}>{label}</div>
+            ))}
           </div>
-        ))}
-        {/* Unemployment Rate */}
-        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{unemploymentData ? `${unemploymentData.rate}%` : '…'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>Unemployment · {unemploymentData?.period || '—'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{unemploymentData ? fmtChange(unemploymentData.change) : '—'} · <a href="https://www.bls.gov/cps/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>BLS</a></div>
-        </div>
+        )}
 
-        {/* Inflation (CPI) */}
-        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{inflationData ? `${inflationData.rate}%` : '…'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: t.hi, marginBottom: 2 }}>CPI inflation YoY · {inflationData?.period || '—'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{inflationData ? fmtChange(inflationData.change) : '—'} · <a href="https://www.bls.gov/cpi/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>BLS</a></div>
-        </div>
+        {/* KPI cells — grouped: 4 economic · 3 campaign · 3 spending */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(10, 1fr)',
+          borderLeft: `1px solid ${t.border}`,
+          borderRight: `1px solid ${t.border}`,
+          borderBottom: `1px solid ${t.border}`,
+        }}>
+          {/* ── ECONOMIC (4) ── */}
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>$39.0T</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>US national debt</div>
+            <a href="https://www.pgpf.org/national-debt-clock/" target="_blank" rel="noopener noreferrer" style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.blue, textDecoration: 'none' }}>pgpf.org · live clock</a>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{unemploymentData ? `${unemploymentData.rate}%` : '…'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>Unemployment · {unemploymentData?.period || '—'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>{unemploymentData ? fmtChange(unemploymentData.change) : '—'} · <a href="https://www.bls.gov/cps/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>BLS</a></div>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{inflationData ? `${inflationData.rate}%` : '…'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>CPI inflation YoY · {inflationData?.period || '—'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>{inflationData ? fmtChange(inflationData.change) : '—'} · <a href="https://www.bls.gov/cpi/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>BLS</a></div>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, lineHeight: 1, marginBottom: 4 }}>{fearGreedData ? `${fearGreedData.score}%` : '…'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, marginBottom: 3 }}>{fearGreedData ? `Market is in ${fearGreedLabel(fearGreedData.rating)}` : 'Market sentiment'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}><a href="https://www.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>CNN · Fear & Greed</a></div>
+          </div>
 
-        {/* CNN Fear & Greed */}
-        <div style={{ padding: isMobile ? '12px 10px' : '18px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: isMobile ? 22 : 28, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.kpiNum, lineHeight: 1, marginBottom: 4 }}>{fearGreedData ? `${fearGreedData.score}%` : '…'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9.5, color: fearGreedData ? fearGreedColor(fearGreedData.rating) : t.hi, marginBottom: 2 }}>{fearGreedData ? `Market is in ${fearGreedLabel(fearGreedData.rating)}` : 'Market sentiment'}</div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}><a href="https://www.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>CNN · Fear & Greed</a></div>
-        </div>
+          {/* ── CAMPAIGN FINANCE (3) ── */}
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{corruptionLoading ? '…' : fmtM(kpiStats.total)}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>2026 total raised</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>FEC · current cycle</div>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.accent, lineHeight: 1, marginBottom: 4 }}>$18bn</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>PAC donations to Congress</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>2023–24 election cycle</div>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.accent, lineHeight: 1, marginBottom: 4 }}>34</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>STOCK Act potential violations</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Current congressional session</div>
+          </div>
 
+          {/* ── FEDERAL SPENDING (3) ── */}
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{conflictData ? fmtSpend(conflictData.spending?.value) : '…'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>US-Iran War spending</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Strikes: {conflictData ? fmtNum(conflictData.strikes?.value) : '—'} · Deaths: {conflictData ? fmtNum(conflictData.deaths?.value) : '—'} · <a href="https://meta-trials.vercel.app/us-iran-conflict" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>tracker</a></div>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{fmtK(totalSpend) || '$157bn'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>{totalSpend != null ? 'Contract obligations' : 'Overspent vs. appropriations'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>{liveContracts?.fiscalYear ? `FY${liveContracts.fiscalYear} · live` : 'FY2024 federal agencies'}</div>
+          </div>
+          <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: flaggedCount != null && flaggedCount > 5 ? t.accent : t.hi, lineHeight: 1, marginBottom: 4 }}>{flaggedCount != null ? String(flaggedCount) : '1,847'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>{flaggedCount != null ? 'Contracts ≥ $500M flagged' : 'Contracts flagged anomalous'}</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>{flaggedCount != null ? `From ${liveContracts?.data?.length} loaded` : 'Across 23 federal agencies'}</div>
+          </div>
+        </div>
       </div>
 
-      {/* ── Top row: Live News + Live Intelligence Feeds grouped ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-        gridTemplateRows: '1fr',
-        alignItems: 'stretch',
-        height: isMobile ? 'auto' : 620,
-        border: `1px solid ${t.border}`,
-        borderTop: `3px solid ${t.accent}`,
-        overflow: 'hidden',
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+      {/* ── Live Intelligence Feeds ── */}
+      <div>
+        <Band label="LIVE INTELLIGENCE FEEDS" right="UPDATING CONTINUOUSLY" />
+      <div
+        ref={feedsContainerRef}
+        style={{
+          display: 'flex',
+          alignItems: 'stretch',
+          height: isMobile ? 'auto' : 620,
+          border: `1px solid ${t.border}`,
+          borderTop: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ width: isMobile ? '100%' : `${splitPct}%`, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', flexShrink: 0 }}>
           <LiveNewsPanel />
         </div>
-        <div style={{ borderLeft: `1px solid ${t.border}`, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+
+        {/* ── Draggable divider ── */}
+        {!isMobile && (
+          <div
+            role="separator"
+            aria-label="Resize panels — arrow keys or drag"
+            aria-valuenow={Math.round(splitPct)}
+            aria-valuemin={20}
+            aria-valuemax={80}
+            tabIndex={0}
+            onMouseDown={handleDividerMouseDown}
+            onDoubleClick={() => setSplitPct(50)}
+            onKeyDown={e => {
+              if (e.key === 'ArrowLeft')  { e.preventDefault(); setSplitPct(p => Math.max(20, p - 5)); }
+              if (e.key === 'ArrowRight') { e.preventDefault(); setSplitPct(p => Math.min(80, p + 5)); }
+              if (e.key === 'Home')       { e.preventDefault(); setSplitPct(20); }
+              if (e.key === 'End')        { e.preventDefault(); setSplitPct(80); }
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSplitPct(50); }
+            }}
+            title="Drag to resize · ← → to adjust · Enter to reset"
+            style={{
+              width: 4,
+              flexShrink: 0,
+              cursor: 'col-resize',
+              background: t.border,
+              transition: 'background 0.15s',
+              position: 'relative',
+              zIndex: 1,
+              outline: 'none',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = t.accent; }}
+            onMouseLeave={e => { e.currentTarget.style.background = t.border; }}
+            onFocus={e => { e.currentTarget.style.background = t.accent; }}
+            onBlur={e => { e.currentTarget.style.background = t.border; }}
+          />
+        )}
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', borderLeft: isMobile ? 'none' : `1px solid ${t.border}` }}>
           <LiveFeedPanel />
         </div>
+      </div>
       </div>
 
       {/* ── Map (full width, below both panels) ─────────────────────── */}
@@ -364,7 +483,7 @@ const CampaignWatch = () => {
           <Card>
             <CardTitle
               h="Infrastructure, economics, and legislation — all in one view."
-              sub="Click any state to open its detailed profile and recent legislation."
+              sub="Select any state to open its intelligence profile, congressional delegation, and recent legislation."
             />
             <Suspense fallback={<MapFallback t={t} />}>
               {/*
@@ -408,11 +527,11 @@ const CampaignWatch = () => {
           <ErrorBoundary label="Delegation" theme={t}>
             <Card>
               {stateRepsLoading ? (
-                <div style={{ padding: '16px 0', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.mid }}>
+                <div style={{ padding: '16px 0', fontFamily: FONT_MONO, fontSize: 11, color: t.mid }}>
                   Loading delegation…
                 </div>
               ) : !stateReps || (stateReps.officials || []).length === 0 ? (
-                <div style={{ padding: '16px 0', fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.low }}>
+                <div style={{ padding: '16px 0', fontFamily: FONT_MONO, fontSize: 11, color: t.low }}>
                   No delegation data available for {STATE_NAMES[selectedState] || selectedState}.
                 </div>
               ) : (
@@ -434,7 +553,7 @@ const CampaignWatch = () => {
                       <div key={i} style={{
                         padding: 14,
                         background: t.cardB, border: `1px solid ${t.border}`,
-                        borderTop: `3px solid ${partyColor}`, borderRadius: 4,
+                        borderTop: `3px solid ${partyColor}`,
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                           {rep.photoUrl && (
@@ -444,24 +563,24 @@ const CampaignWatch = () => {
                             />
                           )}
                           <div>
-                            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11, color: t.hi, fontWeight: 700 }}>
+                            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, fontWeight: 700 }}>
                               {rep.name || `${rep.lastName}, ${rep.firstName}`}
                             </div>
                             {office && (
-                              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.mid, marginTop: 2 }}>{office}</div>
+                              <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.mid, marginTop: 2 }}>{office}</div>
                             )}
                           </div>
                         </div>
                         {party && (
-                          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: partyColor, marginBottom: 5 }}>{party}</div>
+                          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: partyColor, marginBottom: 5 }}>{party}</div>
                         )}
                         {(rep.urls?.length > 0 || rep.officialUrl) && (
                           <a
                             href={rep.urls?.[0] || rep.officialUrl}
                             target="_blank" rel="noopener noreferrer"
-                            style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.blue, textDecoration: 'none' }}
+                            style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.blue, textDecoration: 'none' }}
                           >
-                            🌐 Official website
+                            ↗ Official website
                           </a>
                         )}
                       </div>

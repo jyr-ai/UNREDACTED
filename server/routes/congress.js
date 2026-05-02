@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getMembersByState, getBillsByState, getRecentVotes } from '../services/congressGov.js'
+import { getMembersByState, getBillsByState, getRecentVotes, getMemberDetails, searchMemberByName } from '../services/congressGov.js'
 
 const router = Router()
 
@@ -33,6 +33,31 @@ router.get('/members', async (req, res) => {
     res.json({ success: true, data })
   } catch (e) {
     console.error('congress/members error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+router.get('/member/:bioguideId', async (req, res) => {
+  try {
+    const data = await getMemberDetails(req.params.bioguideId)
+    if (!data) return res.status(404).json({ success: false, error: 'member_not_found' })
+    res.json({ success: true, data })
+  } catch (e) {
+    console.error('congress/member error:', e.message)
+    res.status(500).json({ success: false, error: e.message })
+  }
+})
+
+router.get('/member-search', async (req, res) => {
+  try {
+    const { name, state } = req.query
+    if (!name) return res.status(400).json({ success: false, error: 'name parameter required' })
+    const lastName = name.split(',')[0]?.trim()
+    const data = await searchMemberByName(lastName, state)
+    if (!data) return res.status(404).json({ success: false, error: 'member_not_found' })
+    res.json({ success: true, data })
+  } catch (e) {
+    console.error('congress/member-search error:', e.message)
     res.status(500).json({ success: false, error: e.message })
   }
 })

@@ -1,0 +1,189 @@
+<h2>Pattern Detail Panel — Layout Options</h2>
+<p class="subtitle">When a user clicks a pattern flare on the galaxy, a right-side drawer opens. Which structure feels right?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;padding:10px;background:#111;border-radius:4px;line-height:1.7">
+        <div style="background:#1a1a2e;padding:6px 10px;border-bottom:1px solid #333;font-size:9px;letter-spacing:2px;color:#FF8000">SECTOR CONCENTRATION · DEFENSE</div>
+        <div style="padding:8px 10px">
+          <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:6px">SpaceX-Linked Funds Dominate Two Presidential Candidates via Single Super PAC</div>
+          <div style="font-size:9px;color:#aaa;margin-bottom:10px">SPACE EXPLORATION TECHNOLOGIES CORP. funneled $238.5M into AMERICA PAC, which then disbursed to both major presidential contenders...</div>
+          <!-- mini galaxy -->
+          <div style="background:#0d0d1a;border:1px solid #333;border-radius:3px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;position:relative;overflow:hidden">
+            <svg width="100%" height="120" style="position:absolute">
+              <!-- employer node -->
+              <circle cx="60" cy="60" r="10" fill="#FFB84D" opacity="0.9"/>
+              <text x="60" y="80" text-anchor="middle" font-size="7" fill="#aaa">SpaceX</text>
+              <!-- committee node -->
+              <circle cx="160" cy="40" r="8" fill="#4A7FFF" opacity="0.9"/>
+              <text x="160" y="56" text-anchor="middle" font-size="7" fill="#aaa">AMERICA PAC</text>
+              <!-- candidate nodes -->
+              <circle cx="270" cy="25" r="7" fill="#FF4466" opacity="0.9"/>
+              <text x="270" y="40" text-anchor="middle" font-size="7" fill="#aaa">Trump</text>
+              <circle cx="270" cy="70" r="7" fill="#44AAFF" opacity="0.9"/>
+              <text x="270" y="85" text-anchor="middle" font-size="7" fill="#aaa">Kennedy</text>
+              <!-- edges -->
+              <line x1="70" y1="57" x2="152" y2="44" stroke="#FF8000" stroke-width="2.5" opacity="0.6"/>
+              <line x1="168" y1="38" x2="263" y2="28" stroke="#FF8000" stroke-width="1.8" opacity="0.5"/>
+              <line x1="168" y1="42" x2="263" y2="68" stroke="#FF8000" stroke-width="1.4" opacity="0.4"/>
+              <text x="190" y="14" text-anchor="middle" font-size="7" fill="#FF8000" opacity="0.7">$238M</text>
+            </svg>
+          </div>
+          <!-- timeline -->
+          <div style="font-size:8px;letter-spacing:1.5px;color:#555;margin-bottom:6px">CONTRIBUTION TIMELINE</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;gap:6px;align-items:flex-start">
+              <div style="width:40px;font-size:8px;color:#555;flex-shrink:0">Jul 3</div>
+              <div style="width:6px;height:6px;background:#FF8000;border-radius:50%;margin-top:2px;flex-shrink:0"></div>
+              <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <span style="color:#FF8000">$5.0M</span></div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:flex-start">
+              <div style="width:40px;font-size:8px;color:#555;flex-shrink:0">Jul 10</div>
+              <div style="width:6px;height:6px;background:#FF8000;border-radius:50%;margin-top:2px;flex-shrink:0"></div>
+              <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <span style="color:#FF8000">$5.0M</span></div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:flex-start">
+              <div style="width:40px;font-size:8px;color:#555;flex-shrink:0">Aug 5</div>
+              <div style="width:6px;height:6px;background:#FF8000;border-radius:50%;margin-top:2px;flex-shrink:0"></div>
+              <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <span style="color:#FF8000">$7.5M</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Stacked (narrative → mini-galaxy → timeline)</h3>
+      <p>Top-to-bottom flow. Read the story, see the network, scroll the receipts. Simple and focused.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;padding:10px;background:#111;border-radius:4px;line-height:1.7">
+        <div style="background:#1a1a2e;padding:6px 10px;border-bottom:1px solid #333;font-size:9px;letter-spacing:2px;color:#FF8000">SECTOR CONCENTRATION · DEFENSE</div>
+        <div style="padding:8px 10px">
+          <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:6px">SpaceX-Linked Funds Dominate Two Presidential Candidates</div>
+          <!-- top row: galaxy left, narrative right -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <div style="background:#0d0d1a;border:1px solid #333;border-radius:3px;height:100px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative">
+              <svg width="100%" height="100">
+                <circle cx="40" cy="50" r="9" fill="#FFB84D" opacity="0.9"/>
+                <text x="40" y="66" text-anchor="middle" font-size="6" fill="#aaa">SpaceX</text>
+                <circle cx="105" cy="32" r="7" fill="#4A7FFF" opacity="0.9"/>
+                <text x="105" y="46" text-anchor="middle" font-size="6" fill="#aaa">AMERICA PAC</text>
+                <circle cx="165" cy="18" r="6" fill="#FF4466" opacity="0.9"/>
+                <text x="165" y="31" text-anchor="middle" font-size="6" fill="#aaa">Trump</text>
+                <circle cx="165" cy="55" r="6" fill="#44AAFF" opacity="0.9"/>
+                <text x="165" y="68" text-anchor="middle" font-size="6" fill="#aaa">Kennedy</text>
+                <line x1="49" y1="48" x2="98" y2="36" stroke="#FF8000" stroke-width="2" opacity="0.6"/>
+                <line x1="112" y1="30" x2="159" y2="22" stroke="#FF8000" stroke-width="1.5" opacity="0.5"/>
+                <line x1="112" y1="34" x2="159" y2="52" stroke="#FF8000" stroke-width="1.2" opacity="0.4"/>
+              </svg>
+            </div>
+            <div style="font-size:9px;color:#aaa;line-height:1.6">SPACE EXPLORATION TECHNOLOGIES CORP. funneled $238.5M into AMERICA PAC, which then disbursed to both major presidential contenders — the same corporate source finances both sides of the presidential race.</div>
+          </div>
+          <!-- timeline below -->
+          <div style="font-size:8px;letter-spacing:1.5px;color:#555;margin-bottom:5px">RECEIPT TIMELINE</div>
+          <div style="display:flex;align-items:center;gap:0;position:relative;padding-bottom:8px">
+            <div style="position:absolute;top:8px;left:0;right:0;height:1px;background:#333"></div>
+            <div style="display:flex;justify-content:space-between;width:100%">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;z-index:1;margin-top:4px"></div>
+                <div style="font-size:7px;color:#666;margin-top:2px">Jul 3</div>
+                <div style="font-size:8px;color:#FF8000">$5M</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;z-index:1;margin-top:4px"></div>
+                <div style="font-size:7px;color:#666;margin-top:2px">Jul 10</div>
+                <div style="font-size:8px;color:#FF8000">$5M</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;z-index:1;margin-top:4px"></div>
+                <div style="font-size:7px;color:#666;margin-top:2px">Jul 18</div>
+                <div style="font-size:8px;color:#FF8000">$5M</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:9px;height:9px;background:#FF8000;border-radius:50%;z-index:1;margin-top:3px"></div>
+                <div style="font-size:7px;color:#666;margin-top:2px">Aug 5</div>
+                <div style="font-size:8px;color:#FF8000">$7.5M</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:9px;height:9px;background:#FF8000;border-radius:50%;z-index:1;margin-top:3px"></div>
+                <div style="font-size:7px;color:#666;margin-top:2px">Aug 6</div>
+                <div style="font-size:8px;color:#FF8000">$7.5M</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Two-column top, horizontal timeline below</h3>
+      <p>Mini-galaxy and narrative sit side by side. Timeline becomes a horizontal scatter — dots sized by amount, spaced by date. More data-dense, less linear.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="font-family:monospace;font-size:11px;padding:10px;background:#111;border-radius:4px;line-height:1.7">
+        <div style="background:#1a1a2e;padding:6px 10px;border-bottom:1px solid #333;font-size:9px;letter-spacing:2px;color:#FF8000">SECTOR CONCENTRATION · DEFENSE</div>
+        <!-- title + mini galaxy side by side, full width -->
+        <div style="display:grid;grid-template-columns:220px 1fr;gap:0">
+          <div style="padding:8px 10px;border-right:1px solid #1e1e2e">
+            <div style="font-size:11px;font-weight:700;color:#fff;margin-bottom:4px">SpaceX-Linked Funds Dominate Two Presidential Candidates</div>
+            <div style="font-size:8px;color:#555;margin-bottom:6px">2024 CYCLE · SEVERITY 9/10</div>
+            <div style="font-size:9px;color:#aaa;line-height:1.5">SPACE EXPLORATION TECHNOLOGIES funneled $238.5M through one PAC into both major presidential contenders.</div>
+            <div style="margin-top:8px;font-size:8px;letter-spacing:1px;color:#555">NODES IN PATTERN</div>
+            <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px">
+              <span style="padding:1px 5px;background:#FFB84D22;border:1px solid #FFB84D44;border-radius:2px;font-size:7px;color:#FFB84D">SpaceX</span>
+              <span style="padding:1px 5px;background:#4A7FFF22;border:1px solid #4A7FFF44;border-radius:2px;font-size:7px;color:#4A7FFF">AMERICA PAC</span>
+              <span style="padding:1px 5px;background:#FF446622;border:1px solid #FF446644;border-radius:2px;font-size:7px;color:#FF4466">Trump</span>
+              <span style="padding:1px 5px;background:#44AAFF22;border:1px solid #44AAFF44;border-radius:2px;font-size:7px;color:#44AAFF">Kennedy</span>
+            </div>
+          </div>
+          <div style="background:#0d0d1a;height:140px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+            <svg width="100%" height="140">
+              <circle cx="50" cy="70" r="11" fill="#FFB84D" opacity="0.9"/>
+              <text x="50" y="88" text-anchor="middle" font-size="7" fill="#aaa">SpaceX</text>
+              <circle cx="130" cy="45" r="8" fill="#4A7FFF" opacity="0.9"/>
+              <text x="130" y="60" text-anchor="middle" font-size="7" fill="#aaa">AMERICA PAC</text>
+              <circle cx="195" cy="25" r="7" fill="#FF4466" opacity="0.9"/>
+              <text x="195" y="39" text-anchor="middle" font-size="7" fill="#aaa">Trump</text>
+              <circle cx="195" cy="72" r="7" fill="#44AAFF" opacity="0.9"/>
+              <text x="195" y="86" text-anchor="middle" font-size="7" fill="#aaa">Kennedy</text>
+              <line x1="61" y1="66" x2="122" y2="49" stroke="#FF8000" stroke-width="3" opacity="0.7"/>
+              <line x1="138" y1="43" x2="188" y2="29" stroke="#FF8000" stroke-width="2" opacity="0.5"/>
+              <line x1="138" y1="48" x2="188" y2="68" stroke="#FF8000" stroke-width="1.5" opacity="0.4"/>
+              <text x="90" y="40" text-anchor="middle" font-size="7" fill="#FF8000" opacity="0.8">$238M</text>
+            </svg>
+          </div>
+        </div>
+        <!-- vertical timeline below, full width -->
+        <div style="padding:8px 10px;border-top:1px solid #1e1e2e">
+          <div style="font-size:8px;letter-spacing:1.5px;color:#555;margin-bottom:6px">RECEIPT TIMELINE — CONTRIBUTIONS.DATE</div>
+          <div style="display:grid;grid-template-columns:50px 10px 1fr;gap:4px 6px;align-items:start">
+            <div style="font-size:8px;color:#555;text-align:right">Jul 3 '24</div>
+            <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;margin-top:1px"></div>
+            <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <b style="color:#FF8000">$5.0M</b> · individual contributions</div>
+            <div style="font-size:8px;color:#555;text-align:right">Jul 10</div>
+            <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;margin-top:1px"></div>
+            <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <b style="color:#FF8000">$5.0M</b></div>
+            <div style="font-size:8px;color:#555;text-align:right">Aug 5</div>
+            <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;margin-top:1px"></div>
+            <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <b style="color:#FF8000">$7.5M</b></div>
+            <div style="font-size:8px;color:#555;text-align:right">Aug 6</div>
+            <div style="width:8px;height:8px;background:#FF8000;border-radius:50%;margin-top:1px"></div>
+            <div style="font-size:9px;color:#ccc">SpaceX → AMERICA PAC · <b style="color:#FF8000">$7.5M</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Left metadata + right mini-galaxy, full-width timeline below</h3>
+      <p>Metadata panel on left (title, severity, node chips), mini-galaxy fills the right half, then timeline scrolls below spanning the full width. Closest to the FOIA Fluent reference.</p>
+    </div>
+  </div>
+
+</div>

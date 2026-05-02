@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { FONT_MONO } from '../theme/tokens.js';
 import { useTheme } from '../theme/index.js'
 import { getRecentStockTrades, getStockActWatchlist } from '../api/client.js'
 
 const ORANGE = '#FF8000'
 const RED    = '#E63946'
-const MF     = "'Roboto', sans-serif"
-const SF     = "'Roboto', sans-serif"
+const MF     = FONT_MONO
+const SF     = FONT_MONO
 
 export default function StockActMonitor() {
   const t = useTheme()

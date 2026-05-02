@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useMemo, lazy, Suspense, useCallback } from 'react';
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 import { useTheme } from '../theme/index.js';
 import { Band } from '../components/ui/index.js';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -66,11 +67,11 @@ function KpiCell({ value, label, source, last }) {
       minWidth: 0,
     }}>
       <div style={{
-        fontFamily: "'Playfair Display',Georgia,serif",
-        fontSize: 24, color: t.kpiNum, lineHeight: 1, marginBottom: 3,
+        fontFamily: "FONT_SERIF",
+        fontSize: 24, color: t.hi, lineHeight: 1, marginBottom: 3,
       }}>{value}</div>
-      <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.hi, marginBottom: 1 }}>{label}</div>
-      <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>{source}</div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.hi, marginBottom: 1 }}>{label}</div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low }}>{source}</div>
     </div>
   );
 }
@@ -110,13 +111,13 @@ function RepCard({ rep, t }) {
         />
       )}
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.hi,
+        <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.hi,
           fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {chamber && <span style={{ color: partyColor, marginRight: 5, fontSize: 8 }}>{chamber}</span>}
           {rep.name || `${rep.lastName}, ${rep.firstName}`}
         </div>
         {party && (
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: partyColor, marginTop: 1 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: partyColor, marginTop: 1 }}>
             {party.replace('Republican', 'R').replace('Democrat', 'D').replace('Independent', 'I')}
           </div>
         )}
@@ -162,10 +163,10 @@ function StatePanel({ stateCode, corruptionIndex, gasPriceByState, t, onClose })
         display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
       }}>
         <div>
-          <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 18, color: t.hi, lineHeight: 1.1 }}>
+          <div style={{ fontFamily: "FONT_SERIF", fontSize: 18, color: t.hi, lineHeight: 1.1 }}>
             {STATE_NAMES[stateCode] || stateCode}
           </div>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.low, marginTop: 3 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low, marginTop: 3 }}>
             STATE PROFILE · {stateCode}
           </div>
         </div>
@@ -181,26 +182,26 @@ function StatePanel({ stateCode, corruptionIndex, gasPriceByState, t, onClose })
         {score != null ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low, letterSpacing: '1px' }}>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low, letterSpacing: '1px' }}>
                 ACCOUNTABILITY SCORE
               </span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8,
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8,
                 color: SCORE_COLOR(score), fontWeight: 700, letterSpacing: '1px' }}>
                 {SCORE_LABEL(score)}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 32,
+              <span style={{ fontFamily: "FONT_SERIF", fontSize: 32,
                 color: SCORE_COLOR(score), lineHeight: 1 }}>{score}</span>
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.mid }}>/100</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.mid }}>/100</span>
             </div>
             <ScoreBar score={score} />
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low }}>
               Higher = less corrupt · RECEIPTS methodology
             </div>
           </>
         ) : (
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.low }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.low }}>
             Score unavailable
           </div>
         )}
@@ -209,14 +210,14 @@ function StatePanel({ stateCode, corruptionIndex, gasPriceByState, t, onClose })
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
           {raised != null && (
             <div style={{ background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 3, padding: '8px 10px' }}>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low, marginBottom: 2 }}>2026 RAISED</div>
-              <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: t.kpiNum }}>{fmtM(raised)}</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low, marginBottom: 2 }}>2026 RAISED</div>
+              <div style={{ fontFamily: "FONT_SERIF", fontSize: 15, color: t.hi }}>{fmtM(raised)}</div>
             </div>
           )}
           {gasPrice != null && (
             <div style={{ background: t.cardB, border: `1px solid ${t.border}`, borderRadius: 3, padding: '8px 10px' }}>
-              <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low, marginBottom: 2 }}>GAS / GAL</div>
-              <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: t.kpiNum }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low, marginBottom: 2 }}>GAS / GAL</div>
+              <div style={{ fontFamily: "FONT_SERIF", fontSize: 15, color: t.hi }}>
                 ${typeof gasPrice === 'number' ? gasPrice.toFixed(2) : gasPrice}
               </div>
             </div>
@@ -226,16 +227,16 @@ function StatePanel({ stateCode, corruptionIndex, gasPriceByState, t, onClose })
 
       {/* Delegation */}
       <div style={{ padding: '10px 16px 4px' }}>
-        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low,
+        <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low,
           letterSpacing: '1px', marginBottom: 8 }}>CONGRESSIONAL DELEGATION</div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
         {loading ? (
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.mid, paddingTop: 8 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.mid, paddingTop: 8 }}>
             Loading delegation…
           </div>
         ) : !reps || (reps.officials || []).length === 0 ? (
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.low, paddingTop: 8 }}>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.low, paddingTop: 8 }}>
             No delegation data available.
           </div>
         ) : (
@@ -257,18 +258,18 @@ function LeaderboardPanel({ corruptionIndex, gasPriceByState, onStateClick, t })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ padding: '14px 16px 10px', borderBottom: `1px solid ${t.border}` }}>
-        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, color: t.low,
+        <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low,
           letterSpacing: '1.5px', marginBottom: 2 }}>ACCOUNTABILITY INDEX</div>
-        <div style={{ fontFamily: "'Playfair Display',Georgia,serif", fontSize: 15, color: t.hi }}>
+        <div style={{ fontFamily: "FONT_SERIF", fontSize: 15, color: t.hi }}>
           State Rankings
         </div>
-        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low, marginTop: 3 }}>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low, marginTop: 3 }}>
           Click a state to view profile · Lower score = more corrupt
         </div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {sorted.length === 0 ? (
-          <div style={{ padding: '16px', fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.mid }}>
+          <div style={{ padding: '16px', fontFamily: FONT_MONO, fontSize: 10, color: t.mid }}>
             Loading state rankings…
           </div>
         ) : sorted.map((s, i) => {
@@ -287,10 +288,10 @@ function LeaderboardPanel({ corruptionIndex, gasPriceByState, onStateClick, t })
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8,
+              <span style={{ fontFamily: FONT_MONO, fontSize: 8,
                 color: t.low, textAlign: 'right' }}>{i+1}</span>
               <div>
-                <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: t.hi, fontWeight: 600 }}>
+                <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: t.hi, fontWeight: 600 }}>
                   {s.stateCode}
                   <span style={{ color: t.low, fontWeight: 400, marginLeft: 6, fontSize: 9 }}>
                     {STATE_NAMES[s.stateCode] || ''}
@@ -303,10 +304,10 @@ function LeaderboardPanel({ corruptionIndex, gasPriceByState, onStateClick, t })
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11,
+                <div style={{ fontFamily: FONT_MONO, fontSize: 11,
                   color: SCORE_COLOR(score), fontWeight: 700 }}>{score}</div>
                 {gas != null && (
-                  <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: t.low }}>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 8, color: t.low }}>
                     ${typeof gas === 'number' ? gas.toFixed(2) : gas}
                   </div>
                 )}
@@ -469,7 +470,7 @@ export default function MapPage() {
           <ErrorBoundary label="Map" theme={t}>
             <Suspense fallback={
               <div style={{ height: mapH, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontFamily: "'IBM Plex Mono',monospace",
+                justifyContent: 'center', fontFamily: FONT_MONO,
                 fontSize: 11, color: t.mid }}>
                 Loading map…
               </div>

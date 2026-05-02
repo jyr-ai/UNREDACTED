@@ -24,7 +24,7 @@ function Tip({ active, payload, label, fmt }) {
   );
 }
 
-const ax = (t) => ({ axisLine: { stroke: t.border }, tickLine: false, tick: { fontFamily: MF, fontSize: 9.5, fill: t.mid } });
+const ax = (t) => ({ axisLine: { stroke: t.border }, tickLine: false, tick: { fontFamily: MF, fontSize: 11, fill: t.mid } });
 
 export default function Overview() {
   const t = useTheme();
@@ -52,7 +52,7 @@ export default function Overview() {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
       {/* ── LIVE INTELLIGENCE FEEDS (pinned at top of Overview) ── */}
       <LiveFeedPanel />
@@ -69,7 +69,7 @@ export default function Overview() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr) minmax(180px,1fr)", borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}` }}>
         {kpis.map((k, i) => (
           <div key={i} style={{ padding: "18px 20px", borderRight: `1px solid ${t.border}` }}>
-            <div style={{ fontFamily: SF, fontSize: 34, color: t.kpiNum, lineHeight: 1, marginBottom: 5 }}>{k.v}</div>
+            <div style={{ fontFamily: SF, fontSize: 34, color: t.hi, lineHeight: 1, marginBottom: 5 }}>{k.v}</div>
             <div style={{ fontFamily: MF, fontSize: 10.5, color: t.hi, marginBottom: 3 }}>{k.d}</div>
             <div style={{ fontFamily: MF, fontSize: 9, color: t.low }}>{k.s}</div>
           </div>

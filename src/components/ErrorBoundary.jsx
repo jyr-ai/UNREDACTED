@@ -1,7 +1,7 @@
 /**
  * ErrorBoundary — Reusable React error boundary.
  * Catches render-time errors and shows a styled fallback matching the
- * UNREDACTED design system (IBM Plex Mono / Playfair Display).
+ * UNREDACTED design system (Fira Code / Fira Sans).
  *
  * Usage:
  *   <ErrorBoundary label="Map">
@@ -9,6 +9,7 @@
  *   </ErrorBoundary>
  */
 import React from 'react';
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -50,7 +51,7 @@ class ErrorBoundary extends React.Component {
       >
         <div
           style={{
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: FONT_MONO,
             fontSize: 11,
             color: t.warn || '#ef4444',
             letterSpacing: '1px',
@@ -60,7 +61,7 @@ class ErrorBoundary extends React.Component {
         </div>
         <div
           style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
+            fontFamily: "FONT_SERIF",
             fontSize: 12,
             fontStyle: 'italic',
             color: t.mid || '#888',
@@ -78,7 +79,7 @@ class ErrorBoundary extends React.Component {
             border: `1px solid ${t.border || '#333'}`,
             borderRadius: 4,
             color: t.hi || '#fff',
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: FONT_MONO,
             fontSize: 10,
             letterSpacing: '1px',
             cursor: 'pointer',

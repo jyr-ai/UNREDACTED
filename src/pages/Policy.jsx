@@ -3,6 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useTheme } from "../theme/index.js";
 import { ORANGE, WHITE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
 import { Band, Card, CardTitle, SourceFooter, Legend } from "../components/ui/index.js";
+import { useMobile } from "../hooks/useMediaQuery.js";
+import PageSidebar from "../components/ui/PageSidebar.jsx";
 import { POLICY_MONTHLY } from "../data/policy.js";
 import { queryAgent } from "../api/client.js";
 import BillsVotes from "../components/BillsVotes.jsx";
@@ -16,7 +18,7 @@ const SUBTABS = [
   { id: "rulemaking", label: "Reg. Watch",     badge: "NEW"     },
 ];
 
-const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize:9.5, fill:t.mid } });
+const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize: 11, fill:t.mid } });
 
 const STARTERS = [
   "EOs affecting EPA 2025",
@@ -56,7 +58,7 @@ function PolicyAIChat() {
   const rc = f => f.risk==="HIGH"?ORANGE:f.risk==="MED"?"#FFB84D":"#4A7FFF";
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap: 14 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>POLICY INTELLIGENCE · FEDREGISTER · GOVINFO</div>
         <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>AI policy agent</h2>
@@ -143,42 +145,21 @@ function PolicyAIChat() {
   );
 }
 
-// ─── Sub-tab bar ──────────────────────────────────────────────────────────────
-function SubTabBar({ tabs, active, onChange }) {
-  const t = useTheme();
-  return (
-    <div style={{ display: "flex", borderBottom: `1px solid ${t.border}`, flexWrap: "wrap" }}>
-      {tabs.map(st => (
-        <button key={st.id} onClick={() => onChange(st.id)} style={{
-          background: "none", border: "none", cursor: "pointer",
-          padding: "10px 18px", fontFamily: MF, fontSize: 10.5, letterSpacing: 0.5,
-          color: active === st.id ? ORANGE : t.mid,
-          borderBottom: `3px solid ${active === st.id ? ORANGE : "transparent"}`,
-          marginBottom: -1, transition: "all .14s", whiteSpace: "nowrap",
-          display: "flex", alignItems: "center", gap: 6,
-        }}>
-          {st.label}
-          {st.badge && (
-            <span style={{ background: "#00CC6622", border: "1px solid #00CC6644", color: "#00CC66", fontSize: 7, padding: "1px 4px", borderRadius: 2, fontWeight: 700 }}>
-              {st.badge}
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function Policy() {
+  const isMobile = useMobile();
   const [sub, setSub] = useState("ai");
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-      <SubTabBar tabs={SUBTABS} active={sub} onChange={setSub} />
-      {sub === "ai"         && <PolicyAIChat />}
-      {sub === "bills"      && <BillsVotes />}
-      {sub === "eo"         && <ExecutiveOrders />}
-      {sub === "rulemaking" && <RegulatoryWatch />}
+    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", minHeight: 0, height: "100%" }}>
+      <PageSidebar tabs={SUBTABS} active={sub} onChange={setSub} isMobile={isMobile} />
+      <div style={{ flex: 1, minWidth: 0, overflowY: "auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: 14 }}>
+          {sub === "ai"         && <PolicyAIChat />}
+          {sub === "bills"      && <BillsVotes />}
+          {sub === "eo"         && <ExecutiveOrders />}
+          {sub === "rulemaking" && <RegulatoryWatch />}
+        </div>
+      </div>
     </div>
   );
 }

@@ -18,7 +18,8 @@
     { "path": "/api/cron/seed-corruption", "schedule": "0 7 * * *" },
     { "path": "/api/cron/seed-elections",  "schedule": "0 7 * * *" },
     { "path": "/api/cron/seed-dark-money", "schedule": "0 7 * * *" },
-    { "path": "/api/cron/seed-spending",   "schedule": "0 7 * * *" }
+    { "path": "/api/cron/seed-spending",   "schedule": "0 7 * * *" },
+    { "path": "/api/cron/detect-funding-patterns", "schedule": "0 7 * * 0" }
   ],
 
   "headers": [

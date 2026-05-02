@@ -1,12 +1,13 @@
 import { useState, useEffect, useContext, createContext } from 'react'
+import { FONT_MONO } from '../theme/tokens.js';
 import { fetchSettings, saveSettings, testAIConnection } from '../api/client.js'
 
 // ─── Theme helpers (inline — matches App.jsx tokens) ─────────────────────────
 const ORANGE = '#FF8000'
 const BLUE   = '#0028AA'
 const WHITE  = '#FFFFFF'
-const MF     = "'Roboto', sans-serif"
-const SF     = "'Roboto', sans-serif"
+const MF     = FONT_MONO
+const SF     = FONT_MONO
 
 // ─── Provider catalogue ───────────────────────────────────────────────────────
 const PROVIDERS = [
@@ -405,7 +406,7 @@ export default function Settings({ theme }) {
                       background: ok ? '#00C97A' : t.border,
                       boxShadow: ok ? '0 0 5px #00C97A88' : 'none',
                     }} />
-                    <span style={{ fontFamily: MF, fontSize: 9.5, color: isActive ? ORANGE : t.mid, flex: 1 }}>
+                    <span style={{ fontFamily: MF, fontSize: 11, color: isActive ? ORANGE : t.mid, flex: 1 }}>
                       {p.icon} {p.name}
                     </span>
                     <span style={{ fontFamily: MF, fontSize: 8, color: isActive ? ORANGE : (ok ? '#00C97A' : t.low) }}>

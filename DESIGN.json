@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-24T00:00:00Z",
+  "title": "Design System: UNREDACTED",
+  "extensions": {
+    "colorMeta": {
+      "signal-orange":      { "role": "primary",   "displayName": "Signal Orange",        "canonical": "#FF8000", "tonalRamp": ["#1A0900","#331200","#4D1C00","#6B2800","#8C3800","#B34800","#FF8000","#FFB870","#FFE0C0"] },
+      "deep-blue":          { "role": "secondary",  "displayName": "Deep Authority Blue",  "canonical": "#0028AA", "tonalRamp": ["#000819","#001033","#001A66","#002299","#0028AA","#1F47CC","#6680E0","#99AAEB","#CCD0F5"] },
+      "readable-blue":      { "role": "secondary",  "displayName": "Readable Blue",        "canonical": "#4A7FFF", "tonalRamp": ["#000819","#001033","#001A66","#002299","#1F47CC","#4A7FFF","#7AA0FF","#AABFFF","#D5DFFF"] },
+      "navy-band":          { "role": "tertiary",   "displayName": "Navy Band",            "canonical": "#001A7A", "tonalRamp": ["#000511","#000C22","#001244","#001A7A","#001F99","#1939B3","#6675D4","#99AAEA","#CCD0F5"] },
+      "warn-amber":         { "role": "tertiary",   "displayName": "Warn Amber",           "canonical": "#FFB84D", "tonalRamp": ["#1A0D00","#331A00","#663300","#995000","#CC7300","#FFB84D","#FFCF80","#FFE4B3","#FFF5E0"] },
+      "surface-black":      { "role": "neutral",    "displayName": "Surface Black",        "canonical": "#0D0D0D", "tonalRamp": ["#000000","#050505","#0D0D0D","#1A1A1A","#2B2B2B","#404040","#666666","#999999","#CCCCCC"] },
+      "surface-deep":       { "role": "neutral",    "displayName": "Surface Deep",         "canonical": "#111111" },
+      "card-surface":       { "role": "neutral",    "displayName": "Card Surface",         "canonical": "#161616" },
+      "card-surface-raised":{ "role": "neutral",    "displayName": "Card Surface Raised",  "canonical": "#1D1D1D" },
+      "border-steel":       { "role": "neutral",    "displayName": "Border Steel",         "canonical": "#272727" },
+      "text-primary":       { "role": "neutral",    "displayName": "Text Primary",         "canonical": "#FFFFFF" },
+      "text-secondary":     { "role": "neutral",    "displayName": "Text Secondary",       "canonical": "#888888" },
+      "text-muted":         { "role": "neutral",    "displayName": "Text Muted",           "canonical": "#484848" },
+      "ink-black":          { "role": "neutral",    "displayName": "Ink Black",            "canonical": "#080808" },
+      "nav-black":          { "role": "neutral",    "displayName": "Nav Black",            "canonical": "#0A0A0A" }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "KPI metric values, hero numbers — Follow the Money totals, Corruption Watch scores, Dark Money figures." },
+      "headline": { "displayName": "Headline", "purpose": "Card titles and panel section headers (CardTitle component)." },
+      "body":     { "displayName": "Body",     "purpose": "Supporting text, metadata rows, data labels, descriptive copy inside panels." },
+      "label":    { "displayName": "Label",    "purpose": "Band component text, section headers inside navy bars. Always uppercase with generous tracking." },
+      "micro":    { "displayName": "Micro",    "purpose": "Source footers, chart axis ticks, timestamp meta, legal lines." }
+    },
+    "shadows": [
+      { "name": "signal-glow", "value": "0 0 12px rgba(255,128,0,0.15)", "purpose": "Hover/focus glow on orange-accented interactive elements only — CTAs and KPI cards." }
+    ],
+    "motion": [
+      { "name": "ease-standard",  "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions." },
+      { "name": "ease-out-fast",  "value": "cubic-bezier(0, 0, 0.2, 1)",   "purpose": "Chart data entrance — elements decelerate into position." },
+      { "name": "duration-fast",  "value": "150ms", "purpose": "Button hover, border color shifts." },
+      { "name": "duration-base",  "value": "250ms", "purpose": "Panel transitions, tooltip fade." }
+    ],
+    "breakpoints": [
+      { "name": "mobile",  "value": "600px",  "notes": "Cards stack 1-up; nav collapses to hamburger." },
+      { "name": "tablet",  "value": "768px",  "notes": "Cards 2-up; full nav re-expands." },
+      { "name": "laptop",  "value": "1024px", "notes": "Full layout; cards 3-up." },
+      { "name": "desktop", "value": "1280px", "notes": "Standard editorial layout; cards 3–4-up." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Band",
+      "kind": "custom",
+      "refersTo": "band",
+      "description": "Full-width navy section header — opens every data panel. The system's structural signature.",
+      "html": "<div class=\"ds-band\"><span class=\"ds-band__label\">PANEL TITLE</span><span class=\"ds-band__meta\">right-side meta</span></div>",
+      "css": ".ds-band { background: #001A7A; padding: 7px 14px; display: flex; justify-content: space-between; align-items: center; } .ds-band__label { font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 500; color: #FFFFFF; letter-spacing: 2px; text-transform: uppercase; } .ds-band__meta { font-family: 'Roboto', sans-serif; font-size: 8px; font-weight: 400; color: rgba(255,255,255,0.45); letter-spacing: 1px; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default data container. Sharp-cornered, flat, 1px bordered, no shadow. border-top: none — Band provides the top edge.",
+      "html": "<div class=\"ds-band\"><span class=\"ds-band__label\">CARD TITLE</span></div><div class=\"ds-card\"><p class=\"ds-card__body\">Panel content goes here.</p></div>",
+      "css": ".ds-card { background: #161616; border: 1px solid #272727; border-top: none; padding: 18px 18px 14px; } .ds-card__body { font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 400; color: #888888; line-height: 1.5; margin: 0; }"
+    },
+    {
+      "name": "Card Title",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Panel headline inside a Card — 19.5px Roboto 600.",
+      "html": "<div class=\"ds-card-title\"><div class=\"ds-card-title__h\">Panel Headline</div><div class=\"ds-card-title__sub\">Supporting subtitle</div></div>",
+      "css": ".ds-card-title__h { font-family: 'Roboto', sans-serif; font-size: 19.5px; font-weight: 600; color: #FFFFFF; line-height: 1.35; margin-bottom: 4px; } .ds-card-title__sub { font-family: 'Roboto', sans-serif; font-size: 14px; font-weight: 400; color: #888888; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary CTA. Signal Orange fill, 4px radius — the only softness in the system.",
+      "html": "<button class=\"ds-btn-primary\">EXPLORE DATA</button>",
+      "css": ".ds-btn-primary { background: #FF8000; color: #FFFFFF; font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; transition: background 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: #E67200; transform: translateY(-1px); box-shadow: 0 0 12px rgba(255,128,0,0.15); } .ds-btn-primary:focus-visible { outline: 2px solid rgba(255,128,0,0.6); outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(0); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "card",
+      "description": "Secondary action. Transparent with Border Steel outline; hover shifts to Signal Orange.",
+      "html": "<button class=\"ds-btn-ghost\">VIEW SOURCE</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #888888; font-family: 'Roboto', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; border: 1px solid #272727; border-radius: 4px; padding: 8px 16px; cursor: pointer; transition: border-color 150ms, color 150ms; } .ds-btn-ghost:hover { border-color: #FF8000; color: #FF8000; } .ds-btn-ghost:focus-visible { outline: 2px solid rgba(255,128,0,0.6); outline-offset: 2px; }"
+    },
+    {
+      "name": "Chart Tooltip",
+      "kind": "custom",
+      "refersTo": "tooltip",
+      "description": "Inline data label on chart hover. 3px left Signal Orange border marks the active datum.",
+      "html": "<div class=\"ds-tooltip\"><div class=\"ds-tooltip__label\">CONTRIBUTOR</div><div class=\"ds-tooltip__row\"><span class=\"ds-tooltip__dot\">■</span><span class=\"ds-tooltip__value\">$4,200,000</span></div></div>",
+      "css": ".ds-tooltip { background: #080808; border: 1px solid #272727; border-left: 3px solid #FF8000; padding: 8px 12px; font-family: 'Roboto', sans-serif; } .ds-tooltip__label { font-size: 9px; font-weight: 500; color: #888888; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; } .ds-tooltip__row { font-size: 11px; color: #FFFFFF; display: flex; align-items: center; } .ds-tooltip__dot { color: #FF8000; margin-right: 5px; font-size: 8px; } .ds-tooltip__value { font-weight: 400; }"
+    },
+    {
+      "name": "Accent Chip",
+      "kind": "chip",
+      "refersTo": "chip-accent",
+      "description": "Category label — Card Surface background, Signal Orange text, 4px radius.",
+      "html": "<span class=\"ds-chip-accent\">DARK MONEY</span>",
+      "css": ".ds-chip-accent { background: #161616; color: #FF8000; font-family: 'Roboto', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 4px; padding: 4px 10px; display: inline-block; }"
+    },
+    {
+      "name": "Source Footer",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Citation line at the bottom of data panels — micro text, top border.",
+      "html": "<div class=\"ds-source-footer\">Sources: FEC.gov, USASpending.gov</div>",
+      "css": ".ds-source-footer { margin-top: 10px; padding-top: 8px; border-top: 1px solid #272727; font-family: 'Roboto', sans-serif; font-size: 8.5px; font-weight: 400; color: #484848; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The War Room Terminal",
+    "overview": "UNREDACTED is an open-source intelligence platform that exposes the money flows shaping American politics. Its visual system is built on one conviction: the data is the confrontation. Every panel is a briefing. Every chart is an accusation. Every number is evidence. The interface never decorates — it presents.\n\nThe aesthetic sits at the intersection of Bloomberg Terminal density and The Intercept's editorial credibility. Dark surfaces dominate (four near-black tones from #0D0D0D to #1D1D1D), carrying the gravity of a place where serious people track serious money. Signal Orange (#FF8000) functions as a signal flare — used on ≤10% of any screen, marking KPI values, live ticker text, and primary CTAs. Deep Blue (#0028AA) carries institutional weight in band headers and secondary data panels.\n\nInside panels, the layout follows Vodafone's editorial discipline — typographic hierarchy does the work, spacing is generous between sections and tight within cards, surfaces are flat with no decorative shadows or gradients.",
+    "keyCharacteristics": [
+      "Dark-first: four surface depths (#0D0D0D / #111111 / #161616 / #1D1D1D), all near-black",
+      "Signal Orange used on ≤10% of any screen — KPI numbers, CTAs, live ticker, accent marks",
+      "Deep Blue (#0028AA / #001A7A) for institutional band headers and secondary data panels",
+      "Zero border radius on cards — sharp-cornered surfaces throughout",
+      "Flat elevation: 1px solid borders carry hierarchy, no drop shadows",
+      "Roboto exclusively across all scales; weight and size do all the work",
+      "Band component opens every data section: full-width navy bar, 9px uppercase label, letter-spacing 2px"
+    ],
+    "rules": [
+      { "name": "The One Signal Rule",           "body": "Orange appears on ≤10% of any given screen. A dashboard where everything is orange is a dashboard where nothing is urgent. Reserve it for the moments that demand attention.", "section": "colors" },
+      { "name": "The Dark Discipline Rule",       "body": "Never pure black (#000) or pure white (#fff). The four dark surface tones are a complete system — do not introduce new ones.", "section": "colors" },
+      { "name": "The Single-Family Rule",         "body": "Roboto everywhere, always. No display serif, no mono accent, no second family. Weight and scale alone carry all hierarchy.", "section": "typography" },
+      { "name": "The Uppercase-at-Label-Scale-Only Rule", "body": "Uppercase with letter-spacing is reserved for Band labels (9px) and micro-labels. Headlines and body copy are always sentence case.", "section": "typography" },
+      { "name": "The Tonal-Not-Lifted Rule",      "body": "Do not add drop shadows to cards, panels, or navigation. The four near-black surface tones create depth through tonal shift alone. Shadows imply softness — this system does not traffic in softness.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Signal Orange (#FF8000) on ≤10% of any screen — KPI numbers, primary CTAs, the live ticker, and chart tooltip accents.",
+      "Do open every data panel with the Band component — the navy header bar is the system's structural signature.",
+      "Do apply 0px border radius to all cards, panels, and containers.",
+      "Do use Roboto weight 700 for all metric and KPI values.",
+      "Do set border-top: none on Cards — the Band's bottom edge is the card's top border.",
+      "Do verify WCAG AA contrast (4.5:1) on all text combinations.",
+      "Do support prefers-reduced-motion for all chart animations and panel transitions."
+    ],
+    "donts": [
+      "Don't use Signal Orange as a background for large surface areas — orange cards and panels are prohibited.",
+      "Don't add border-radius to cards or the Band component.",
+      "Don't add drop shadows to cards, containers, or navigation.",
+      "Don't use gradients on backgrounds, buttons, surfaces, or text.",
+      "Don't let the interface resemble USA.gov, Congress.gov, or FEC.gov — the aesthetic anti-references.",
+      "Don't use patterns that read as conspiratorial — red string, neon-on-black, wall-of-text layouts.",
+      "Don't introduce a second font family.",
+      "Don't use uppercase with letter-spacing above the Label scale.",
+      "Don't use pure black (#000) or pure white (#fff)."
+    ]
+  }
+}

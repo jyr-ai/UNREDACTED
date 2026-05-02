@@ -7,7 +7,7 @@ import { DONORS, CORPS } from "../data/donors.js";
 import { TREND } from "../data/spending.js";
 import { GN_NODES, GN_EDGES, NODE_COL } from "../data/graph.js";
 
-const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize:9.5, fill:t.mid } });
+const ax = t => ({ axisLine:{ stroke:t.border }, tickLine:false, tick:{ fontFamily:MF, fontSize: 11, fill:t.mid } });
 const SUBTABS = [{ id:"intel", label:"Donor Intel" }, { id:"web", label:"Entity Network" }];
 
 export default function Donation() {
@@ -18,7 +18,7 @@ export default function Donation() {
   const topDonors = [...DONORS].sort((a,b)=>b.pac-a.pac);
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:22 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap: 14 }}>
       <div style={{ borderTop:`3px solid ${ORANGE}`, paddingTop:16 }}>
         <div style={{ fontFamily:MF, fontSize:9, color:ORANGE, letterSpacing:3, marginBottom:8 }}>DONOR INTELLIGENCE · FEC · OPENSECRETS · STOCKACT</div>
         <h2 style={{ fontFamily:SF, fontSize:32, color:t.hi, fontWeight:700, lineHeight:1.1, marginBottom:8 }}>Donation &amp; Donor Networks</h2>
@@ -121,7 +121,7 @@ export default function Donation() {
                 <div style={{ position:"absolute", top:10, right:10, background:t.cardB, border:`1px solid ${ORANGE}`, borderTop:`3px solid ${ORANGE}`, padding:"12px 16px", minWidth:200, fontFamily:MF }}>
                   <div style={{ fontSize:9, color:ORANGE, letterSpacing:2, marginBottom:8 }}>NODE DETAIL</div>
                   <div style={{ fontSize:12, color:"#fff", marginBottom:5, fontWeight:700 }}>{sel.label}</div>
-                  <div style={{ fontSize:9.5, color:t.mid, marginBottom:4 }}>Type: <span style={{ color:NODE_COL[sel.type]||"#fff" }}>{sel.type?.toUpperCase()}</span></div>
+                  <div style={{ fontSize: 11, color:t.mid, marginBottom:4 }}>Type: <span style={{ color:NODE_COL[sel.type]||"#fff" }}>{sel.type?.toUpperCase()}</span></div>
                   {sel.desc && <div style={{ fontSize:10, color:t.mid, lineHeight:1.6 }}>{sel.desc}</div>}
                 </div>
               )}

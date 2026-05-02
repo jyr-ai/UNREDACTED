@@ -1,0 +1,78 @@
+<h2>Which money-flow patterns should the AI detect?</h2>
+<p class="subtitle">FOIA Fluent uses 7 pattern types. For funding, these are the candidates. Select all that should ship in the MVP — each becomes a pattern_type in the schema, a branch in the Claude detection prompt, and a cluster-highlight style in the galaxy. Multi-select.</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="concentration" onclick="toggleSelect(this)">
+    <div class="letter">1</div>
+    <div class="content">
+      <h3>Sector Concentration</h3>
+      <p>A sector funnels a disproportionate share of donations into a narrow set of politicians — often committee members who oversee them.</p>
+      <p style="margin-top:8px;padding:8px 10px;background:#0a0a0a;border-left:2px solid #FF8000;font-family:Roboto;font-size:10px;color:#bbb;font-style:italic">
+        Example: "Defense contractors directed 78% of 2024 PAC donations to 12 Armed Services Committee members. Lockheed, Raytheon, and Northrop donated 3.4x their baseline rate to Chairman Rogers and ranking member Reed."
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="darkmoney" onclick="toggleSelect(this)">
+    <div class="letter">2</div>
+    <div class="content">
+      <h3>Dark Money Pathway <span style="color:#FFB84D;font-size:10px">★ core</span></h3>
+      <p>Funds routed through 501(c)(4)s before landing with politicians — the money enters the system with named donors attached, but the path obscures who those donors are.</p>
+      <p style="margin-top:8px;padding:8px 10px;background:#0a0a0a;border-left:2px solid #FFB84D;font-family:Roboto;font-size:10px;color:#bbb;font-style:italic">
+        Example: "Americans for Prosperity (501c4) transferred $14.2M from undisclosed donors to 8 Super PACs in Q3 2024 — all supporting 4 senators voting on SEC crypto regulations."
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="alignment" onclick="toggleSelect(this)">
+    <div class="letter">3</div>
+    <div class="content">
+      <h3>Committee Alignment</h3>
+      <p>Industry PACs converge on members of the specific congressional committee that regulates their industry — above statistical baseline.</p>
+      <p style="margin-top:8px;padding:8px 10px;background:#0a0a0a;border-left:2px solid #4A7FFF;font-family:Roboto;font-size:10px;color:#bbb;font-style:italic">
+        Example: "Pharma PACs donated to HELP Committee members at 4.2x the rate of non-members. PhRMA, Pfizer PAC, and Merck PAC combined: $8.7M to 21 members."
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="surge" onclick="toggleSelect(this)">
+    <div class="letter">4</div>
+    <div class="content">
+      <h3>Sudden Surge</h3>
+      <p>Cycle-over-cycle spike in donations from a sector — usually correlated with pending legislation or regulatory decisions.</p>
+      <p style="margin-top:8px;padding:8px 10px;background:#0a0a0a;border-left:2px solid #FF8000;font-family:Roboto;font-size:10px;color:#bbb;font-style:italic">
+        Example: "Crypto industry donations up 340% vs. 2022 cycle, concentrating around 6 SEC-overseeing senators. Coinbase PAC alone tripled its spend."
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="crossparty" onclick="toggleSelect(this)">
+    <div class="letter">5</div>
+    <div class="content">
+      <h3>Cross-Party Hedging</h3>
+      <p>Same employer donates to both parties' leadership in the same cycle — often in races where specific legislation is at stake.</p>
+      <p style="margin-top:8px;padding:8px 10px;background:#0a0a0a;border-left:2px solid #9966CC;font-family:Roboto;font-size:10px;color:#bbb;font-style:italic">
+        Example: "Blackstone donors split $2.3M 52/48 between R and D leadership PACs — every recipient sits on a committee overseeing private equity tax policy."
+      </p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="geographic" onclick="toggleSelect(this)">
+    <div class="letter">6</div>
+    <div class="content">
+      <h3>Geographic Anomaly</h3>
+      <p>Out-of-state PACs concentrating in specific races where their industry has legislative exposure — regardless of candidate's home state.</p>
+      <p style="margin-top:8px;padding:8px 10px;background:#0a0a0a;border-left:2px solid #44CC88;font-family:Roboto;font-size:10px;color:#bbb;font-style:italic">
+        Example: "Texas energy PACs concentrated in 3 non-Texas Senate races — all targeting candidates voting on federal pipeline permitting."
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;padding:14px;background:rgba(255,128,0,0.08);border-left:3px solid #FF8000">
+  <p class="label">Recommendation</p>
+  <p><strong>MVP: 1, 2, 3, 4</strong> (Concentration, Dark Money, Committee Alignment, Sudden Surge). These four cover the most impactful stories, reuse data you already have in Supabase, and don't require geo or cross-party voting-record joins. Cross-Party (5) and Geographic (6) are excellent v2 additions once the core ships.</p>
+  <p style="margin-top:10px;font-size:11px;color:#888">Note on cost: Claude Sonnet cron analyzing 400 edges weekly ≈ $0.50/run. Daily cost if you pick 6 patterns ≈ $15/mo. Weekly cron probably sufficient for MVP.</p>
+</div>

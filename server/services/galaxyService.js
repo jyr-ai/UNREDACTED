@@ -1,0 +1,529 @@
+/**
+ * server/services/galaxyService.js
+ *
+ * Builds Funding Flow Galaxy responses from money_flow_edges + funding_flow_patterns.
+ * Returns { nodes, edges, sectors, patterns, meta } envelopes per the API contract.
+ */
+import { ensure } from '../lib/supabase.js'
+import { classifySector } from '../lib/sectorClassifier.js'
+
+function enrichEdgesWithSector(edges) {
+  return edges.map(e => ({
+    ...e,
+    source_sector: e.source_type === 'employer' ? classifySector(e.source_label) : (e.source_sector || null),
+    target_sector: e.target_type === 'employer' ? classifySector(e.target_label) : (e.target_sector || null),
+  }))
+}
+
+const SECTOR_COLORS = {
+  'Finance':               '#4A7FFF',
+  'Technology':            '#00AADD',
+  'Healthcare':            '#44CC88',
+  'Energy':                '#FFB84D',
+  'Legal':                 '#CC88FF',
+  'Real Estate':           '#FF8C42',
+  'Defense':               '#FF4466',
+  'Media & Entertainment': '#FF66AA',
+  'Education':             '#66CCFF',
+  'Labor / Unions':        '#FFDD44',
+  'Consulting':            '#88BBFF',
+  'Government / Politics': '#FF8844',
+  'Retired / Inactive':    '#666666',
+  'Other':                 '#444444'
+}
+
+export function nodeId(type, id) {
+  if (type === 'employer') return `emp:${id}`
+  if (type === 'politician' || type === 'candidate') return `pol:${id}`
+  return `cmt:${id}`
+}
+
+/**
+ * Given raw money_flow_edges rows, build the galaxy envelope.
+ * is501c4 / isSuperPac are looked up from the accompanying committees map.
+ */
+export function buildEnvelope({ edges, committees, politicians = new Map(), cycle, source = 'supabase' }) {
+  const nodesMap = new Map()
+  const degreeMap = new Map()
+  const sectorTotals = new Map()
+  let maxAmount = 0
+
+  function upsertNode(type, id, label, sector, tier) {
+    const nid = nodeId(type, id)
+    if (!nodesMap.has(nid)) {
+      const committee = committees.get(id)
+      const politician = (type === 'candidate' || type === 'politician') ? politicians.get(id) : null
+      const kind =
+        type === 'employer' ? 'employer' :
+        type === 'politician' || type === 'candidate' ? 'politician' :
+        committee?.is_super_pac ? 'super_pac' :
+        committee?.is_501c4 ? 'dark_money' :
+        'trad_pac'
+      const resolvedLabel = label || politician?.name || committee?.name || id
+      nodesMap.set(nid, {
+        id: nid, kind, label: resolvedLabel,
+        sector: sector || null,
+        party: politician?.party || null,
+        state: politician?.state || null,
+        chamber: politician?.chamber || null,
+        bioguide_id: politician?.bioguide_id || null,
+        amount: 0, degree: 0,
+        is_501c4:   !!committee?.is_501c4,
+        is_super_pac: !!committee?.is_super_pac,
+        tier: Number(tier) || null
+      })
+    }
+    return nid
+  }
+
+  const builtEdges = []
+  for (const e of edges) {
+    const s = upsertNode(e.source_type, e.source_id, e.source_label, e.source_sector, e.source_tier)
+    const t = upsertNode(e.target_type, e.target_id, e.target_label, e.target_sector, e.target_tier)
+    const amt = Number(e.amount) || 0
+    const sn = nodesMap.get(s), tn = nodesMap.get(t)
+    sn.amount += amt; tn.amount += amt
+    degreeMap.set(s, (degreeMap.get(s) || 0) + 1)
+    degreeMap.set(t, (degreeMap.get(t) || 0) + 1)
+    if (amt > maxAmount) maxAmount = amt
+    builtEdges.push({
+      source: s, target: t, amount: amt,
+      weight: 0,                                          // filled after maxAmount known
+      tier_from: Number(e.source_tier) || null,
+      tier_to:   Number(e.target_tier) || null
+    })
+    const sec = sn.sector || tn.sector
+    if (sec) sectorTotals.set(sec, (sectorTotals.get(sec) || 0) + amt)
+  }
+
+  for (const edge of builtEdges) edge.weight = maxAmount > 0 ? edge.amount / maxAmount : 0
+  for (const node of nodesMap.values()) node.degree = degreeMap.get(node.id) || 0
+
+  // Propagate sector from employer nodes to connected committees/politicians (highest-flow wins)
+  const inheritMap = new Map() // nid → { sector, amount }
+  for (const e of edges) {
+    const srcNode = nodesMap.get(nodeId(e.source_type, e.source_id))
+    const tgtNode = nodesMap.get(nodeId(e.target_type, e.target_id))
+    const amt = Number(e.amount) || 0
+    if (srcNode?.sector && tgtNode && !tgtNode.sector) {
+      const prev = inheritMap.get(tgtNode.id)
+      if (!prev || amt > prev.amount) inheritMap.set(tgtNode.id, { sector: srcNode.sector, amount: amt })
+    }
+  }
+  for (const [nid, { sector }] of inheritMap) {
+    const node = nodesMap.get(nid)
+    if (node && !node.sector) {
+      node.sector = sector
+      sectorTotals.set(sector, (sectorTotals.get(sector) || 0) + (node.amount || 0))
+    }
+  }
+
+  const sectors = Array.from(sectorTotals.entries())
+    .map(([name, total_amount]) => ({
+      name,
+      color: SECTOR_COLORS[name] || '#444444',
+      node_count: Array.from(nodesMap.values()).filter(n => n.sector === name).length,
+      total_amount
+    }))
+    .sort((a, b) => b.total_amount - a.total_amount)
+
+  return {
+    nodes: Array.from(nodesMap.values()),
+    edges: builtEdges,
+    sectors,
+    patterns: [],                                         // callers attach patterns when applicable
+    meta: {
+      cycle,
+      generated_at: new Date().toISOString(),
+      node_count: nodesMap.size,
+      edge_count: builtEdges.length,
+      source
+    }
+  }
+}
+
+/**
+ * Fetch committee metadata for a set of committee IDs in one query.
+ */
+async function loadCommittees(db, committeeIds) {
+  if (!committeeIds.length) return new Map()
+  const { data, error } = await db
+    .from('pac_committees')
+    .select('committee_id, name, is_501c4, is_super_pac, connected_org_name')
+    .in('committee_id', committeeIds)
+  if (error) throw error
+  const map = new Map()
+  for (const c of data || []) map.set(c.committee_id, c)
+  return map
+}
+
+async function loadPoliticians(db, candidateIds) {
+  if (!candidateIds.length) return new Map()
+  const { data, error } = await db
+    .from('politicians')
+    .select('fec_candidate_id, name, party, state, chamber, office, bioguide_id')
+    .in('fec_candidate_id', candidateIds)
+  if (error) throw error
+  const map = new Map()
+  for (const p of data || []) map.set(p.fec_candidate_id, p)
+  return map
+}
+
+function collectCommitteeIds(edges) {
+  const ids = new Set()
+  for (const e of edges) {
+    if (e.source_type !== 'employer' && e.source_type !== 'politician' && e.source_type !== 'candidate') ids.add(e.source_id)
+    if (e.target_type !== 'employer' && e.target_type !== 'politician' && e.target_type !== 'candidate') ids.add(e.target_id)
+  }
+  return Array.from(ids)
+}
+
+function collectCandidateIds(edges) {
+  const ids = new Set()
+  for (const e of edges) {
+    if (e.source_type === 'candidate' || e.source_type === 'politician') ids.add(e.source_id)
+    if (e.target_type === 'candidate' || e.target_type === 'politician') ids.add(e.target_id)
+  }
+  return Array.from(ids)
+}
+
+async function loadPatterns(db, cycle) {
+  const { data, error } = await db
+    .from('funding_flow_patterns')
+    .select('id, pattern_type, title, narrative, explanation, sector, severity_score, node_ids, generated_at')
+    .eq('cycle', cycle)
+    .eq('visible', true)
+    .order('generated_at', { ascending: false })
+    .limit(30)
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Universe mode — top N nodes across the whole cycle.
+ */
+export async function getUniverse({ cycle = '2024', nodeCap = 500 } = {}) {
+  const db = ensure()
+  const { data: edges, error } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', cycle)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(nodeCap * 3)                                   // each edge = 2 nodes; oversample to hit node cap after dedup
+  if (error) throw error
+
+  const enriched = enrichEdgesWithSector(edges || [])
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(enriched)),
+    loadPoliticians(db, collectCandidateIds(enriched))
+  ])
+  const envelope = buildEnvelope({ edges: enriched, committees, politicians, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    const topNodeIds = new Set(
+      [...envelope.nodes].sort((a, b) => b.amount - a.amount).slice(0, nodeCap).map(n => n.id)
+    )
+    envelope.nodes = envelope.nodes.filter(n => topNodeIds.has(n.id))
+    envelope.edges = envelope.edges.filter(e => topNodeIds.has(e.source) && topNodeIds.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+
+  if (process.env.GALAXY_AI_ENABLED === 'true') {
+    envelope.patterns = await loadPatterns(db, cycle)
+  }
+  return envelope
+}
+
+/**
+ * Sector mode — all edges where either end's sector matches.
+ */
+export async function getSector({ cycle = '2024', sector, nodeCap = 80 } = {}) {
+  if (!sector) throw new Error('sector is required')
+  const db = ensure()
+
+  // money_flow_edges has no sector columns — classify employer nodes server-side
+  const { data: allEdges, error } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', cycle)
+    .eq('source_type', 'employer')
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(1000)
+  if (error) throw error
+
+  // Filter to employers whose classified sector matches
+  const hop1 = (allEdges || []).filter(e => classifySector(e.source_label) === sector)
+
+  // Hop 2: committee → candidate for matched employer committees
+  const committeeIds = Array.from(new Set(hop1.map(e => e.target_id).filter(Boolean)))
+  let hop2 = []
+  if (committeeIds.length) {
+    const { data, error: e2 } = await db
+      .from('money_flow_edges')
+      .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+      .eq('cycle', cycle)
+      .in('source_id', committeeIds)
+      .gt('amount', 0)
+      .order('amount', { ascending: false })
+      .limit(200)
+    if (e2) throw e2
+    hop2 = data || []
+  }
+
+  const edges = [...hop1, ...hop2]
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(edges)),
+    loadPoliticians(db, collectCandidateIds(edges))
+  ])
+  const envelope = buildEnvelope({ edges, committees, politicians, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    const topNodeIds = new Set(
+      [...envelope.nodes].sort((a, b) => b.amount - a.amount).slice(0, nodeCap).map(n => n.id)
+    )
+    envelope.nodes = envelope.nodes.filter(n => topNodeIds.has(n.id))
+    envelope.edges = envelope.edges.filter(e => topNodeIds.has(e.source) && topNodeIds.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+  envelope.meta.scope = { mode: 'sector', sector }
+  return envelope
+}
+
+/**
+ * Employer mode — network around a single employer.
+ * Walks 2 hops: employer → committees → politicians.
+ *
+ * Hop-1 uses contributions directly (not money_flow_edges MV) because the MV
+ * only captures the top flows across the whole cycle — small/mid employers may
+ * appear with only 1 MV edge even if they donated to many committees.
+ */
+export async function getEmployer({ cycle = '2024', employerId, rawIds, nodeCap = 40 } = {}) {
+  if (!employerId) throw new Error('employerId is required')
+  const db = ensure()
+
+  const y = parseInt(cycle)
+  const dateStart = `${y - 1}-01-01`
+  const dateEnd   = `${y}-12-31`
+
+  // Hop 1: query contributions directly using all raw ID variants.
+  // Use ilike (case-insensitive) — money_flow_edges.source_id may be uppercased
+  // by the MV while contributions.contributor_employer preserves original case.
+  const ids = (rawIds?.length > 0) ? rawIds : [employerId]
+  let contribQuery = db
+    .from('contributions')
+    .select('committee_id, amount')
+    .gte('date', dateStart).lte('date', dateEnd)
+    .gt('amount', 0)
+    .limit(10000)
+  if (ids.length === 1) {
+    contribQuery = contribQuery.ilike('contributor_employer', ids[0])
+  } else {
+    // Multiple variants: OR filter with ilike per ID; quote values containing commas
+    const orFilter = ids
+      .map(id => `contributor_employer.ilike.${id.includes(',') ? `"${id}"` : id}`)
+      .join(',')
+    contribQuery = contribQuery.or(orFilter)
+  }
+  const { data: contribs, error: e1 } = await contribQuery
+  if (e1) throw e1
+
+  // Aggregate by committee in JS (PostgREST GROUP BY not available)
+  const cmtAmounts = new Map()
+  for (const c of contribs || []) {
+    if (!c.committee_id) continue
+    const cur = cmtAmounts.get(c.committee_id) || { amount: 0, txn_count: 0 }
+    cur.amount    += Number(c.amount) || 0
+    cur.txn_count += 1
+    cmtAmounts.set(c.committee_id, cur)
+  }
+
+  // Top 30 committees by amount; build synthetic edge rows matching MV schema
+  const sortedCmts = [...cmtAmounts.entries()]
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .slice(0, 30)
+  const committeeIds = sortedCmts.map(([id]) => id)
+  const hop1 = sortedCmts.map(([cmtId, { amount, txn_count }]) => ({
+    source_type: 'employer', source_id: employerId, source_label: employerId,
+    source_tier: 1,
+    target_type: 'committee', target_id: cmtId, target_label: null,
+    target_tier: 2,
+    amount, txn_count, cycle: y,
+  }))
+
+  // Hop 2: committee → politician (only for committees the employer touches)
+  let hop2 = []
+  if (committeeIds.length) {
+    const { data, error } = await db
+      .from('money_flow_edges')
+      .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+      .eq('cycle', cycle)
+      .in('source_id', committeeIds)
+      .gt('amount', 0)
+      .order('amount', { ascending: false })
+      .limit(100)
+    if (error) throw error
+    hop2 = data || []
+  }
+
+  const edges = [...hop1, ...hop2]
+  const enriched = enrichEdgesWithSector(edges)
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(enriched)),
+    loadPoliticians(db, collectCandidateIds(enriched))
+  ])
+  const envelope = buildEnvelope({ edges: enriched, committees, politicians, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    // Keep the employer + its committees + top politicians; trim the rest
+    const keep = new Set()
+    keep.add(nodeId('employer', employerId))
+    for (const id of committeeIds) keep.add(nodeId('committee', id))
+    const sortedPols = envelope.nodes
+      .filter(n => n.kind === 'politician')
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, nodeCap - keep.size)
+    for (const p of sortedPols) keep.add(p.id)
+    envelope.nodes = envelope.nodes.filter(n => keep.has(n.id))
+    envelope.edges = envelope.edges.filter(e => keep.has(e.source) && keep.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+  envelope.meta.scope = { mode: 'employer', employerId }
+  return envelope
+}
+
+/**
+ * Corporation mode — network around a corporation's PAC ecosystem.
+ * Fetches the corp's committee IDs from pac_committees, then walks
+ * their edges in money_flow_edges (outbound to politicians + inbound from employers).
+ */
+export async function getCorporation({ cycle = '2024', corpId, nodeCap = 60 } = {}) {
+  if (!corpId) throw new Error('corpId is required')
+  const db = ensure()
+
+  // Fetch all PAC committees connected to this corporation
+  const { data: cmts, error: ce } = await db
+    .from('pac_committees')
+    .select('committee_id, name, is_super_pac, is_501c4, connected_org_name')
+    .ilike('connected_org_name', corpId)
+    .limit(50)
+  if (ce) throw ce
+
+  const committeeIds = (cmts || []).map(c => c.committee_id)
+  if (!committeeIds.length) {
+    return buildEnvelope({ edges: [], committees: new Map(), politicians: new Map(), cycle })
+  }
+
+  // Pre-load committee metadata so buildEnvelope can classify node kinds
+  const cmtMap = new Map((cmts || []).map(c => [c.committee_id, c]))
+
+  // Outbound: committee → politician (PAC spending on candidates)
+  const { data: outEdges, error: oe } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', parseInt(cycle))
+    .in('source_id', committeeIds)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(150)
+  if (oe) throw oe
+
+  // Inbound: employer → committee (who funds the PAC)
+  const { data: inEdges, error: ie } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
+    .eq('cycle', parseInt(cycle))
+    .in('target_id', committeeIds)
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(50)
+  if (ie) throw ie
+
+  const allEdges = [...(outEdges || []), ...(inEdges || [])]
+  const enriched = enrichEdgesWithSector(allEdges)
+
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(enriched)),
+    loadPoliticians(db, collectCandidateIds(enriched))
+  ])
+
+  // cmtMap has all matched PACs; loadCommittees only fetched those appearing in edges.
+  // Merge to restore metadata for any PAC not in money_flow_edges (zero-flow PACs).
+  for (const [id, cmt] of cmtMap) {
+    if (!committees.has(id)) committees.set(id, cmt)
+  }
+
+  const envelope = buildEnvelope({ edges: enriched, committees, politicians, cycle })
+
+  if (envelope.nodes.length > nodeCap) {
+    const topIds = new Set(
+      [...envelope.nodes].sort((a, b) => b.amount - a.amount).slice(0, nodeCap).map(n => n.id)
+    )
+    envelope.nodes = envelope.nodes.filter(n => topIds.has(n.id))
+    envelope.edges = envelope.edges.filter(e => topIds.has(e.source) && topIds.has(e.target))
+    envelope.meta.node_count = envelope.nodes.length
+    envelope.meta.edge_count = envelope.edges.length
+  }
+
+  envelope.meta.scope = { mode: 'corporation', corpId }
+  return envelope
+}
+
+/**
+ * Pattern detail mode — returns the pattern + its fully expanded evidence
+ * nodes/edges by looking up each node_id in money_flow_edges.
+ */
+export async function getPatternDetail({ patternId } = {}) {
+  if (!patternId) throw new Error('patternId is required')
+  const db = ensure()
+
+  const { data: pattern, error: pe } = await db
+    .from('funding_flow_patterns')
+    .select('*')
+    .eq('id', patternId)
+    .eq('visible', true)
+    .maybeSingle()
+  if (pe) throw pe
+  if (!pattern) return null
+
+  // Parse node_ids into {type,id} then fetch matching edges
+  const parsed = (pattern.node_ids || []).map(nid => {
+    const [prefix, rawId] = nid.split(':', 2)
+    const type = prefix === 'emp' ? 'employer' : prefix === 'pol' ? 'candidate' : 'committee'
+    return { type, id: rawId, nid }
+  })
+  const employerIds   = parsed.filter(p => p.type === 'employer').map(p => p.id)
+  const committeeIds  = parsed.filter(p => p.type === 'committee').map(p => p.id)
+  const politicianIds = parsed.filter(p => p.type === 'candidate').map(p => p.id)
+
+  // Union query: edges touching any of the involved IDs (limited for safety)
+  const orFilters = [
+    employerIds.length   ? `and(source_type.eq.employer,source_id.in.(${employerIds.map(x => `"${x}"`).join(',')}))` : null,
+    committeeIds.length  ? `source_id.in.(${committeeIds.map(x => `"${x}"`).join(',')})` : null,
+    committeeIds.length  ? `target_id.in.(${committeeIds.map(x => `"${x}"`).join(',')})` : null,
+    politicianIds.length ? `and(target_type.in.("candidate","politician"),target_id.in.(${politicianIds.map(x => `"${x}"`).join(',')}))` : null
+  ].filter(Boolean)
+
+  if (!orFilters.length) return { pattern, evidence: { nodes: [], edges: [] } }
+
+  const { data: edges, error: ee } = await db
+    .from('money_flow_edges')
+    .select('source_id, source_type, source_tier, source_label, source_sector, target_id, target_type, target_tier, target_label, target_sector, amount, cycle')
+    .eq('cycle', pattern.cycle)
+    .or(orFilters.join(','))
+    .gt('amount', 0)
+    .order('amount', { ascending: false })
+    .limit(200)
+  if (ee) throw ee
+
+  const [committees, politicians] = await Promise.all([
+    loadCommittees(db, collectCommitteeIds(edges || [])),
+    loadPoliticians(db, collectCandidateIds(edges || []))
+  ])
+  const envelope = buildEnvelope({ edges: edges || [], committees, politicians, cycle: pattern.cycle })
+  return { pattern, evidence: { nodes: envelope.nodes, edges: envelope.edges } }
+}

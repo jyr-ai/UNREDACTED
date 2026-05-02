@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { FONT_MONO, FONT_SERIF } from '../theme/tokens.js';
 import { useApiData } from '../hooks/useApiData';
 import { campaignWatch as cwApi } from '../api/client';
 
@@ -204,7 +205,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
       }}>
         <div>
           <div style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
+            fontFamily: "FONT_SERIF",
             fontSize: '16px',
             color: theme.hi,
             fontWeight: 'bold'
@@ -212,7 +213,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
             {stateName} — Political Corporate Greed Index
           </div>
           <div style={{
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: FONT_MONO,
             fontSize: '9px',
             color: theme.mid,
             letterSpacing: '1px',
@@ -247,7 +248,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
       }}>
         {/* Loading state */}
         {corruptionLoading && (
-          <div style={{ textAlign: 'center', padding: '20px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: theme.mid }}>
+          <div style={{ textAlign: 'center', padding: '20px', fontFamily: FONT_MONO, fontSize: '11px', color: theme.mid }}>
             Loading corruption data…
           </div>
         )}
@@ -261,11 +262,11 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
             justifyContent: 'space-between',
             marginBottom: '12px'
           }}>
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: theme.accent, letterSpacing: '2px' }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: '11px', color: theme.accent, letterSpacing: '2px' }}>
               🔴 CORRUPTION INDEX
             </div>
             <div style={{
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: FONT_MONO,
               fontSize: '10px',
               color: getCorruptionColor(liveData.corruptionIndex),
               border: `1px solid ${getCorruptionColor(liveData.corruptionIndex)}44`,
@@ -282,17 +283,17 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
               border: `3px solid ${getCorruptionColor(liveData.corruptionIndex)}`,
               background: getCorruptionColor(liveData.corruptionIndex) + '18',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'IBM Plex Mono', monospace", fontSize: '18px',
+              fontFamily: FONT_MONO, fontSize: '18px',
               color: getCorruptionColor(liveData.corruptionIndex), fontWeight: 'bold',
               boxShadow: `0 0 15px ${getCorruptionColor(liveData.corruptionIndex)}28`
             }}>
               {liveData.corruptionIndex}
             </div>
             <div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: theme.mid, marginBottom: '4px' }}>
+              <div style={{ fontFamily: FONT_MONO, fontSize: '10px', color: theme.mid, marginBottom: '4px' }}>
                 SCORE: {liveData.corruptionIndex}/100
               </div>
-              <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '12px', fontStyle: 'italic', color: theme.mid, lineHeight: '1.4' }}>
+              <div style={{ fontFamily: "FONT_SERIF", fontSize: '12px', fontStyle: 'italic', color: theme.mid, lineHeight: '1.4' }}>
                 {liveData.corruptionIndex < 50
                   ? 'High corruption risk: Strong correlation between donor industries and legislative outcomes.'
                   : 'Moderate corruption risk: Some influence patterns detected.'}
@@ -360,7 +361,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
         {/* Legislation */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{
-            fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: theme.accent,
+            fontFamily: FONT_MONO, fontSize: '10px', color: theme.accent,
             letterSpacing: '1px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px'
           }}>
             <span>📜</span>
@@ -369,11 +370,11 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
           </div>
 
           {legislationLoading ? (
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: theme.mid, paddingLeft: 12 }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: theme.mid, paddingLeft: 12 }}>
               Fetching bills from Congress.gov…
             </div>
           ) : bills.length === 0 ? (
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: theme.low, paddingLeft: 12 }}>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 10, color: theme.low, paddingLeft: 12 }}>
               No recent bills found for {stateName}.
             </div>
           ) : (
@@ -397,7 +398,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
                       onMouseDown={e => e.stopPropagation()}
                       style={{
                         display: 'block',
-                        fontFamily: "'IBM Plex Mono',monospace",
+                        fontFamily: FONT_MONO,
                         fontSize: 10,
                         color: theme.hi,
                         textDecoration: 'none',
@@ -414,7 +415,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
                         {/* Bill ID badge */}
                         {bill.type && bill.number && (
                           <span style={{
-                            fontFamily: "'IBM Plex Mono',monospace", fontSize: 8,
+                            fontFamily: FONT_MONO, fontSize: 8,
                             color: theme.accent, border: `1px solid ${theme.border}`,
                             padding: '1px 5px', borderRadius: 3, letterSpacing: '0.5px',
                           }}>
@@ -423,7 +424,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
                         )}
                         {/* Sponsor */}
                         {bill.sponsor && (
-                          <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: theme.low }}>
+                          <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: theme.low }}>
                             {bill.sponsor.split(',')[0]}
                             {bill.sponsorParty ? ` (${bill.sponsorParty[0]})` : ''}
                           </span>
@@ -432,7 +433,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
 
                       {/* Date */}
                       {bill.introducedDate && (
-                        <span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 8, color: theme.low }}>
+                        <span style={{ fontFamily: FONT_MONO, fontSize: 8, color: theme.low }}>
                           {fmtDate(bill.introducedDate)}
                         </span>
                       )}
@@ -441,7 +442,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
                     {/* Latest action */}
                     {bill.latestAction && (
                       <div style={{
-                        fontFamily: "'IBM Plex Mono',monospace", fontSize: 8,
+                        fontFamily: FONT_MONO, fontSize: 8,
                         color: statusColor, marginTop: 4,
                         overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
                       }}>
@@ -459,7 +460,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
                 rel="noopener noreferrer"
                 onMouseDown={e => e.stopPropagation()}
                 style={{
-                  fontFamily: "'IBM Plex Mono',monospace",
+                  fontFamily: FONT_MONO,
                   fontSize: 9,
                   color: theme.blue || '#4A7FFF',
                   textDecoration: 'none',
@@ -482,19 +483,19 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
           border: `1px solid ${theme.border}`
         }}>
           <div style={{
-            fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: theme.blue,
+            fontFamily: FONT_MONO, fontSize: '10px', color: theme.blue,
             letterSpacing: '1px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px'
           }}>
             <span>🤖</span><span>AI ANALYSIS</span>
             {aiLoading && <span style={{ color: theme.mid }}>— generating…</span>}
           </div>
-          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '12px', fontStyle: 'italic', color: theme.mid, lineHeight: '1.6' }}>
+          <div style={{ fontFamily: "FONT_SERIF", fontSize: '12px', fontStyle: 'italic', color: theme.mid, lineHeight: '1.6' }}>
             {aiLoading
               ? 'Analyzing corruption patterns…'
               : (aiAnalysisText || 'Analysis unavailable.')}
           </div>
           <div style={{
-            marginTop: '10px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '8px', color: theme.low,
+            marginTop: '10px', fontFamily: FONT_MONO, fontSize: '8px', color: theme.low,
             borderTop: `1px solid ${theme.border}`, paddingTop: '8px'
           }}>
             {aiAnalysis?.data?.dataSource || 'FEC · USASpending.gov · DeepSeek AI'}
@@ -507,7 +508,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
           marginTop: '16px',
           paddingTop: '12px',
           borderTop: `1px solid ${theme.border}`,
-          fontFamily: "'IBM Plex Mono', monospace",
+          fontFamily: FONT_MONO,
           fontSize: '8px',
           color: theme.low,
           textAlign: 'center'
@@ -526,7 +527,7 @@ const CorruptionDialog = ({ stateCode, stateName, position, onClose, theme }) =>
 const Section = ({ title, items, theme }) => (
   <div style={{ marginBottom: '16px' }}>
     <div style={{
-      fontFamily: "'IBM Plex Mono', monospace",
+      fontFamily: FONT_MONO,
       fontSize: '10px',
       color: theme.accent,
       letterSpacing: '1px',
@@ -538,7 +539,7 @@ const Section = ({ title, items, theme }) => (
       <div
         key={index}
         style={{
-          fontFamily: "'IBM Plex Mono', monospace",
+          fontFamily: FONT_MONO,
           fontSize: '11px',
           color: theme.mid,
           marginBottom: '4px',
