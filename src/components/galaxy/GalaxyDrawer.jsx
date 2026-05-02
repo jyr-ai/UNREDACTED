@@ -84,6 +84,7 @@ function DetailView({ payload, cycle, t, surface, expanded = false }) {
           <div style={{
             width: '40%', borderRight: `1px solid ${t.panelBorder}`,
             display: 'flex', flexDirection: 'column',
+            overflowY: 'hidden',
           }}>
             <MiniGalaxy
               nodes={detail?.nodes || [node]}
