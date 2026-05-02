@@ -47,7 +47,9 @@ export default function FundingFlowGalaxy({
       ? `SECTOR · ${sector || ''}`
       : mode === 'employer'
         ? `EMPLOYER · ${employerId || ''}`
-        : ''
+        : mode === 'corporation'
+          ? `CORPORATION · ${corpId || ''}`
+          : ''
 
   function handleNodeClick(node) {
     setDrawer({ kind: 'node', node })
