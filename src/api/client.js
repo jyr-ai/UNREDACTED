@@ -80,11 +80,12 @@ export const donors = {
     request(`/api/donors/contributions/by-industry?keywords=${encodeURIComponent(keywords.join(','))}&limit=${limit}`),
   compare:       (ids) => request(`/api/donors/candidates/compare?ids=${ids.join(',')}`),
   pacSpending:   (id, limit = 20) => request(`/api/donors/committees/${id}/spending?limit=${limit}`),
-  employers: ({ cycle, minAmount, limit = 100, sector } = {}) => {
+  employers: ({ cycle, minAmount, limit = 100, sector, search } = {}) => {
     const qs = new URLSearchParams({
       ...(cycle     && { cycle }),
       ...(minAmount && { minAmount }),
       ...(sector    && { sector }),
+      ...(search    && { search }),
       limit,
     }).toString()
     return request(`/api/donors/employers?${qs}`)
@@ -239,8 +240,10 @@ export const galaxy = {
     const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
     return request(`/api/galaxy/sector/${encodeURIComponent(sector)}${qs ? '?' + qs : ''}`)
   },
-  employer: (employerId, { cycle } = {}) => {
-    const qs = new URLSearchParams({ ...(cycle && { cycle }) }).toString()
+  employer: (employerId, { cycle, rawIds } = {}) => {
+    const params = { ...(cycle && { cycle }) }
+    if (rawIds?.length > 1) params.rawIds = rawIds.join('|')
+    const qs = new URLSearchParams(params).toString()
     return request(`/api/galaxy/employer/${encodeURIComponent(employerId)}${qs ? '?' + qs : ''}`)
   },
   pattern: (id) => request(`/api/galaxy/patterns/${encodeURIComponent(id)}`),

@@ -49,6 +49,7 @@ router.get('/sector/:sector', wrap(req => getSector({
 router.get('/employer/:employerId', wrap(req => getEmployer({
   cycle:      req.query.cycle || '2024',
   employerId: decodeURIComponent(req.params.employerId),
+  rawIds:     req.query.rawIds ? req.query.rawIds.split('|').filter(Boolean) : undefined,
   nodeCap:    Number(req.query.limit) || 40
 })))
 

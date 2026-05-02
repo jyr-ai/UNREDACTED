@@ -5,7 +5,7 @@ import { galaxy } from '../../../api/client.js'
  * Fetches the correct galaxy envelope for (mode, cycle, scope).
  * Cancellation-safe; returns { data, loading, error, refetch }.
  */
-export default function useGalaxyData({ mode, cycle, sector, employerId }) {
+export default function useGalaxyData({ mode, cycle, sector, employerId, rawIds }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
@@ -18,7 +18,7 @@ export default function useGalaxyData({ mode, cycle, sector, employerId }) {
       let res
       if (mode === 'universe')      res = await galaxy.universe({ cycle })
       else if (mode === 'sector')   res = await galaxy.sector(sector, { cycle })
-      else if (mode === 'employer') res = await galaxy.employer(employerId, { cycle })
+      else if (mode === 'employer') res = await galaxy.employer(employerId, { cycle, rawIds })
       else throw new Error(`unknown galaxy mode: ${mode}`)
       if (id !== reqId.current) return                 // stale response
       setData(res || null)
@@ -35,7 +35,7 @@ export default function useGalaxyData({ mode, cycle, sector, employerId }) {
     if (mode === 'employer' && !employerId) return
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, cycle, sector, employerId])
+  }, [mode, cycle, sector, employerId, rawIds])
 
   return { data, loading, error, refetch: load }
 }

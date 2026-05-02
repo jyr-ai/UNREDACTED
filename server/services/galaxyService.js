@@ -296,23 +296,53 @@ export async function getSector({ cycle = '2024', sector, nodeCap = 80 } = {}) {
 /**
  * Employer mode — network around a single employer.
  * Walks 2 hops: employer → committees → politicians.
+ *
+ * Hop-1 uses contributions directly (not money_flow_edges MV) because the MV
+ * only captures the top flows across the whole cycle — small/mid employers may
+ * appear with only 1 MV edge even if they donated to many committees.
  */
-export async function getEmployer({ cycle = '2024', employerId, nodeCap = 40 } = {}) {
+export async function getEmployer({ cycle = '2024', employerId, rawIds, nodeCap = 40 } = {}) {
   if (!employerId) throw new Error('employerId is required')
   const db = ensure()
 
-  // Hop 1: employer → committee
-  const { data: hop1, error: e1 } = await db
-    .from('money_flow_edges')
-    .select('source_id, source_type, source_tier, source_label, target_id, target_type, target_tier, target_label, amount, txn_count, cycle')
-    .eq('cycle', cycle)
-    .eq('source_type', 'employer')
-    .eq('source_id', employerId)
+  const y = parseInt(cycle)
+  const dateStart = `${y - 1}-01-01`
+  const dateEnd   = `${y}-12-31`
+
+  // Hop 1: query contributions directly using all raw ID variants
+  // rawIds covers all name variants of this canonical employer (e.g. ["GOOGLE", "Google Llc"])
+  const ids = (rawIds?.length > 0) ? rawIds : [employerId]
+  const { data: contribs, error: e1 } = await db
+    .from('contributions')
+    .select('committee_id, amount')
+    .in('contributor_employer', ids)
+    .gte('date', dateStart).lte('date', dateEnd)
     .gt('amount', 0)
-    .order('amount', { ascending: false })
-    .limit(50)
+    .limit(10000)
   if (e1) throw e1
-  const committeeIds = Array.from(new Set((hop1 || []).map(e => e.target_id)))
+
+  // Aggregate by committee in JS (PostgREST GROUP BY not available)
+  const cmtAmounts = new Map()
+  for (const c of contribs || []) {
+    if (!c.committee_id) continue
+    const cur = cmtAmounts.get(c.committee_id) || { amount: 0, txn_count: 0 }
+    cur.amount    += Number(c.amount) || 0
+    cur.txn_count += 1
+    cmtAmounts.set(c.committee_id, cur)
+  }
+
+  // Top 30 committees by amount; build synthetic edge rows matching MV schema
+  const sortedCmts = [...cmtAmounts.entries()]
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .slice(0, 30)
+  const committeeIds = sortedCmts.map(([id]) => id)
+  const hop1 = sortedCmts.map(([cmtId, { amount, txn_count }]) => ({
+    source_type: 'employer', source_id: employerId, source_label: employerId,
+    source_tier: 1,
+    target_type: 'committee', target_id: cmtId, target_label: null,
+    target_tier: 2,
+    amount, txn_count, cycle: y,
+  }))
 
   // Hop 2: committee → politician (only for committees the employer touches)
   let hop2 = []
@@ -329,12 +359,13 @@ export async function getEmployer({ cycle = '2024', employerId, nodeCap = 40 } =
     hop2 = data || []
   }
 
-  const edges = [...(hop1 || []), ...hop2]
+  const edges = [...hop1, ...hop2]
+  const enriched = enrichEdgesWithSector(edges)
   const [committees, politicians] = await Promise.all([
-    loadCommittees(db, collectCommitteeIds(edges)),
-    loadPoliticians(db, collectCandidateIds(edges))
+    loadCommittees(db, collectCommitteeIds(enriched)),
+    loadPoliticians(db, collectCandidateIds(enriched))
   ])
-  const envelope = buildEnvelope({ edges, committees, politicians, cycle })
+  const envelope = buildEnvelope({ edges: enriched, committees, politicians, cycle })
 
   if (envelope.nodes.length > nodeCap) {
     // Keep the employer + its committees + top politicians; trim the rest
