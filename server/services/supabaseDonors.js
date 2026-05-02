@@ -8,6 +8,7 @@
  */
 import { supabase } from '../lib/supabase.js'
 import { classifySector } from '../lib/sectorClassifier.js'
+import { canonicalizeEmployers } from '../lib/employerNormalizer.js'
 
 function ensure() {
   if (!supabase) throw new Error('Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing)')
@@ -264,8 +265,11 @@ export async function getTopEmployers({ cycle, minAmount = 0, limit = 100 } = {}
     byId.set(id, cur)
   }
 
-  return [...byId.values()]
+  const raw = [...byId.values()]
     .filter(r => r.total >= minAmount)
+    .sort((a, b) => b.total - a.total)
+
+  return canonicalizeEmployers(raw)
     .sort((a, b) => b.total - a.total)
     .slice(0, limit)
 }
