@@ -160,6 +160,43 @@ export async function getMemberDetails(bioguideId) {
 
 // ─── Bills ────────────────────────────────────────────────────────────────────
 
+// Maps Congress.gov API bill type codes to the slug used in public www.congress.gov URLs.
+const BILL_TYPE_SLUG = {
+  HR: 'house-bill',
+  S: 'senate-bill',
+  HJRES: 'house-joint-resolution',
+  SJRES: 'senate-joint-resolution',
+  HCONRES: 'house-concurrent-resolution',
+  SCONRES: 'senate-concurrent-resolution',
+  HRES: 'house-resolution',
+  SRES: 'senate-resolution',
+}
+
+function ordinal(n) {
+  const num = Number(n)
+  if (!Number.isFinite(num)) return String(n)
+  const mod100 = num % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${num}th`
+  switch (num % 10) {
+    case 1: return `${num}st`
+    case 2: return `${num}nd`
+    case 3: return `${num}rd`
+    default: return `${num}th`
+  }
+}
+
+/**
+ * Build a user-facing www.congress.gov URL for a bill.
+ * The API's `bill.url` field points at api.congress.gov (requires api_key),
+ * so we can't hand that to a browser — construct the public page URL instead.
+ */
+function billPublicUrl(type, number, congress) {
+  if (!type || !number || !congress) return null
+  const slug = BILL_TYPE_SLUG[String(type).toUpperCase()]
+  if (!slug) return null
+  return `https://www.congress.gov/bill/${ordinal(congress)}-congress/${slug}/${number}`
+}
+
 /**
  * Get recent bills sponsored by members from a state.
  */
@@ -207,7 +244,7 @@ export async function getBillsByState(stateCode, limit = 20) {
           sponsorParty: member.party,
           sponsorChamber: member.chamber,
           policyArea: bill.policyArea?.name,
-          url: bill.url,
+          url: billPublicUrl(bill.type, bill.number, bill.congress),
         })
       }
     }
