@@ -6,56 +6,53 @@ const router = express.Router()
 let cache = { unemployment: null, inflation: null, ts: 0 }
 const CACHE_TTL = 6 * 60 * 60 * 1000 // 6 hours
 
-// Hardcoded fallback — updated manually when BLS publishes new data.
+// Hardcoded fallback — updated when BLS publishes new data.
 // This ensures the KPI always renders even when BLS rate limits are hit.
 const FALLBACK = {
-  unemployment: { rate: 4.2, change: 0.2, period: 'February 2026' },
-  inflation:    { rate: 2.8, change: -0.4, period: 'February 2026' },
+  unemployment: { rate: 4.3, change: 0.1, period: 'March 2026' },
+  inflation:    { rate: 3.3, change: 0.9, period: 'March 2026' },
 }
 
 /**
- * Fetch both series in a single POST to BLS v1.
- * POST requests use a separate, more generous rate-limit pool than GET.
+ * Fetch a single BLS series via the v2 GET API.
+ * The v1 POST endpoint returns 404; v2 GET works without a key.
  */
-async function fetchBLSSeries(seriesIds, startYear, endYear) {
-  const resp = await fetch('https://api.bls.gov/publicAPI/v1/timeseries/data', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      seriesid: seriesIds,
-      startyear: String(startYear),
-      endyear: String(endYear),
-    }),
-  })
+async function fetchBLSSeries(seriesId, startYear, endYear) {
+  const url = `https://api.bls.gov/publicAPI/v2/timeseries/data/${seriesId}?startyear=${startYear}&endyear=${endYear}`
+  const resp = await fetch(url, { signal: AbortSignal.timeout(10000) })
   if (!resp.ok) return null
   const json = await resp.json()
   if (json.status !== 'REQUEST_SUCCEEDED') return null
-  return json?.Results?.series || null
+  return json?.Results?.series?.[0]?.data || null
 }
 
-function parseUnemployment(series) {
-  if (!series || series.length < 13) return null
-  const current = parseFloat(series[0].value)
-  const yearAgo = parseFloat(series[12].value)
+function parseUnemployment(data) {
+  // Filter out entries with missing values (BLS returns '-' for not-yet-released months)
+  const valid = data.filter(r => r.value !== '-')
+  if (valid.length < 13) return null
+  const current  = parseFloat(valid[0].value)
+  const yearAgo  = parseFloat(valid[12].value)
   return {
-    rate: current,
+    rate:   current,
     change: +(current - yearAgo).toFixed(1),
-    period: `${series[0].periodName} ${series[0].year}`,
+    period: `${valid[0].periodName} ${valid[0].year}`,
   }
 }
 
-function parseInflation(series) {
-  if (!series || series.length < 13) return null
-  const cur = parseFloat(series[0].value)
-  const prev = parseFloat(series[12].value)
-  const yoy = +((cur - prev) / prev * 100).toFixed(1)
-  const prevChange = series.length >= 25
-    ? +((prev - parseFloat(series[24].value)) / parseFloat(series[24].value) * 100).toFixed(1)
+function parseInflation(data) {
+  // Filter out entries with missing values
+  const valid = data.filter(r => r.value !== '-')
+  if (valid.length < 13) return null
+  const cur  = parseFloat(valid[0].value)
+  const prev = parseFloat(valid[12].value)
+  const yoy  = +((cur - prev) / prev * 100).toFixed(1)
+  const prevChange = valid.length >= 25
+    ? +((parseFloat(valid[12].value) - parseFloat(valid[24].value)) / parseFloat(valid[24].value) * 100).toFixed(1)
     : null
   return {
-    rate: yoy,
+    rate:   yoy,
     change: prevChange != null ? +(yoy - prevChange).toFixed(1) : null,
-    period: `${series[0].periodName} ${series[0].year}`,
+    period: `${valid[0].periodName} ${valid[0].year}`,
   }
 }
 
@@ -68,28 +65,19 @@ async function loadData() {
   const currentYear = new Date().getFullYear()
 
   try {
-    // Single POST: fetch both unemployment and CPI in one request
-    const allSeries = await fetchBLSSeries(
-      ['LNS14000000', 'CUUR0000SA0'],
-      currentYear - 3,
-      currentYear
-    )
-    if (allSeries) {
-      for (const s of allSeries) {
-        if (s.seriesID === 'LNS14000000') {
-          cache.unemployment = parseUnemployment(s.data) || cache.unemployment
-        } else if (s.seriesID === 'CUUR0000SA0') {
-          cache.inflation = parseInflation(s.data) || cache.inflation
-        }
-      }
-    }
+    const [unemploymentData, cpiData] = await Promise.all([
+      fetchBLSSeries('LNS14000000', currentYear - 3, currentYear),
+      fetchBLSSeries('CUUR0000SA0', currentYear - 3, currentYear),
+    ])
+    if (unemploymentData) cache.unemployment = parseUnemployment(unemploymentData) || cache.unemployment
+    if (cpiData)          cache.inflation    = parseInflation(cpiData)             || cache.inflation
   } catch (e) {
     console.error('BLS fetch failed:', e.message)
   }
 
-  // If BLS is rate-limited, use hardcoded fallback
+  // If BLS is rate-limited or unavailable, use hardcoded fallback
   if (!cache.unemployment) cache.unemployment = FALLBACK.unemployment
-  if (!cache.inflation) cache.inflation = FALLBACK.inflation
+  if (!cache.inflation)    cache.inflation    = FALLBACK.inflation
 
   cache.ts = now
   return cache
@@ -103,7 +91,7 @@ router.get('/', async (_req, res) => {
     const data = await loadData()
     res.json({
       unemployment: data.unemployment,
-      inflation: data.inflation,
+      inflation:    data.inflation,
     })
   } catch (err) {
     res.status(502).json({ error: err.message })

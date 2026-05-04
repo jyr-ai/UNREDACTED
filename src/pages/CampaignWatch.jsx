@@ -179,49 +179,25 @@ const CampaignWatch = () => {
   // The bootstrap fetch (fast + slow tiers) runs in parallel with a 800ms timeout;
   // if it misses the cache, loadMapData falls through to individual API calls.
   useEffect(() => {
-    primeHydrationCache().then(() => {
-      loadMapData({
-        setCorruptionScores: (scores) => {
-          // Merge bootstrap corruption scores into corruptionIndex state shape
-          // so the existing choropleth + KPIs still work from the same source.
-          if (scores && typeof scores === 'object') {
-            setCorruptionIndex(prev => {
-              // Only replace if we got more data from bootstrap than from API
-              const bootstrapCount = Object.keys(scores).length;
-              if (bootstrapCount > prev.length) {
-                // Preserve totalRaised from API data already in prev — bootstrap doesn't carry it
-                const prevRaised = {};
-                prev.forEach(s => { if (s.stateCode) prevRaised[s.stateCode] = s.totalRaised || 0; });
-                return Object.entries(scores).map(([stateCode, corruptionIndex]) => ({
-                  stateCode,
-                  corruptionIndex,
-                  totalRaised: prevRaised[stateCode] || 0,
-                }));
-              }
-              return prev;
-            });
-          }
-        },
-        setGasPriceByState,
-        setContributions,
-        setElectionRaces,
-        setDarkMoneyFlows,
-        setSpendingFlows,
-        setStockActTrades,
-        setNewsLocations,
-      });
-    }).catch(() => {
-      // Bootstrap failed entirely — loadMapData will use individual fallbacks
-      loadMapData({
-        setGasPriceByState,
-        setContributions,
-        setElectionRaces,
-        setDarkMoneyFlows,
-        setSpendingFlows,
-        setStockActTrades,
-        setNewsLocations,
-      });
-    });
+    // Note: setCorruptionScores is intentionally NOT passed here.
+    // The bootstrap/seed payload for `corruption:index:v1` is a score-only
+    // {stateCode: 0-100} map and has no totalRaised values, so feeding it into
+    // corruptionIndex state would race with the cwApi.corruptionIndex() effect
+    // below and zero out the "2026 total raised" KPI. That effect already
+    // populates the full rich array including totalRaised for both the KPI
+    // and the choropleth, so the bootstrap path for corruption is redundant.
+    const mapSetters = {
+      setGasPriceByState,
+      setContributions,
+      setElectionRaces,
+      setDarkMoneyFlows,
+      setSpendingFlows,
+      setStockActTrades,
+      setNewsLocations,
+    };
+    primeHydrationCache()
+      .then(() => loadMapData(mapSetters))
+      .catch(() => loadMapData(mapSetters));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -382,19 +358,19 @@ const CampaignWatch = () => {
 
           {/* ── CAMPAIGN FINANCE (3) ── */}
           <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{corruptionLoading ? '…' : fmtM(kpiStats.total)}</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>2026 total raised</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>FEC · current cycle</div>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>$1.94B</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>Candidates raised</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Jan 2025–present · <a href="https://www.fec.gov/data/browse-data/?tab=raising" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>FEC</a></div>
           </div>
           <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.accent, lineHeight: 1, marginBottom: 4 }}>$18bn</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>PAC donations to Congress</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>2023–24 election cycle</div>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.accent, lineHeight: 1, marginBottom: 4 }}>$6.48B</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>PACs raised</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Jan 2025–present · <a href="https://www.fec.gov/data/browse-data/?tab=raising" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>FEC</a></div>
           </div>
           <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.accent, lineHeight: 1, marginBottom: 4 }}>34</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>STOCK Act potential violations</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Current congressional session</div>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.blue, lineHeight: 1, marginBottom: 4 }}>$1.28B</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>Party committees raised</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Jan 2025–present · <a href="https://www.fec.gov/data/browse-data/?tab=raising" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>FEC</a></div>
           </div>
 
           {/* ── FEDERAL SPENDING (3) ── */}
@@ -404,14 +380,14 @@ const CampaignWatch = () => {
             <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>Strikes: {conflictData ? fmtNum(conflictData.strikes?.value) : '—'} · Deaths: {conflictData ? fmtNum(conflictData.deaths?.value) : '—'} · <a href="https://meta-trials.vercel.app/us-iran-conflict" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>tracker</a></div>
           </div>
           <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderRight: `1px solid ${t.border}`, borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>{fmtK(totalSpend) || '$157bn'}</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>{totalSpend != null ? 'Contract obligations' : 'Overspent vs. appropriations'}</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>{liveContracts?.fiscalYear ? `FY${liveContracts.fiscalYear} · live` : 'FY2024 federal agencies'}</div>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.hi, lineHeight: 1, marginBottom: 4 }}>$3.65T</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>Federal spending FY2026</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}><span style={{ color: t.blue }}>+2% YoY</span> · <a href="https://fiscaldata.treasury.gov/americas-finance-guide/federal-spending/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>US Treasury · fiscal data</a></div>
           </div>
           <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
-            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: flaggedCount != null && flaggedCount > 5 ? t.accent : t.hi, lineHeight: 1, marginBottom: 4 }}>{flaggedCount != null ? String(flaggedCount) : '1,847'}</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>{flaggedCount != null ? 'Contracts ≥ $500M flagged' : 'Contracts flagged anomalous'}</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.low }}>{flaggedCount != null ? `From ${liveContracts?.data?.length} loaded` : 'Across 23 federal agencies'}</div>
+            <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.ok, lineHeight: 1, marginBottom: 4 }}>$2.48T</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>US Government Revenue</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.ok }}>+10% YoY · <a href="https://fiscaldata.treasury.gov/americas-finance-guide/government-revenue/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>US Treasury · fiscal data</a></div>
           </div>
         </div>
       </div>
