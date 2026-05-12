@@ -386,7 +386,7 @@ const CampaignWatch = () => {
           </div>
           <div style={{ padding: isMobile ? '10px 10px' : '14px 14px', borderBottom: isMobile ? `1px solid ${t.border}` : 'none' }}>
             <div style={{ fontFamily: FONT_SERIF, fontSize: isMobile ? 22 : 28, color: t.ok, lineHeight: 1, marginBottom: 4 }}>$2.48T</div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>US Government Revenue</div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.hi, marginBottom: 3 }}>US Gov. Revenue FY2026</div>
             <div style={{ fontFamily: FONT_MONO, fontSize: 9, color: t.ok }}>+10% YoY · <a href="https://fiscaldata.treasury.gov/americas-finance-guide/government-revenue/" target="_blank" rel="noopener noreferrer" style={{ color: t.blue, textDecoration: 'none' }}>US Treasury · fiscal data</a></div>
           </div>
         </div>

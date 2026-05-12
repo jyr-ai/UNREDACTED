@@ -29,6 +29,7 @@ import watchlistRouter from './routes/watchlist.js'
 import alertsRouter from './routes/alerts.js'
 import flagsRouter from './routes/flags.js'
 import galaxyRouter from './routes/galaxy.js'
+import liveStreamsRouter from './routes/liveStreams.js'
 
 const app = express()
 const isVercelDeployment =
@@ -135,6 +136,7 @@ app.use('/api/watchlist',      generalLimiter, watchlistRouter)
 app.use('/api/alerts',         generalLimiter, alertsRouter)
 app.use('/api/flags',          generalLimiter, flagsRouter)
 app.use('/api/galaxy',         generalLimiter, galaxyRouter)
+app.use('/api/live-streams',   generalLimiter, liveStreamsRouter)
 
 app.use((err, _req, res, _next) => {
   console.error(err.stack)

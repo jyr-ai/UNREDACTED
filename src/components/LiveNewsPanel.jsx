@@ -4,23 +4,30 @@ import { FONT_MONO } from '../theme/tokens.js';
 
 const ORANGE = '#FF8000';
 
+// channelId values verified via YouTube RSS feed (feeds/videos.xml?channel_id=...)
+// FOX: visit https://www.youtube.com/@livenowfox, open browser console and run:
+//   ytInitialData.header.c4TabbedHeaderRenderer.channelId
 const CHANNELS = [
-  { id: 'bloomberg',    label: 'BLOOMBERG',  name: 'Bloomberg',       videoId: 'iEpJwprxDdk' },
-  { id: 'abc',          label: 'ABC',        name: 'ABC News Live',   videoId: 'unwn_H2pRgM' },
-  { id: 'cbs',          label: 'CBS',        name: 'CBS News',        channelId: 'UC8p1vwvWtl6T73JiExfWs1g' },
-  { id: 'nbc',          label: 'NBC',        name: 'NBC News NOW',    videoId: 'VX7VRS2ZBPU' },
-  { id: 'fox',          label: 'FOX',        name: 'Fox News',        videoId: 'Mz1NkvRm8O8' },
-  { id: 'yahoo_finance',label: 'YAHOO FIN',  name: 'Yahoo Finance',   videoId: 'KQp-e_XQnDE' },
+  { id: 'bloomberg',    label: 'BLOOMBERG',  name: 'Bloomberg',        channelId: 'UCIALMKvObZNtJ6AmdCLP7Lg' },
+  { id: 'abc',          label: 'ABC',        name: 'ABC News Live',    channelId: 'UCBi2mrWuNuyYy4gbM6fU18Q' },
+  { id: 'cbs',          label: 'CBS',        name: 'CBS News',         channelId: 'UC8p1vwvWtl6T73JiExfWs1g' },
+  { id: 'nbc',          label: 'NBC',        name: 'NBC News NOW',     channelId: 'UCeY0bbntWzzVIaj2z3QigXg' },
+  { id: 'fox',          label: 'FOX',        name: 'LiveNOW from FOX', channelId: 'UCJg9wBPyKMNA5sRDnvzmkdg' },
+  { id: 'yahoo_finance',label: 'YAHOO FIN',  name: 'Yahoo Finance',    channelId: 'UCEAZeUIeJs0IjQiqTCdVSIg' },
 ];
 
-function buildEmbedUrl(channel, muted) {
+// Priority: (1) API-resolved live videoId, (2) channelId live_stream embed, (3) null
+function buildEmbedUrl(channel, resolvedVideoId, muted) {
   const params = new URLSearchParams({
     autoplay: '1', mute: muted ? '1' : '0',
     rel: '0', modestbranding: '1', playsinline: '1',
   });
-  if (channel.videoId) return `https://www.youtube.com/embed/${channel.videoId}?${params}`;
-  params.set('channel', channel.channelId);
-  return `https://www.youtube.com/embed/live_stream?${params}`;
+  if (resolvedVideoId) return `https://www.youtube.com/embed/${resolvedVideoId}?${params}`;
+  if (channel.channelId) {
+    params.set('channel', channel.channelId);
+    return `https://www.youtube.com/embed/live_stream?${params}`;
+  }
+  return null;
 }
 
 function usePanelWidth(ref) {
@@ -39,12 +46,25 @@ export default function LiveNewsPanel() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [muted, setMuted]         = useState(true);
   const [iframeKey, setIframeKey] = useState(0);
+  const [resolvedIds, setResolvedIds] = useState({});
   const panelRef = useRef(null);
   const w = usePanelWidth(panelRef);
   const s = Math.max(0.72, Math.min(1, w / 580));
 
+  useEffect(() => {
+    fetch('/api/live-streams')
+      .then(r => r.json())
+      .then(({ channels }) => {
+        if (!channels) return;
+        const ids = {};
+        Object.entries(channels).forEach(([id, ch]) => { if (ch?.videoId) ids[id] = ch.videoId; });
+        if (Object.keys(ids).length) setResolvedIds(ids);
+      })
+      .catch(() => {});
+  }, []);
+
   const channel  = CHANNELS[activeIdx];
-  const embedUrl = buildEmbedUrl(channel, muted);
+  const embedUrl = buildEmbedUrl(channel, resolvedIds[channel.id], muted);
 
   const selectChannel = useCallback((idx) => {
     if (idx === activeIdx) return;
@@ -100,14 +120,20 @@ export default function LiveNewsPanel() {
 
       {/* ── Video content ── */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative', background: '#000' }}>
-        <iframe
-          key={`yt-${channel.id}-${iframeKey}`}
-          src={embedUrl}
-          title={`${channel.name} Live`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-        />
+        {embedUrl ? (
+          <iframe
+            key={`yt-${channel.id}-${iframeKey}`}
+            src={embedUrl}
+            title={`${channel.name} Live`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+          />
+        ) : (
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: t.low, letterSpacing: 1 }}>CHANNEL ID NOT CONFIGURED</span>
+          </div>
+        )}
       </div>
 
       {/* ── Footer ── */}
@@ -119,7 +145,7 @@ export default function LiveNewsPanel() {
           </span>
         )}
         <a
-          href={channel.videoId ? `https://www.youtube.com/watch?v=${channel.videoId}` : `https://www.youtube.com/channel/${channel.channelId}/live`}
+          href={resolvedIds[channel.id] ? `https://www.youtube.com/watch?v=${resolvedIds[channel.id]}` : channel.channelId ? `https://www.youtube.com/channel/${channel.channelId}/live` : '#'}
           target="_blank" rel="noopener noreferrer"
           style={{ fontFamily: FONT_MONO, fontSize: Math.round(9 * s), color: t.low, textDecoration: 'none', letterSpacing: 0.5, transition: 'color 0.13s' }}
           onMouseEnter={e => { e.currentTarget.style.color = ORANGE; }}
