@@ -26,6 +26,7 @@ import {
 import Ticker from "./components/layout/Ticker.jsx";
 import { CommunityWidget } from "./components/ui/index.js";
 import WarStats from "./components/WarStats.jsx";
+import MobileVisitorModal from "./components/MobileVisitorModal.jsx";
 import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
@@ -1395,7 +1396,8 @@ function AppInner() {
       {/* Community widget — fixed position, appears on all pages */}
       <CommunityWidget theme={theme} />
 
-      <div style={{ background:theme.bg, minHeight:"100vh", transition:"background .25s", display:"flex", flexDirection:"column" }}>
+      <div style={{ background:theme.bg, minHeight:"100vh", transition:"background .25s", display:"flex", flexDirection:"column", overflowX:"hidden" }}>
+        <MobileVisitorModal />
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500;700&display=swap');
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1486,7 +1488,7 @@ function AppInner() {
                 {/* Hamburger toggle */}
                 <button onClick={() => setMenuOpen(o=>!o)} style={{
                   background:"none", border:`1px solid ${theme.border}`,
-                  color:theme.mid, width:36, height:36,
+                  color:theme.mid, width:44, height:44,
                   display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4,
                 }}>
                   {[0,1,2].map(i=>(
