@@ -203,7 +203,7 @@ function DesktopSidebar({ tabs, active, onChange }) {
               )}
             </button>
             {tab.coachMarkId && (
-              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1, pointerEvents: 'none' }}>
+              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}>
                 <CoachMark id={tab.coachMarkId} />
               </span>
             )}
@@ -284,7 +284,7 @@ function MobileDrawer({ tabs, active, onChange, open, onClose }) {
                 )}
               </button>
               {tab.coachMarkId && (
-                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1, pointerEvents: 'none' }}>
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}>
                   <CoachMark id={tab.coachMarkId} />
                 </span>
               )}

@@ -49,13 +49,12 @@ export default function CoachMark({ id }) {
 
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', left: '50%',
-          transform: 'translateX(-50%)',
+          position: 'absolute', top: '100%', left: 0,
           marginTop: 6, zIndex: 400,
           background: t.card,
           border: `1px solid ${ORANGE}`,
           padding: '10px 14px',
-          minWidth: 220, maxWidth: 300,
+          minWidth: 220, maxWidth: 'min(300px, calc(100vw - 24px))',
           boxShadow: `0 4px 16px rgba(255,128,0,.2)`,
           pointerEvents: 'auto',
         }}>
