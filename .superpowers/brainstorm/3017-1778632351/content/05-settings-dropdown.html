@@ -1,0 +1,56 @@
+<h2>Settings → Dropdown Menu</h2>
+<p class="subtitle">Replaces the current single "⚙ Settings" tab. Two items inside.</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Desktop / Tablet — top nav</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="background:#0A0A0A; padding:10px 20px; display:flex; align-items:center; gap:14px; border-bottom:1px solid #272727; font-family:Roboto,sans-serif">
+        <span style="color:#FF8000; font-size:11px; letter-spacing:1px; border-bottom:3px solid #FF8000; padding:8px 4px">MONITOR</span>
+        <span style="color:#888; font-size:11px; letter-spacing:1px; padding:8px 4px">EXPLORE MONEY GALAXY</span>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:8px; position:relative">
+          <button class="mock-button" style="background:transparent; border:1px solid #FF8000; color:#FF8000; font-size:10px">◈ AI</button>
+          <div style="position:relative">
+            <button class="mock-button" style="background:#161616; border:1px solid #FF8000; color:#FF8000; font-size:10px">⚙ Settings ▾</button>
+            <div style="position:absolute; top:38px; right:0; background:#0A0A0A; border:1px solid #FF8000; min-width:200px; box-shadow:0 6px 20px rgba(255,128,0,.25); z-index:10">
+              <div style="padding:10px 14px; font-size:11px; color:#fff; cursor:pointer; border-bottom:1px solid #272727">
+                <span style="color:#FF8000">◑</span> &nbsp; Take a tour
+                <div style="font-size:9px; color:#666; margin-top:2px">Replay the newcomer walkthrough</div>
+              </div>
+              <div style="padding:10px 14px; font-size:11px; color:#fff; cursor:pointer">
+                <span style="color:#FF8000">⚙</span> &nbsp; Configure
+                <div style="font-size:9px; color:#666; margin-top:2px">Theme &amp; API keys</div>
+              </div>
+            </div>
+          </div>
+          <button class="mock-button" style="background:#161616; border:1px solid #444; color:#888; font-size:10px">◎ Sign In</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Mobile — slide-out drawer</div>
+    <div class="mockup-body" style="padding:0">
+      <div style="background:#0A0A0A; padding:14px 0; max-width:280px; margin:0 auto">
+        <div style="padding:0 16px 12px; border-bottom:1px solid #272727; color:#FF8000; font-size:14px; font-weight:700">UN*REDACTED</div>
+        <div style="padding:13px 16px; font-size:18px; color:#FF8000; border-left:3px solid #FF8000; background:rgba(255,128,0,.09)">Monitor</div>
+        <div style="padding:13px 16px; font-size:18px; color:#888">Explore Money Galaxy</div>
+        <div style="height:1px; background:#272727; margin:8px 16px"></div>
+        <div style="padding:13px 16px; font-size:14px; color:#888; display:flex; align-items:center; gap:10px"><span style="color:#FF8000">◑</span> Take a tour</div>
+        <div style="padding:13px 16px; font-size:14px; color:#888; display:flex; align-items:center; gap:10px"><span style="color:#FF8000">⚙</span> Configure</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:18px">
+  <div class="label">Behavior</div>
+  <ul style="font-size:13px; line-height:1.7">
+    <li><b>Desktop:</b> hover or click <code>⚙ Settings ▾</code> opens the dropdown. Click outside / Esc closes.</li>
+    <li><b>Mobile:</b> drawer shows the two items inline (no nested menu — phones don't need it).</li>
+    <li><b>Take a tour</b> → calls <code>startTour()</code>. Welcome modal does <i>not</i> reappear (only "Configure" can reset that, if we ever want a "reset onboarding" button).</li>
+    <li><b>Configure</b> → opens the existing <code>&lt;Settings/&gt;</code> page (current behavior, just renamed in the menu).</li>
+    <li>The current <code>tab === "settings"</code> id stays internal — only the user-facing label changes.</li>
+  </ul>
+</div>
