@@ -49,6 +49,33 @@ export default function GuidedTour({ tab, setTab }) {
     };
   }, [isRunning, reposition]);
 
+  // Scroll the target into view on step change so the user doesn't have to.
+  // Run after the requiresTab switch has had a moment to render the target.
+  useEffect(() => {
+    if (!isRunning || !step?.targetSelector) return;
+    let cancelled = false;
+    const tryScroll = (attempt = 0) => {
+      if (cancelled) return;
+      const el = document.querySelector(step.targetSelector);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const vpH = window.innerHeight;
+        // Only scroll if the element isn't already comfortably in view.
+        const fullyVisible = rect.top >= 40 && rect.bottom <= vpH - 40;
+        if (!fullyVisible) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        // Reposition once the smooth scroll has settled
+        setTimeout(reposition, 450);
+      } else if (attempt < 6) {
+        setTimeout(() => tryScroll(attempt + 1), 100);
+      }
+    };
+    // Wait one frame for any tab switch to commit
+    const id = setTimeout(tryScroll, 50);
+    return () => { cancelled = true; clearTimeout(id); };
+  }, [isRunning, currentStep, step?.targetSelector, reposition]);
+
   // Step 4: auto-advance when user clicks the money tab
   useEffect(() => {
     if (!isRunning || !step?.waitForUserAction) return;
