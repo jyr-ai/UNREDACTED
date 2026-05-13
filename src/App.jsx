@@ -29,6 +29,7 @@ import { CommunityWidget } from "./components/ui/index.js";
 import WarStats from "./components/WarStats.jsx";
 import MobileVisitorModal from "./components/MobileVisitorModal.jsx";
 import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
+import WelcomeModal from "./features/tutorial/WelcomeModal.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -1393,6 +1394,9 @@ function AppInner() {
     <ThemeCtx.Provider value={theme}>
       {/* Auth modal — rendered at root so it overlays everything */}
       <Auth isOpen={showAuth} onClose={() => setShowAuth(false)} theme={theme}/>
+
+      {/* Tutorial layer 1 — welcome modal */}
+      <WelcomeModal />
 
       {/* Community widget — fixed position, appears on all pages */}
       <CommunityWidget theme={theme} />
