@@ -133,8 +133,8 @@ No CSS classes, no threaded refs — `spotlight.js` uses `document.querySelector
 | 2 | `monitor-map` | The live map | right | Click a state → delegation panel |
 | 3 | `monitor-feeds` | Live news & feed | bottom | What's surfacing right now |
 | 4 | `switch-to-galaxy` | Explore Money Galaxy | top | `waitForUserAction: true` — user clicks tab to advance |
-| 5 | `money-flow` | Money Flow | right | Sankey: donor → PAC → candidate |
-| 6 | `donor-intel` | Donor Intelligence | right | Deep-dive donor profiles |
+| 5 | `donor-intel` | Donor Intelligence | right | Deep-dive donor profiles |
+| 6 | `money-flow` | Money Flow | right | Sankey: donor → PAC → candidate |
 | 7 | `dark-money` | Dark Money | right | 501(c)(4) and undisclosed flows |
 | 8 | `corp-pacs` | Corporate PACs | right | FundingFlowGalaxy network graph |
 | 9 | `ai-analyst` | The AI Analyst | left | Ask anything — agents route and synthesize. **END.** |
@@ -169,7 +169,7 @@ Steps 5–8 (sub-tab switching):
 
 `authGated: false` on all steps in v1. When Dark Money and Money Flow become auth-gated:
 
-1. Set `authGated: true` on steps 5 and 7.
+1. Set `authGated: true` on steps 6 and 7 (Money Flow and Dark Money).
 2. If step reached and `!isAuthenticated`: swap callout body to *"Sign in to explore [feature name] — click below or continue the tour."* Two buttons: Sign In (opens existing `<Auth/>` modal alongside) and Next.
 3. Either action advances the tour. **Tour never blocks on auth.**
 4. Bump localStorage key to `v2` so existing users see the updated tour once.

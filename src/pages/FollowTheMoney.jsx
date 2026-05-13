@@ -25,8 +25,8 @@ import CorporatePACFlow from "../components/CorporatePACFlow.jsx";
 import CashFloodAnomalies from "../components/CashFloodAnomalies.jsx";
 
 const SUBTABS = [
-  { id: "flow",      label: "Money Flow",          badge: "NEW" },
   { id: "intel",     label: "Donor Intelligence"               },
+  { id: "flow",      label: "Money Flow",          badge: "NEW" },
   { id: "darkmoney", label: "Dark Money"                       },
   // { id: "anomalies", label: "Cash Flood",           badge: "NEW" },  // not ready
   // { id: "web",       label: "Donor Web"                        },  // not ready
