@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme } from '../../theme/index.js';
 import { useMobile } from '../../hooks/useMediaQuery.js';
 
@@ -9,22 +10,30 @@ export default function SettingsMenu({ onConfigure, onTakeTour }) {
   const t = useTheme();
   const isMobile = useMobile();
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [dropPos, setDropPos] = useState(null);
+  const btnRef = useRef(null);
+
+  function computePos() {
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setDropPos({ top: rect.bottom + 2, right: window.innerWidth - rect.right });
+  }
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    computePos();
+    const onDown = (e) => {
+      if (e.target.closest('[data-settings-dropdown]')) return;
+      if (btnRef.current && btnRef.current.contains(e.target)) return;
+      setOpen(false);
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
 
   if (isMobile) {
@@ -37,8 +46,9 @@ export default function SettingsMenu({ onConfigure, onTakeTour }) {
   }
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <>
       <button
+        ref={btnRef}
         onClick={() => setOpen(o => !o)}
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
@@ -54,13 +64,20 @@ export default function SettingsMenu({ onConfigure, onTakeTour }) {
         ⚙ Settings {open ? '▴' : '▾'}
       </button>
 
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', right: 0, marginTop: 2,
-          background: t.navBg || t.bg, border: `1px solid ${ORANGE}`,
-          minWidth: 210, zIndex: 300,
-          boxShadow: `0 6px 20px rgba(255,128,0,.2)`,
-        }}>
+      {open && dropPos && createPortal(
+        <div
+          data-settings-dropdown=""
+          style={{
+            position: 'fixed',
+            top: dropPos.top,
+            right: dropPos.right,
+            background: t.navBg || t.bg,
+            border: `1px solid ${ORANGE}`,
+            minWidth: 210,
+            zIndex: 900,
+            boxShadow: `0 6px 20px rgba(255,128,0,.2)`,
+          }}
+        >
           <button onClick={() => { onTakeTour?.(); setOpen(false); }} style={dropdownItemStyle(t)}>
             <span style={{ color: ORANGE, fontSize: 13, fontStyle: 'italic', fontFamily: 'Georgia, serif', flexShrink: 0 }}>i</span>
             <div>
@@ -75,9 +92,10 @@ export default function SettingsMenu({ onConfigure, onTakeTour }) {
               <div style={{ color: t.mid, fontSize: 9, fontFamily: MF, marginTop: 1 }}>Theme & API keys</div>
             </div>
           </button>
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
