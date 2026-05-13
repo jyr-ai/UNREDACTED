@@ -29,16 +29,10 @@ export default function SettingsMenu({ onConfigure, onTakeTour }) {
 
   if (isMobile) {
     return (
-      <>
-        <button onClick={() => { onTakeTour?.(); }} style={mobileRowStyle(t)}>
-          <span style={{ color: ORANGE, fontSize: 12, fontStyle: 'italic', fontFamily: 'Georgia, serif' }}>i</span>
-          Take a tour
-        </button>
-        <button onClick={() => { onConfigure(); }} style={mobileRowStyle(t)}>
-          <span style={{ color: ORANGE }}>⚙</span>
-          Configure
-        </button>
-      </>
+      <button onClick={() => { onConfigure(); }} style={mobileRowStyle(t)}>
+        <span style={{ color: ORANGE }}>⚙</span>
+        Configure
+      </button>
     );
   }
 

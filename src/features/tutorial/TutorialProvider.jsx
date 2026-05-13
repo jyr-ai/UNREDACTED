@@ -20,6 +20,7 @@ export default function TutorialProvider({ children }) {
   }, []);
 
   function startTour() {
+    markSeen();
     setCurrentStep(0);
     setPhase('tour-running');
   }

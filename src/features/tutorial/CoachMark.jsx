@@ -49,7 +49,7 @@ export default function CoachMark({ id }) {
 
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0,
+          position: 'absolute', top: '100%', right: 0,
           marginTop: 6, zIndex: 400,
           background: t.card,
           border: `1px solid ${ORANGE}`,

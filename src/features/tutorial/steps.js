@@ -14,7 +14,7 @@ export const STEPS = [
     targetSelector: '[data-tour="monitor-map"]',
     title: 'The live map',
     body: 'Click any state to see its congressional delegation, live news, and active federal contracts.',
-    placement: 'right',
+    placement: 'bottom',
     requiresTab: 'monitor',
     waitForUserAction: false,
     authGated: false,
