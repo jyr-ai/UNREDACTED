@@ -12,10 +12,12 @@
  * circular dependencies (both are defined inline in App.jsx).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../theme/index.js";
 import { ORANGE, FONT_MONO as MF, FONT_SERIF as SF } from "../theme/tokens.js";
 import { useMobile } from "../hooks/useMediaQuery.js";
+import { useTutorial } from "../features/tutorial/TutorialProvider.jsx";
+import { STEPS } from "../features/tutorial/steps.js";
 import PageSidebar from "../components/ui/PageSidebar.jsx";
 import DarkMoneyTracker from "../components/DarkMoneyTracker.jsx";
 import LobbyistBundlers from "../components/LobbyistBundlers.jsx";
@@ -38,7 +40,21 @@ const SUBTABS = [
 export default function FollowTheMoney({ DonorIntel, DonorWeb, theme }) {
   const t = useTheme();
   const isMobile = useMobile();
-  const [sub, setSub] = useState("flow");
+  const [sub, setSub] = useState("intel");
+  const { phase, currentStep } = useTutorial();
+
+  useEffect(() => {
+    if (phase !== 'tour-running') return;
+    const stepId = STEPS[currentStep]?.id;
+    const subMap = {
+      'donor-intel': 'intel',
+      'money-flow':  'flow',
+      'dark-money':  'darkmoney',
+      'corp-pacs':   'corpacs',
+    };
+    const target = subMap[stepId];
+    if (target) setSub(target);
+  }, [phase, currentStep]);
 
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", minHeight: 0, height: "100%" }}>

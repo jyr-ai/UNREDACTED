@@ -158,6 +158,7 @@ function DesktopSidebar({ tabs, active, onChange }) {
         return (
           <button
             key={tab.id}
+            data-tour={`subtab-${tab.id}`}
             onClick={() => onChange(tab.id)}
             title={tab.label}
             style={{
@@ -246,6 +247,7 @@ function MobileDrawer({ tabs, active, onChange, open, onClose }) {
           return (
             <button
               key={tab.id}
+              data-tour={`subtab-${tab.id}`}
               onClick={() => { onChange(tab.id); onClose(); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
