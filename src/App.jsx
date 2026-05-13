@@ -24,6 +24,7 @@ import {
   version,
 } from "./api/client.js";
 import Ticker from "./components/layout/Ticker.jsx";
+import SettingsMenu from "./components/layout/SettingsMenu.jsx";
 import { CommunityWidget } from "./components/ui/index.js";
 import WarStats from "./components/WarStats.jsx";
 import MobileVisitorModal from "./components/MobileVisitorModal.jsx";
@@ -232,10 +233,10 @@ function hg(t) {
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
 const NAV_CARDS = [
   { id:"monitor",        label:"Monitor",              sub:"Live map · news feed · alerts",                     color:"#4A7FFF" },
-  { id:"money",          label:"Follow the Money",     sub:"Donor networks · dark money · lobbyist bundlers",   color:ORANGE    },
-  { id:"accountability", label:"Accountability",       sub:"STOCK Act · vote-donor alignment · watchlist",      color:"#FF4455" },
-  { id:"policy",         label:"Policy & Regulation",  sub:"Bills · executive orders · regulatory watch",       color:"#A855F7" },
-  { id:"budget",         label:"Budget & Contracts",   sub:"Agency spending · contract awards · energy intel",  color:"#10B981" },
+  { id:"money",          label:"Explore Money Galaxy",  sub:"Donor networks · dark money · lobbyist bundlers",   color:ORANGE    },
+  // { id:"accountability", label:"Accountability",       sub:"STOCK Act · vote-donor alignment · watchlist",      color:"#FF4455" },  // hidden — underdeveloped
+  // { id:"policy",         label:"Policy & Regulation",  sub:"Bills · executive orders · regulatory watch",       color:"#A855F7" },  // hidden — underdeveloped
+  // { id:"budget",         label:"Budget & Contracts",   sub:"Agency spending · contract awards · energy intel",  color:"#10B981" },  // hidden — underdeveloped
 ];
 
 function Overview({ onNavigate }) {
@@ -879,10 +880,10 @@ function CorporateAndProfile({ theme }) {
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
   { id:"monitor",        label:"Monitor"            },
-  { id:"money",          label:"Follow the Money"   },
-  { id:"accountability", label:"Accountability"     },
-  { id:"policy",         label:"Policy & Regulation"},
-  { id:"budget",         label:"Budget & Contracts" },
+  { id:"money",          label:"Explore Money Galaxy"},
+  // { id:"accountability", label:"Accountability"     },  // hidden — underdeveloped
+  // { id:"policy",         label:"Policy & Regulation"},  // hidden — underdeveloped
+  // { id:"budget",         label:"Budget & Contracts" },  // hidden — underdeveloped
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1536,13 +1537,10 @@ function AppInner() {
                     );
                   })}
                   {/* Settings row */}
-                  <button onClick={() => { setTab(t=>t==="settings"?"monitor":"settings"); setMenuOpen(false); }} style={{
-                    width:"100%", textAlign:"left", background: tab==="settings" ? ORANGE+"18" : "none",
-                    border:"none", borderLeft:`3px solid ${tab==="settings"?ORANGE:"transparent"}`,
-                    padding:"13px 16px", fontFamily:MF, fontSize:24, color: tab==="settings"?ORANGE:theme.mid,
-                  }}>
-                    ⚙ Settings
-                  </button>
+                  <SettingsMenu
+                    onConfigure={() => { setTab("settings"); setMenuOpen(false); track("tab_view", { tab: "settings" }); }}
+                    onTakeTour={null}
+                  />
                   {/* Divider */}
                   <div style={{ height:1, background:theme.border, margin:"8px 16px" }}/>
                   {/* Theme + Auth in drawer */}
@@ -1625,14 +1623,10 @@ function AppInner() {
               </button>
 
               <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
-              <button onClick={() => { setTab(t => { const next=t==="settings"?"overview":"settings"; track("tab_view",{tab:next}); return next; }); }} style={{
-                display:"flex", alignItems:"center", gap:6, background:"transparent", border:"none",
-                borderBottom:`3px solid ${tab==="settings"?ORANGE:"transparent"}`, padding:"12px 10px",
-                fontFamily:MF, fontSize:10.5, letterSpacing:0.5, color:tab==="settings"?ORANGE:theme.mid,
-                transition:"color .14s, border-color .14s", whiteSpace:"nowrap",
-              }}>
-                ⚙ Settings
-              </button>
+              <SettingsMenu
+                onConfigure={() => { setTab("settings"); track("tab_view", { tab: "settings" }); }}
+                onTakeTour={null}
+              />
             </div>
           </div>
         )}
