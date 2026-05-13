@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTheme } from '../../theme/index.js';
 import { FONT_MONO } from '../../theme/tokens.js';
+import CoachMark from '../../features/tutorial/CoachMark.jsx';
 
 const ORANGE = '#FF8000';
 
@@ -186,8 +187,9 @@ function DesktopSidebar({ tabs, active, onChange }) {
             <span style={{ color: isActive ? ORANGE : 'inherit', flexShrink: 0, display: 'flex' }}>
               {ICONS[tab.id] || DEFAULT_ICON}
             </span>
-            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
               {tab.label}
+              {tab.coachMarkId && <CoachMark id={tab.coachMarkId} />}
             </span>
             {tab.badge && (
               <span style={{
@@ -265,7 +267,10 @@ function MobileDrawer({ tabs, active, onChange, open, onClose }) {
               <span style={{ color: isActive ? ORANGE : 'inherit', display: 'flex' }}>
                 {ICONS[tab.id] || DEFAULT_ICON}
               </span>
-              <span style={{ flex: 1 }}>{tab.label}</span>
+              <span style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                {tab.label}
+                {tab.coachMarkId && <CoachMark id={tab.coachMarkId} />}
+              </span>
               {tab.badge && (
                 <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: ORANGE, background: ORANGE + '18', border: `1px solid ${ORANGE}44`, padding: '1px 5px' }}>
                   {tab.badge}

@@ -32,6 +32,7 @@ import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
 import WelcomeModal from "./features/tutorial/WelcomeModal.jsx";
 import GuidedTour from "./features/tutorial/GuidedTour.jsx";
 import { useTutorial } from "./features/tutorial/TutorialProvider.jsx";
+import CoachMark from "./features/tutorial/CoachMark.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -1616,12 +1617,16 @@ function AppInner() {
                   <button onClick={() => { track("auth_sign_out"); signOut(); }} title="Sign out" style={{ background:"none", border:`1px solid ${theme.border}`, color:theme.low, fontFamily:MF, fontSize:8.5, padding:"5px 8px", cursor:"pointer" }}>↪</button>
                 </div>
               ) : (
-                <button onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }} style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}>
-                  <span style={{ fontSize:11 }}>◎</span>
-                  <span style={{ letterSpacing:1 }}>SIGN IN</span>
-                </button>
+                <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                  <button onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }} style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}>
+                    <span style={{ fontSize:11 }}>◎</span>
+                    <span style={{ letterSpacing:1 }}>SIGN IN</span>
+                  </button>
+                  <CoachMark id="sign-in-explainer" />
+                </span>
               )}
 
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
               <button data-tour="ai-button" onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
                 display:"flex", alignItems:"center", gap:7,
                 background: analyst ? ORANGE : ORANGE+"18", border:`1.5px solid ${ORANGE}`, padding:"5px 14px",
@@ -1631,6 +1636,8 @@ function AppInner() {
                 <span style={{ fontSize:12 }}>◈</span>
                 ANALYST {analyst ? "▾" : "▸"}
               </button>
+              <CoachMark id="ai-analyst-explainer" />
+              </span>
 
               <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
               <SettingsMenu

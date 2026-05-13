@@ -19,6 +19,7 @@ import { useMobile } from "../hooks/useMediaQuery.js";
 import { useTutorial } from "../features/tutorial/TutorialProvider.jsx";
 import { STEPS } from "../features/tutorial/steps.js";
 import PageSidebar from "../components/ui/PageSidebar.jsx";
+import CoachMark from "../features/tutorial/CoachMark.jsx";
 import DarkMoneyTracker from "../components/DarkMoneyTracker.jsx";
 import LobbyistBundlers from "../components/LobbyistBundlers.jsx";
 import IndependentExpenditures from "../components/IndependentExpenditures.jsx";
@@ -27,14 +28,14 @@ import CorporatePACFlow from "../components/CorporatePACFlow.jsx";
 import CashFloodAnomalies from "../components/CashFloodAnomalies.jsx";
 
 const SUBTABS = [
-  { id: "intel",     label: "Donor Intelligence"               },
-  { id: "flow",      label: "Money Flow",          badge: "NEW" },
-  { id: "darkmoney", label: "Dark Money"                       },
+  { id: "intel",     label: "Donor Intelligence", coachMarkId: "donor-intel-explainer"               },
+  { id: "flow",      label: "Money Flow",          badge: "NEW", coachMarkId: "money-flow-explainer"  },
+  { id: "darkmoney", label: "Dark Money",           coachMarkId: "dark-money-explainer"               },
   // { id: "anomalies", label: "Cash Flood",           badge: "NEW" },  // not ready
   // { id: "web",       label: "Donor Web"                        },  // not ready
   // { id: "bundlers",  label: "Lobbyist Bundlers",   badge: "NEW" },  // not ready
   // { id: "ie",        label: "Indep. Expenditures", badge: "NEW" },  // not ready
-  { id: "corpacs",   label: "Corporate PACs",      badge: "NEW" },
+  { id: "corpacs",   label: "Corporate PACs",      badge: "NEW", coachMarkId: "corp-pacs-explainer"   },
 ];
 
 export default function FollowTheMoney({ DonorIntel, DonorWeb, theme }) {
