@@ -30,6 +30,7 @@ import WarStats from "./components/WarStats.jsx";
 import MobileVisitorModal from "./components/MobileVisitorModal.jsx";
 import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
 import WelcomeModal from "./features/tutorial/WelcomeModal.jsx";
+import GuidedTour from "./features/tutorial/GuidedTour.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -1398,6 +1399,9 @@ function AppInner() {
       {/* Tutorial layer 1 — welcome modal */}
       <WelcomeModal />
 
+      {/* Tutorial layer 2 — guided overlay tour */}
+      <GuidedTour tab={tab} setTab={setTab} />
+
       {/* Community widget — fixed position, appears on all pages */}
       <CommunityWidget theme={theme} />
 
@@ -1577,7 +1581,7 @@ function AppInner() {
             {TABS.map(tb => {
               const on = tab===tb.id;
               return (
-                <button key={tb.id} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
+                <button key={tb.id} data-tour={tb.id === 'money' ? 'tab-money' : undefined} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
                   background:"transparent",
                   color: on ? ORANGE : theme.mid,
                   border:"none",

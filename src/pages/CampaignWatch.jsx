@@ -393,7 +393,7 @@ const CampaignWatch = () => {
       </div>
 
       {/* ── Live Intelligence Feeds ── */}
-      <div>
+      <div data-tour="monitor-feeds">
         <Band label="LIVE INTELLIGENCE FEEDS" right="UPDATING CONTINUOUSLY" />
       <div
         ref={feedsContainerRef}
@@ -453,7 +453,7 @@ const CampaignWatch = () => {
       </div>
 
       {/* ── Map (full width, below both panels) ─────────────────────── */}
-      <div>
+      <div data-tour="monitor-map">
         <Band label="US Geoeconomic Map" right="CLICK ANY STATE FOR PROFILE" />
         <ErrorBoundary label="Map" theme={t}>
           <Card>

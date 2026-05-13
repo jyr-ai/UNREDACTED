@@ -82,7 +82,7 @@ function Ticker() {
   const animId  = 'ticker-scroll'
 
   return (
-    <div style={{
+    <div data-tour="ticker" style={{
       background: t.tickerBg,
       borderBottom: `1px solid ${t.border}`,
       padding: '0 0',
