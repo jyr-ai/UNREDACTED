@@ -31,6 +31,7 @@ import MobileVisitorModal from "./components/MobileVisitorModal.jsx";
 import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
 import WelcomeModal from "./features/tutorial/WelcomeModal.jsx";
 import GuidedTour from "./features/tutorial/GuidedTour.jsx";
+import { useTutorial } from "./features/tutorial/TutorialProvider.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -1380,6 +1381,7 @@ function AppInner() {
 
   const [showAuth, setShowAuth] = useState(false);
   const { isAuthenticated, user, profile, signOut } = useAuth();
+  const { startTour } = useTutorial();
   const theme = DARK_THEME;
 
   const renderTab = () => {
@@ -1547,7 +1549,7 @@ function AppInner() {
                   {/* Settings row */}
                   <SettingsMenu
                     onConfigure={() => { setTab("settings"); setMenuOpen(false); track("tab_view", { tab: "settings" }); }}
-                    onTakeTour={null}
+                    onTakeTour={startTour}
                   />
                   {/* Divider */}
                   <div style={{ height:1, background:theme.border, margin:"8px 16px" }}/>
@@ -1633,7 +1635,7 @@ function AppInner() {
               <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
               <SettingsMenu
                 onConfigure={() => { setTab("settings"); track("tab_view", { tab: "settings" }); }}
-                onTakeTour={null}
+                onTakeTour={startTour}
               />
             </div>
           </div>
