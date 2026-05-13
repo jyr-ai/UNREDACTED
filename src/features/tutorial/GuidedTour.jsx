@@ -8,6 +8,7 @@ import { getSpotlightStyles } from './lib/spotlight.js';
 
 const ORANGE = '#FF8000';
 const MF = "'Roboto', sans-serif";
+const DIM = 'rgba(0,0,0,.72)';
 
 export default function GuidedTour({ tab, setTab }) {
   const t = useTheme();
@@ -30,16 +31,21 @@ export default function GuidedTour({ tab, setTab }) {
   // Reposition on step change, resize, DOM mutations
   useEffect(() => {
     if (!isRunning) { setStyles(null); return; }
+    // Run immediately so the callout is on screen with no flicker
     reposition();
-    // Small delay to let React finish rendering the target
-    const timer = setTimeout(reposition, 80);
+    // Run again after the target's tab has had a chance to mount
+    const t1 = setTimeout(reposition, 80);
+    const t2 = setTimeout(reposition, 250);
+    const t3 = setTimeout(reposition, 600);
     roRef.current = new ResizeObserver(reposition);
     roRef.current.observe(document.body);
     window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
     return () => {
-      clearTimeout(timer);
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       roRef.current?.disconnect();
       window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
     };
   }, [isRunning, reposition]);
 
@@ -75,32 +81,56 @@ export default function GuidedTour({ tab, setTab }) {
     return () => document.removeEventListener('keydown', handler);
   }, [isRunning, skipTour]);
 
-  if (!isRunning || !styles) return null;
+  // CRITICAL: render even before styles are computed — once isRunning is true
+  // the callout must always be on screen. styles fills in via effect below.
+  if (!isRunning || !step) return null;
+
+  const hole = styles?.hole || null;
+  const callout = styles?.callout || { position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 280 };
+  const vpW = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const vpH = typeof window !== 'undefined' ? window.innerHeight : 800;
 
   return createPortal(
     <>
-      {/* Dimmed overlay with spotlight hole */}
-      <div
-        onClick={skipTour}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 600,
-          background: 'rgba(0,0,0,.75)',
-          ...(styles.found ? { clipPath: styles.clipPath } : {}),
-          transition: 'clip-path .2s ease',
-        }}
-      />
+      {/* 4-rectangle dim overlay around the spotlight hole.
+          When no hole, render a single full-screen dim div. */}
+      {hole ? (
+        <>
+          {/* TOP */}
+          <div onClick={skipTour} style={dimRect(0, 0, vpW, hole.top)} />
+          {/* LEFT */}
+          <div onClick={skipTour} style={dimRect(0, hole.top, hole.left, hole.height)} />
+          {/* RIGHT */}
+          <div onClick={skipTour} style={dimRect(hole.left + hole.width, hole.top, vpW - (hole.left + hole.width), hole.height)} />
+          {/* BOTTOM */}
+          <div onClick={skipTour} style={dimRect(0, hole.top + hole.height, vpW, vpH - (hole.top + hole.height))} />
+          {/* Glow ring around the spotlight (no fill — just a colored border) */}
+          <div
+            style={{
+              position: 'fixed',
+              top: hole.top, left: hole.left, width: hole.width, height: hole.height,
+              border: `2px solid ${ORANGE}`,
+              boxShadow: `0 0 0 2px rgba(255,128,0,.25), 0 0 32px rgba(255,128,0,.4)`,
+              pointerEvents: 'none',
+              zIndex: 600,
+              transition: 'all .2s ease',
+            }}
+          />
+        </>
+      ) : (
+        <div onClick={skipTour} style={{ position: 'fixed', inset: 0, zIndex: 600, background: DIM }} />
+      )}
 
-      {/* Callout card */}
+      {/* Callout card — ALWAYS rendered when tour is running */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
           zIndex: 700,
-          width: 280,
           background: t.card,
           border: `1px solid ${ORANGE}`,
           padding: '16px 18px',
           boxShadow: `0 8px 24px rgba(255,128,0,.25)`,
-          ...styles.callout,
+          ...callout,
         }}
       >
         {/* Header row */}
@@ -110,6 +140,7 @@ export default function GuidedTour({ tab, setTab }) {
           </span>
           <button
             onClick={skipTour}
+            aria-label="Close tour"
             style={{ background: 'none', border: 'none', color: t.mid, fontSize: 18, cursor: 'pointer', lineHeight: 1, padding: 0 }}
           >
             ×
@@ -121,7 +152,7 @@ export default function GuidedTour({ tab, setTab }) {
           {step.title}
         </div>
 
-        {/* Body — swap copy for waitForUserAction step */}
+        {/* Body */}
         <div style={{ fontFamily: MF, fontSize: 12, color: t.mid, lineHeight: 1.55, marginBottom: 14 }}>
           {step.waitForUserAction ? 'Click the highlighted tab to continue.' : step.body}
         </div>
@@ -153,6 +184,18 @@ export default function GuidedTour({ tab, setTab }) {
     </>,
     document.body
   );
+}
+
+function dimRect(left, top, width, height) {
+  return {
+    position: 'fixed',
+    top, left,
+    width: Math.max(0, width),
+    height: Math.max(0, height),
+    background: DIM,
+    zIndex: 600,
+    cursor: 'pointer',
+  };
 }
 
 function navBtn(t, primary) {
