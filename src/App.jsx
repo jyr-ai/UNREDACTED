@@ -1620,7 +1620,7 @@ function AppInner() {
                 </button>
               )}
 
-              <button onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+              <button data-tour="ai-button" onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
                 display:"flex", alignItems:"center", gap:7,
                 background: analyst ? ORANGE : ORANGE+"18", border:`1.5px solid ${ORANGE}`, padding:"5px 14px",
                 fontFamily:MF, fontSize:9, letterSpacing:1, color: analyst ? WHITE : ORANGE, transition:"all .2s",
