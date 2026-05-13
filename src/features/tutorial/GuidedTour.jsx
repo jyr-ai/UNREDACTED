@@ -7,7 +7,7 @@ import { STEPS } from './steps.js';
 import { getSpotlightStyles } from './lib/spotlight.js';
 
 const ORANGE = '#FF8000';
-const MF = "'IBM Plex Mono', monospace";
+const MF = "'Roboto', sans-serif";
 
 export default function GuidedTour({ tab, setTab }) {
   const t = useTheme();
