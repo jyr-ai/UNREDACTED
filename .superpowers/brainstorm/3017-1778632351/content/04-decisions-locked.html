@@ -1,0 +1,42 @@
+<h2>Decisions Locked</h2>
+<p class="subtitle">Now presenting the design in sections. Read each section in the terminal and tell me to revise or proceed.</p>
+
+<div class="section">
+  <div class="label">Shape</div>
+  <p>Hybrid (D) — welcome modal · 9-step guided overlay tour · persistent <b>?</b> coach marks · "Take the tour again" in Settings</p>
+</div>
+
+<div class="section">
+  <div class="label">Tour stops</div>
+  <ol style="font-size:13px; line-height:1.7">
+    <li>What is UN*REDACTED?</li>
+    <li>Monitor — live map</li>
+    <li>News &amp; Feed panels</li>
+    <li>Switch to Explore Money Galaxy <span style="color:#FF8000">(user clicks tab)</span></li>
+    <li>Money Flow</li>
+    <li>Donor Intelligence</li>
+    <li>Dark Money</li>
+    <li>Corporate PACs</li>
+    <li>◈ AI Analyst — END</li>
+  </ol>
+</div>
+
+<div class="section">
+  <div class="label">Mobile</div>
+  <p>Welcome modal + ? coach marks. <b>No</b> guided overlay tour.</p>
+</div>
+
+<div class="section">
+  <div class="label">Persistence</div>
+  <p>localStorage <code>unr_tour_seen=v1</code> only. Replay from Settings relaunches overlay (welcome modal stays dismissed).</p>
+</div>
+
+<div class="section">
+  <div class="label">Mechanics</div>
+  <ul style="font-size:13px; line-height:1.7">
+    <li>Tab change at step 4 → user clicks tab themselves (interactive)</li>
+    <li>Esc / outside-click → silent end, flag set</li>
+    <li>Auth ignored in v1; mention "sign in to save" on step 9 + ? on Sign In button</li>
+    <li><b>Future:</b> Dark Money &amp; Money Flow will become auth-gated → tour must handle gracefully</li>
+  </ul>
+</div>

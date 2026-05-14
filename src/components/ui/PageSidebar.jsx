@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTheme } from '../../theme/index.js';
 import { FONT_MONO } from '../../theme/tokens.js';
+import CoachMark from '../../features/tutorial/CoachMark.jsx';
 
 const ORANGE = '#FF8000';
 
@@ -156,49 +157,57 @@ function DesktopSidebar({ tabs, active, onChange }) {
       {tabs.map(tab => {
         const isActive = tab.id === active;
         return (
-          <button
-            key={tab.id}
-            onClick={() => onChange(tab.id)}
-            title={tab.label}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '11px 14px',
-              background: isActive ? t.card : 'none',
-              border: 'none',
-              borderBottom: `1px solid ${t.border}`,
-              color: isActive ? t.hi : t.mid,
-              fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 0.5,
-              cursor: 'pointer', width: '100%', textAlign: 'left',
-              transition: 'background 0.12s, color 0.12s',
-              position: 'relative',
-            }}
-            onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = t.cardB; e.currentTarget.style.color = t.hi; } }}
-            onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = t.mid; } }}
-          >
-            {/* Active indicator — 3px DOM element, not border-left */}
-            <div style={{
-              position: 'absolute', left: 0, top: 0, bottom: 0,
-              width: 3,
-              background: isActive ? ORANGE : 'transparent',
-              transition: 'background 0.12s',
-            }} />
-            <span style={{ color: isActive ? ORANGE : 'inherit', flexShrink: 0, display: 'flex' }}>
-              {ICONS[tab.id] || DEFAULT_ICON}
-            </span>
-            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {tab.label}
-            </span>
-            {tab.badge && (
-              <span style={{
-                fontFamily: FONT_MONO, fontSize: 7.5, letterSpacing: 0.5,
-                color: ORANGE, background: ORANGE + '18',
-                border: `1px solid ${ORANGE}44`,
-                padding: '1px 5px', flexShrink: 0,
-              }}>
-                {tab.badge}
+          <div key={tab.id} style={{ position: 'relative', borderBottom: `1px solid ${t.border}` }}>
+            <button
+              data-tour={`subtab-${tab.id}`}
+              onClick={() => onChange(tab.id)}
+              title={tab.label}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '11px 14px',
+                paddingRight: tab.coachMarkId ? 30 : 14,
+                background: isActive ? t.card : 'none',
+                border: 'none',
+                borderBottom: 'none',
+                color: isActive ? t.hi : t.mid,
+                fontFamily: FONT_MONO, fontSize: 11, letterSpacing: 0.5,
+                cursor: 'pointer', width: '100%', textAlign: 'left',
+                transition: 'background 0.12s, color 0.12s',
+                position: 'relative',
+              }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = t.cardB; e.currentTarget.style.color = t.hi; } }}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = t.mid; } }}
+            >
+              {/* Active indicator — 3px DOM element, not border-left */}
+              <div style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0,
+                width: 3,
+                background: isActive ? ORANGE : 'transparent',
+                transition: 'background 0.12s',
+              }} />
+              <span style={{ color: isActive ? ORANGE : 'inherit', flexShrink: 0, display: 'flex' }}>
+                {ICONS[tab.id] || DEFAULT_ICON}
+              </span>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {tab.label}
+              </span>
+              {tab.badge && (
+                <span style={{
+                  fontFamily: FONT_MONO, fontSize: 7.5, letterSpacing: 0.5,
+                  color: ORANGE, background: ORANGE + '18',
+                  border: `1px solid ${ORANGE}44`,
+                  padding: '1px 5px', flexShrink: 0,
+                }}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+            {tab.coachMarkId && (
+              <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}>
+                <CoachMark id={tab.coachMarkId} />
               </span>
             )}
-          </button>
+          </div>
         );
       })}
     </div>
@@ -244,32 +253,42 @@ function MobileDrawer({ tabs, active, onChange, open, onClose }) {
         {tabs.map(tab => {
           const isActive = tab.id === active;
           return (
-            <button
-              key={tab.id}
-              onClick={() => { onChange(tab.id); onClose(); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '13px 16px',
-                background: isActive ? t.card : 'none',
-                border: 'none',
-                borderBottom: `1px solid ${t.border}`,
-                color: isActive ? t.hi : t.mid,
-                fontFamily: FONT_MONO, fontSize: 12, letterSpacing: 0.5,
-                cursor: 'pointer', width: '100%', textAlign: 'left',
-                position: 'relative',
-              }}
-            >
-              <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: isActive ? ORANGE : 'transparent' }} />
-              <span style={{ color: isActive ? ORANGE : 'inherit', display: 'flex' }}>
-                {ICONS[tab.id] || DEFAULT_ICON}
-              </span>
-              <span style={{ flex: 1 }}>{tab.label}</span>
-              {tab.badge && (
-                <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: ORANGE, background: ORANGE + '18', border: `1px solid ${ORANGE}44`, padding: '1px 5px' }}>
-                  {tab.badge}
+            <div key={tab.id} style={{ position: 'relative', borderBottom: `1px solid ${t.border}` }}>
+              <button
+                data-tour={`subtab-${tab.id}`}
+                onClick={() => { onChange(tab.id); onClose(); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 16px',
+                  paddingRight: tab.coachMarkId ? 36 : 16,
+                  background: isActive ? t.card : 'none',
+                  border: 'none',
+                  borderBottom: 'none',
+                  color: isActive ? t.hi : t.mid,
+                  fontFamily: FONT_MONO, fontSize: 12, letterSpacing: 0.5,
+                  cursor: 'pointer', width: '100%', textAlign: 'left',
+                  position: 'relative',
+                }}
+              >
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: isActive ? ORANGE : 'transparent' }} />
+                <span style={{ color: isActive ? ORANGE : 'inherit', display: 'flex' }}>
+                  {ICONS[tab.id] || DEFAULT_ICON}
+                </span>
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {tab.label}
+                </span>
+                {tab.badge && (
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 7.5, color: ORANGE, background: ORANGE + '18', border: `1px solid ${ORANGE}44`, padding: '1px 5px' }}>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+              {tab.coachMarkId && (
+                <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}>
+                  <CoachMark id={tab.coachMarkId} />
                 </span>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

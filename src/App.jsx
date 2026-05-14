@@ -24,10 +24,15 @@ import {
   version,
 } from "./api/client.js";
 import Ticker from "./components/layout/Ticker.jsx";
+import SettingsMenu from "./components/layout/SettingsMenu.jsx";
 import { CommunityWidget } from "./components/ui/index.js";
 import WarStats from "./components/WarStats.jsx";
 import MobileVisitorModal from "./components/MobileVisitorModal.jsx";
 import { ThemeProvider as WarThemeProvider } from "./theme/index.js";
+import WelcomeModal from "./features/tutorial/WelcomeModal.jsx";
+import GuidedTour from "./features/tutorial/GuidedTour.jsx";
+import { useTutorial } from "./features/tutorial/TutorialProvider.jsx";
+import CoachMark from "./features/tutorial/CoachMark.jsx";
 
 // ─── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const ORANGE = "#FF8000";
@@ -232,10 +237,10 @@ function hg(t) {
 // ─── OVERVIEW ─────────────────────────────────────────────────────────────────
 const NAV_CARDS = [
   { id:"monitor",        label:"Monitor",              sub:"Live map · news feed · alerts",                     color:"#4A7FFF" },
-  { id:"money",          label:"Follow the Money",     sub:"Donor networks · dark money · lobbyist bundlers",   color:ORANGE    },
-  { id:"accountability", label:"Accountability",       sub:"STOCK Act · vote-donor alignment · watchlist",      color:"#FF4455" },
-  { id:"policy",         label:"Policy & Regulation",  sub:"Bills · executive orders · regulatory watch",       color:"#A855F7" },
-  { id:"budget",         label:"Budget & Contracts",   sub:"Agency spending · contract awards · energy intel",  color:"#10B981" },
+  { id:"money",          label:"Explore Money Galaxy",  sub:"Donor networks · dark money · lobbyist bundlers",   color:ORANGE    },
+  // { id:"accountability", label:"Accountability",       sub:"STOCK Act · vote-donor alignment · watchlist",      color:"#FF4455" },  // hidden — underdeveloped
+  // { id:"policy",         label:"Policy & Regulation",  sub:"Bills · executive orders · regulatory watch",       color:"#A855F7" },  // hidden — underdeveloped
+  // { id:"budget",         label:"Budget & Contracts",   sub:"Agency spending · contract awards · energy intel",  color:"#10B981" },  // hidden — underdeveloped
 ];
 
 function Overview({ onNavigate }) {
@@ -879,10 +884,10 @@ function CorporateAndProfile({ theme }) {
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 const TABS = [
   { id:"monitor",        label:"Monitor"            },
-  { id:"money",          label:"Follow the Money"   },
-  { id:"accountability", label:"Accountability"     },
-  { id:"policy",         label:"Policy & Regulation"},
-  { id:"budget",         label:"Budget & Contracts" },
+  { id:"money",          label:"Explore Money Galaxy"},
+  // { id:"accountability", label:"Accountability"     },  // hidden — underdeveloped
+  // { id:"policy",         label:"Policy & Regulation"},  // hidden — underdeveloped
+  // { id:"budget",         label:"Budget & Contracts" },  // hidden — underdeveloped
 ];
 
 // ─── ANALYST PANEL ────────────────────────────────────────────────────────────
@@ -1377,11 +1382,12 @@ function AppInner() {
 
   const [showAuth, setShowAuth] = useState(false);
   const { isAuthenticated, user, profile, signOut } = useAuth();
+  const { startTour } = useTutorial();
   const theme = DARK_THEME;
 
   const renderTab = () => {
     if (tab==="monitor")        return <Monitor/>;
-    if (tab==="money")          return <FollowTheMoney DonorIntel={DonorIntel} DonorWeb={DonorWeb} theme={theme}/>;
+    if (tab==="money")          return <FollowTheMoney DonorIntel={DonorIntel} DonorWeb={DonorWeb} theme={theme} onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="accountability") return <Accountability onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="policy")         return <Policy/>;
     if (tab==="budget")         return <BudgetContracts theme={theme}/>;
@@ -1392,6 +1398,12 @@ function AppInner() {
     <ThemeCtx.Provider value={theme}>
       {/* Auth modal — rendered at root so it overlays everything */}
       <Auth isOpen={showAuth} onClose={() => setShowAuth(false)} theme={theme}/>
+
+      {/* Tutorial layer 1 — welcome modal */}
+      <WelcomeModal />
+
+      {/* Tutorial layer 2 — guided overlay tour */}
+      <GuidedTour tab={tab} setTab={setTab} />
 
       {/* Community widget — fixed position, appears on all pages */}
       <CommunityWidget theme={theme} />
@@ -1475,7 +1487,7 @@ function AppInner() {
               </span>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 {/* Analyst button — always visible on mobile */}
-                <button onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+                <button onClick={() => { if (!isAuthenticated) { setShowAuth(true); return; } const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
                   display:"flex", alignItems:"center", gap:5,
                   background: analyst ? ORANGE : ORANGE+"18",
                   border:`1.5px solid ${ORANGE}`, padding:"5px 10px",
@@ -1536,13 +1548,10 @@ function AppInner() {
                     );
                   })}
                   {/* Settings row */}
-                  <button onClick={() => { setTab(t=>t==="settings"?"monitor":"settings"); setMenuOpen(false); }} style={{
-                    width:"100%", textAlign:"left", background: tab==="settings" ? ORANGE+"18" : "none",
-                    border:"none", borderLeft:`3px solid ${tab==="settings"?ORANGE:"transparent"}`,
-                    padding:"13px 16px", fontFamily:MF, fontSize:24, color: tab==="settings"?ORANGE:theme.mid,
-                  }}>
-                    ⚙ Settings
-                  </button>
+                  <SettingsMenu
+                    onConfigure={() => { setTab("settings"); setMenuOpen(false); track("tab_view", { tab: "settings" }); }}
+                    onTakeTour={startTour}
+                  />
                   {/* Divider */}
                   <div style={{ height:1, background:theme.border, margin:"8px 16px" }}/>
                   {/* Theme + Auth in drawer */}
@@ -1575,7 +1584,7 @@ function AppInner() {
             {TABS.map(tb => {
               const on = tab===tb.id;
               return (
-                <button key={tb.id} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
+                <button key={tb.id} data-tour={tb.id === 'money' ? 'tab-money' : undefined} onClick={() => { setTab(tb.id); track("tab_view", { tab: tb.id }); }} style={{
                   background:"transparent",
                   color: on ? ORANGE : theme.mid,
                   border:"none",
@@ -1608,13 +1617,17 @@ function AppInner() {
                   <button onClick={() => { track("auth_sign_out"); signOut(); }} title="Sign out" style={{ background:"none", border:`1px solid ${theme.border}`, color:theme.low, fontFamily:MF, fontSize:8.5, padding:"5px 8px", cursor:"pointer" }}>↪</button>
                 </div>
               ) : (
-                <button onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }} style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}>
-                  <span style={{ fontSize:11 }}>◎</span>
-                  <span style={{ letterSpacing:1 }}>SIGN IN</span>
-                </button>
+                <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                  <button onClick={() => { track("auth_sign_in_click"); setShowAuth(true); }} style={{ display:"flex", alignItems:"center", gap:6, background:theme.cardB, border:`1px solid ${theme.border}`, padding:"5px 11px", fontFamily:MF, fontSize:9, color:theme.mid, transition:"all .2s" }}>
+                    <span style={{ fontSize:11 }}>◎</span>
+                    <span style={{ letterSpacing:1 }}>SIGN IN</span>
+                  </button>
+                  <CoachMark id="sign-in-explainer" />
+                </span>
               )}
 
-              <button onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+              <button data-tour="ai-button" onClick={() => { if (!isAuthenticated) { setShowAuth(true); return; } const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
                 display:"flex", alignItems:"center", gap:7,
                 background: analyst ? ORANGE : ORANGE+"18", border:`1.5px solid ${ORANGE}`, padding:"5px 14px",
                 fontFamily:MF, fontSize:9, letterSpacing:1, color: analyst ? WHITE : ORANGE, transition:"all .2s",
@@ -1623,16 +1636,14 @@ function AppInner() {
                 <span style={{ fontSize:12 }}>◈</span>
                 ANALYST {analyst ? "▾" : "▸"}
               </button>
+              <CoachMark id="ai-analyst-explainer" />
+              </span>
 
               <div style={{ width:1, height:22, background:theme.border, flexShrink:0 }}/>
-              <button onClick={() => { setTab(t => { const next=t==="settings"?"overview":"settings"; track("tab_view",{tab:next}); return next; }); }} style={{
-                display:"flex", alignItems:"center", gap:6, background:"transparent", border:"none",
-                borderBottom:`3px solid ${tab==="settings"?ORANGE:"transparent"}`, padding:"12px 10px",
-                fontFamily:MF, fontSize:10.5, letterSpacing:0.5, color:tab==="settings"?ORANGE:theme.mid,
-                transition:"color .14s, border-color .14s", whiteSpace:"nowrap",
-              }}>
-                ⚙ Settings
-              </button>
+              <SettingsMenu
+                onConfigure={() => { setTab("settings"); track("tab_view", { tab: "settings" }); }}
+                onTakeTour={startTour}
+              />
             </div>
           </div>
         )}
