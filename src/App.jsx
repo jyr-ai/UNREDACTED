@@ -1387,7 +1387,7 @@ function AppInner() {
 
   const renderTab = () => {
     if (tab==="monitor")        return <Monitor/>;
-    if (tab==="money")          return <FollowTheMoney DonorIntel={DonorIntel} DonorWeb={DonorWeb} theme={theme}/>;
+    if (tab==="money")          return <FollowTheMoney DonorIntel={DonorIntel} DonorWeb={DonorWeb} theme={theme} onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="accountability") return <Accountability onSignInRequest={() => setShowAuth(true)}/>;
     if (tab==="policy")         return <Policy/>;
     if (tab==="budget")         return <BudgetContracts theme={theme}/>;
@@ -1487,7 +1487,7 @@ function AppInner() {
               </span>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 {/* Analyst button — always visible on mobile */}
-                <button onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+                <button onClick={() => { if (!isAuthenticated) { setShowAuth(true); return; } const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
                   display:"flex", alignItems:"center", gap:5,
                   background: analyst ? ORANGE : ORANGE+"18",
                   border:`1.5px solid ${ORANGE}`, padding:"5px 10px",
@@ -1627,7 +1627,7 @@ function AppInner() {
               )}
 
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-              <button data-tour="ai-button" onClick={() => { const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
+              <button data-tour="ai-button" onClick={() => { if (!isAuthenticated) { setShowAuth(true); return; } const next=!analyst; setAnalyst(next); track("analyst_panel_toggle",{open:next}); }} style={{
                 display:"flex", alignItems:"center", gap:7,
                 background: analyst ? ORANGE : ORANGE+"18", border:`1.5px solid ${ORANGE}`, padding:"5px 14px",
                 fontFamily:MF, fontSize:9, letterSpacing:1, color: analyst ? WHITE : ORANGE, transition:"all .2s",
